@@ -120,16 +120,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     const heightInMeters = profile.height / 100;
     const value = Math.round((profile.weight / (heightInMeters * heightInMeters)) * 10) / 10;
     
-    let label = 'Saudável 🟢';
+    let label = 'Peso Ideal';
     let color = '#10b981'; // Green
     if (value < 18.5) {
-      label = 'Abaixo do Peso 🟡';
+      label = 'Abaixo do Peso';
       color = '#eab308'; // Yellow
     } else if (value >= 25 && value < 30) {
-      label = 'Sobrepeso 🟠';
+      label = 'Acima do Peso';
       color = '#f97316'; // Orange
     } else if (value >= 30) {
-      label = 'Obesidade 🔴';
+      label = 'Obesidade';
       color = '#ef4444'; // Red
     }
     return { value, label, color };
@@ -310,65 +310,66 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
   };
 
-  // Render IMC gauge (sleek horizontal slider bar)
+  // Render IMC gauge (sleek minimalist horizontal slider)
   const renderIMCGauge = () => {
     const value = imcData.value;
     const percentage = Math.min(Math.max((value - 15) / 20, 0), 1); // 15 to 35 range (20 total)
 
     return (
-      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 0, padding: '18px 20px' }}>
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0, padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 800 }}>
             Índice de Massa Corporal (IMC)
           </span>
-          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', backgroundColor: `${imcData.color}15`, color: imcData.color, border: `1px solid ${imcData.color}30` }}>
+          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: imcData.color, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: imcData.color }} />
             {imcData.label}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '2px' }}>
-          <span style={{ fontSize: '1.75rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
-            {value}
-          </span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>kg/m²</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+            <span style={{ fontSize: '1.8rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', lineHeight: 1 }}>
+              {value}
+            </span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>kg/m²</span>
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 600, textAlign: 'right' }}>
+            {profile.height} cm • {profile.weight} kg
+          </div>
         </div>
 
-        {/* Minimalist Slider Bar */}
-        <div style={{ position: 'relative', margin: '14px 4px 22px 4px' }}>
-          {/* Gradient line */}
-          <div style={{ height: '6px', background: 'linear-gradient(90deg, #eab308 0%, #10b981 30%, #f97316 70%, #ef4444 100%)', borderRadius: '3px' }} />
-          
-          {/* Sliding indicator pin */}
+        {/* Clean Progress Slider Line */}
+        <div style={{ position: 'relative', marginTop: '10px', height: '6px', background: '#f1f5f9', borderRadius: '3px' }}>
+          {/* Highlighted active part of the range */}
+          <div 
+            style={{
+              position: 'absolute',
+              left: 0,
+              width: `${percentage * 100}%`,
+              height: '100%',
+              background: imcData.color,
+              borderRadius: '3px',
+              transition: 'width 0.5s ease-out'
+            }} 
+          />
+          {/* Slider handle dot */}
           <div 
             style={{
               position: 'absolute',
               left: `${percentage * 100}%`,
               top: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '15px',
-              height: '15px',
+              width: '12px',
+              height: '12px',
               borderRadius: '50%',
               backgroundColor: '#ffffff',
-              border: `3.5px solid ${imcData.color}`,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
-              transition: 'left 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+              border: `3px solid ${imcData.color}`,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+              transition: 'left 0.5s ease-out',
               zIndex: 5
             }} 
           />
-
-          {/* Tick numbers below */}
-          <div style={{ position: 'absolute', top: '10px', left: '0%', transform: 'translateX(-50%)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)' }}>15</div>
-          <div style={{ position: 'absolute', top: '10px', left: '17.5%', transform: 'translateX(-50%)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)' }}>18.5</div>
-          <div style={{ position: 'absolute', top: '10px', left: '50%', transform: 'translateX(-50%)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)' }}>25</div>
-          <div style={{ position: 'absolute', top: '10px', left: '75%', transform: 'translateX(-50%)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)' }}>30</div>
-          <div style={{ position: 'absolute', top: '10px', left: '100%', transform: 'translateX(-50%)', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)' }}>35</div>
-        </div>
-
-        {/* Height, Age and Weight display row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px' }}>
-          <span>Altura: <strong style={{ color: 'var(--text-primary)' }}>{profile.height} cm</strong></span>
-          <span>Idade: <strong style={{ color: 'var(--text-primary)' }}>{profile.age} anos</strong></span>
-          <span>Peso: <strong style={{ color: 'var(--text-primary)' }}>{profile.weight} kg</strong></span>
         </div>
       </div>
     );
