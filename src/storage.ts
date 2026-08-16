@@ -1,4 +1,4 @@
-import type { AppData, Exercise, Workout, PersonalRecord, AppSettings } from './types';
+import type { AppData, Exercise, Workout, PersonalRecord, AppSettings, UserProfile } from './types';
 
 const STORAGE_KEY = 'strongpr_app_data';
 
@@ -24,12 +24,20 @@ const DEFAULT_SETTINGS: AppSettings = {
   enableSound: true,
 };
 
+export const DEFAULT_PROFILE: UserProfile = {
+  name: 'Atleta Gabin',
+  weight: 78,
+  avatarUrl: '💪',
+  avatarType: 'emoji',
+};
+
 // Initial App State
 export const INITIAL_DATA: AppData = {
   workouts: [],
   exercises: DEFAULT_EXERCISES,
   prs: [],
   settings: DEFAULT_SETTINGS,
+  profile: DEFAULT_PROFILE,
 };
 
 // Calculate Estimated 1-Rep Max (1RM) using Epley's formula
@@ -57,6 +65,7 @@ export function loadAppData(): AppData {
       exercises: parsed.exercises && parsed.exercises.length > 0 ? parsed.exercises : DEFAULT_EXERCISES,
       prs: parsed.prs || [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
+      profile: parsed.profile || DEFAULT_PROFILE,
     };
   } catch (error) {
     console.error('Failed to load data from localStorage', error);

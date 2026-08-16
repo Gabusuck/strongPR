@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import type { Workout, PersonalRecord, Exercise, AppSettings, AppData } from '../types';
+import type { Workout, PersonalRecord, Exercise, AppSettings, AppData, UserProfile } from '../types';
 import { PRTracker } from './PRTracker';
 import { ExercisesList } from './ExercisesList';
 import { exportBackup, importBackup } from '../storage';
-import { Trophy, Flame, Dumbbell, Calendar, Volume2, VolumeX, Smartphone, Download, Upload, RotateCcw, Timer, ShieldAlert, ArrowLeft, User, TrendingUp } from 'lucide-react';
+import { Trophy, Flame, Dumbbell, Calendar, Volume2, VolumeX, Smartphone, Download, Upload, RotateCcw, Timer, ShieldAlert, ArrowLeft, User, TrendingUp, X } from 'lucide-react';
 
 interface ProfileViewProps {
   workouts: Workout[];
@@ -11,6 +11,8 @@ interface ProfileViewProps {
   exercises: Exercise[];
   settings: AppSettings;
   appData: AppData;
+  profile: UserProfile;
+  onUpdateProfile: (profile: UserProfile) => void;
   onUpdateSettings: (settings: AppSettings) => void;
   onImportData: (data: AppData) => void;
   onResetData: () => void;
@@ -27,6 +29,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   exercises,
   settings,
   appData,
+  profile,
+  onUpdateProfile,
   onUpdateSettings,
   onImportData,
   onResetData,
@@ -36,7 +40,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const [subView, setSubView] = useState<ProfileSubView>('main');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarUploadRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
+
+  // Modal edit states
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
+  const [editName, setEditName] = useState(profile.name);
+  const [editWeight, setEditWeight] = useState(profile.weight.toString());
+  const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl);
+  const [editAvatarType, setEditAvatarType] = useState(profile.avatarType);
 
   // Calculate statistics
   const totalWorkouts = workouts.length;
@@ -289,14 +301,44 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
       
       {/* Profile Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px var(--accent-glow)' }}>
-          <User size={30} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div 
+            style={{ width: '64px', height: '64px', borderRadius: '50%', border: '2px solid var(--accent-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', fontSize: '28px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }} 
+            onClick={() => {
+              setEditName(profile.name);
+              setEditWeight(profile.weight.toString());
+              setEditAvatarUrl(profile.avatarUrl);
+              setEditAvatarType(profile.avatarType);
+              setShowEditProfileModal(true);
+            }}
+          >
+            {profile.avatarType === 'image' ? (
+              <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              profile.avatarUrl
+            )}
+          </div>
+          <div>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>{profile.name}</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700 }}>
+              ⚖️ {profile.weight} kg • Nível: Superador
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Atleta Gabin</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>Nível: Superador 💪</p>
-        </div>
+        <button 
+          className="btn btn-secondary btn-small"
+          onClick={() => {
+            setEditName(profile.name);
+            setEditWeight(profile.weight.toString());
+            setEditAvatarUrl(profile.avatarUrl);
+            setEditAvatarType(profile.avatarType);
+            setShowEditProfileModal(true);
+          }}
+          style={{ padding: '8px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          Editar
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -547,6 +589,135 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           StrongPR PWA • Versão 1.1.0 (Light Theme)
         </div>
       </div>
+
+      {/* EDIT PROFILE MODAL */}
+      {showEditProfileModal && (
+        <div className="modal-overlay" onClick={() => setShowEditProfileModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Editar Perfil</h3>
+              <button 
+                onClick={() => setShowEditProfileModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              onUpdateProfile({
+                name: editName,
+                weight: parseFloat(editWeight) || 0,
+                avatarUrl: editAvatarUrl,
+                avatarType: editAvatarType
+              });
+              setShowEditProfileModal(false);
+            }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Avatar Selection */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '3px solid var(--accent-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', fontSize: '38px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' }}>
+                  {editAvatarType === 'image' ? (
+                    <img src={editAvatarUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    editAvatarUrl
+                  )}
+                </div>
+                
+                {/* Upload Photo Button */}
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-small"
+                  onClick={() => avatarUploadRef.current?.click()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Upload size={14} /> Carregar Foto
+                </button>
+                <input
+                  type="file"
+                  ref={avatarUploadRef}
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        if (ev.target?.result) {
+                          setEditAvatarUrl(ev.target.result as string);
+                          setEditAvatarType('image');
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+
+                {/* Quick Emoji selection */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '6px' }}>
+                  {['💪', '🏋️‍♂️', '🏃‍♂️', '🥊', '🏆', '🔥', '⚡', '👑', '🦈', '🦅'].map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => {
+                        setEditAvatarUrl(emoji);
+                        setEditAvatarType('emoji');
+                      }}
+                      style={{
+                        fontSize: '1.4rem',
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        border: editAvatarType === 'emoji' && editAvatarUrl === emoji ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                        background: '#ffffff',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all var(--transition-fast)'
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Name Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nome do Atleta</label>
+                <input
+                  type="text"
+                  required
+                  className="form-input"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  style={{ fontWeight: 600 }}
+                />
+              </div>
+
+              {/* Weight Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peso Corporal (kg)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  required
+                  className="form-input"
+                  value={editWeight}
+                  onChange={(e) => setEditWeight(e.target.value)}
+                  style={{ fontWeight: 700, fontFamily: 'var(--font-display)' }}
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', padding: '14px' }}>
+                Gravar Alterações
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

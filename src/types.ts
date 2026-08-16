@@ -39,6 +39,13 @@ export interface PersonalRecord {
   workoutId?: string;
 }
 
+export interface UserProfile {
+  name: string;
+  weight: number;
+  avatarUrl: string; // base64 string or emoji string
+  avatarType: 'emoji' | 'image';
+}
+
 export type ActiveTab = 'history' | 'workout' | 'profile';
 
 export interface AppSettings {
@@ -52,4 +59,6 @@ export interface AppData {
   exercises: Exercise[];
   prs: PersonalRecord[];
   settings: AppSettings;
+  profile: UserProfile;
 }
+
