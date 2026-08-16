@@ -407,37 +407,60 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (ev) => {
+        const rawBase64 = ev.target?.result as string;
+        
         const img = new Image();
+        // Prevent Garbage Collection on iOS Safari while decoding large files
+        (window as any)._activeOnboardImg = img;
+        
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 150;
-          const MAX_HEIGHT = 150;
-          let width = img.width;
-          let height = img.height;
+          try {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 120; // 120px is perfect for avatar
+            const MAX_HEIGHT = 120;
+            let width = img.width;
+            let height = img.height;
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+              }
             }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
 
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (ctx) {
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressed = canvas.toDataURL('image/jpeg', 0.7);
-            setAvatarUrl(compressed);
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressed = canvas.toDataURL('image/jpeg', 0.6); // 0.6 is lightweight and high quality
+              setAvatarUrl(compressed);
+              setAvatarType('image');
+            } else {
+              setAvatarUrl(rawBase64);
+              setAvatarType('image');
+            }
+          } catch (err) {
+            console.error('Canvas compression error in onboarding', err);
+            setAvatarUrl(rawBase64);
             setAvatarType('image');
           }
+          delete (window as any)._activeOnboardImg;
         };
-        img.src = ev.target?.result as string;
+
+        img.onerror = (err) => {
+          console.error('Image load error in onboarding, falling back to raw base64', err);
+          setAvatarUrl(rawBase64);
+          setAvatarType('image');
+          delete (window as any)._activeOnboardImg;
+        };
+
+        img.src = rawBase64;
       };
       reader.readAsDataURL(file);
     }
