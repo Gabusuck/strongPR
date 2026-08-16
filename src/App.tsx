@@ -304,24 +304,24 @@ export default function App() {
         <button 
           className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
+          title="Histórico"
         >
-          <History size={18} />
-          Histórico
+          <History size={22} />
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'workout' ? 'active' : ''}`}
           onClick={() => setActiveTab('workout')}
           style={{ position: 'relative' }}
+          title="Treinar"
         >
-          <Dumbbell size={18} />
-          Treinar
+          <Dumbbell size={22} />
           {activeWorkout && (
             <span 
               style={{
                 position: 'absolute',
-                top: '4px',
-                right: '20px',
+                top: '10px',
+                right: '16px',
                 width: '6px',
                 height: '6px',
                 backgroundColor: 'var(--accent-color)',
@@ -335,9 +335,9 @@ export default function App() {
         <button 
           className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
           onClick={() => setActiveTab('profile')}
+          title="Perfil"
         >
-          <User size={18} />
-          Perfil
+          <User size={22} />
         </button>
       </nav>
 

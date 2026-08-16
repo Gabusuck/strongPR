@@ -103,11 +103,10 @@ body {
   }
   .bottom-nav {
     position: absolute; /* Fixa o menu dentro do simulador */
-    bottom: 10px;
-    left: 16px;
-    right: 16px;
-    transform: none;
-    width: auto;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 230px;
   }
 }
 
@@ -173,61 +172,61 @@ body {
 
 /* Barra de Navegação Estilo Cápsula Flutuante */
 .bottom-nav {
-  height: 58px;
+  height: 62px; /* Mais larga (alta) */
   position: fixed; /* Flutua na janela do browser no telemóvel */
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 32px);
-  max-width: 448px;
-  background: rgba(255, 255, 255, 0.5); /* Meia transparente */
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.35); /* Borda brilhante translúcida */
-  border-radius: 29px; /* Totalmente redonda e flutuante */
+  width: 230px; /* Menos comprida (largura estreita) */
+  background: rgba(255, 255, 255, 0.45); /* Mais transparente */
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(15, 23, 42, 0.08); /* Borda mais visível para contraste */
+  border-radius: 31px; /* Totalmente redonda e flutuante */
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 0 16px;
+  padding: 0 10px;
   z-index: 100;
-  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12); /* Sombra mais forte para separar do conteúdo */
 }
 
 .nav-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 0.72rem;
-  font-weight: 700;
-  transition: color var(--transition-fast), transform var(--transition-fast);
+  transition: all var(--transition-fast);
   border: none;
   background: none;
   cursor: pointer;
-  width: 72px;
-  height: 54px;
-  border-radius: 20px;
-  gap: 5px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   position: relative;
+}
+
+.nav-item:hover {
+  background: rgba(15, 23, 42, 0.03);
 }
 
 .nav-item.active {
   color: var(--accent-color);
+  background: rgba(255, 94, 58, 0.08); /* Destaque circular leve coral */
 }
 
 .nav-item.active svg {
   color: var(--accent-color);
-  filter: drop-shadow(0 2px 4px rgba(255, 94, 58, 0.3));
+  filter: drop-shadow(0 2px 4px rgba(255, 94, 58, 0.2));
 }
 
 .nav-item::after {
   content: '';
   position: absolute;
-  bottom: 2px;
-  width: 5px;
-  height: 5px;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
   background-color: var(--accent-color);
   border-radius: 50%;
   opacity: 0;
@@ -241,7 +240,7 @@ body {
 }
 
 .nav-item:active {
-  transform: scale(0.9);
+  transform: scale(0.92);
 }
 
 /* Botões Táteis Claros */
