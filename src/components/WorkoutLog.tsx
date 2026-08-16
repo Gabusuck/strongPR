@@ -40,6 +40,27 @@ const ALL_FILTER_MUSCLES = [
   'abdominals', 'quadriceps', 'hamstrings', 'glutes', 'calves',
 ];
 
+// Agrupa músculos da API por categoria de filtro
+const MUSCLE_GROUPS: Record<string, string[]> = {
+  chest: ['chest', 'pectorals'],
+  back: ['lats', 'middle back', 'lower back', 'upper back', 'traps', 'back'],
+  shoulders: ['shoulders', 'deltoids', 'front deltoids', 'rear deltoids'],
+  biceps: ['biceps'],
+  triceps: ['triceps'],
+  abdominals: ['abdominals', 'core'],
+  quadriceps: ['quadriceps', 'quads'],
+  hamstrings: ['hamstrings'],
+  glutes: ['glutes', 'gluteus maximus'],
+  calves: ['calves'],
+};
+
+const muscleMatchesFilter = (primaryMuscles: string[], filter: string): boolean => {
+  if (filter === 'all') return true;
+  const group = MUSCLE_GROUPS[filter];
+  if (!group) return false;
+  return primaryMuscles.some(m => group.includes(m.toLowerCase()));
+};
+
 // ─── Props ─────────────────────────────────────────────────────────────────────
 interface WorkoutLogProps {
   activeWorkout: Workout | null;
@@ -273,8 +294,12 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const localExercises = exercises.filter(ex => ex.isCustom);
 
   const filteredApiExercises = apiExercises.filter(ex => {
-    const matchesMuscle = muscleFilter === 'all' || ex.primaryMuscles.some(m => m.toLowerCase() === muscleFilter);
-    const matchesSearch = !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase()) || ex.primaryMuscles.some(m => m.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesMuscle = muscleMatchesFilter(ex.primaryMuscles, muscleFilter);
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q ||
+      ex.name.toLowerCase().includes(q) ||
+      ex.primaryMuscles.some(m => m.toLowerCase().includes(q)) ||
+      ex.primaryMuscles.some(m => (MUSCLE_LABELS[m.toLowerCase()] || '').toLowerCase().includes(q));
     return matchesMuscle && matchesSearch;
   });
 
