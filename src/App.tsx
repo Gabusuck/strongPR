@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
-import type { ActiveTab, AppData, Workout, Exercise, PersonalRecord, AppSettings } from './types';
+import type { ActiveTab, AppData, Workout, AppSettings } from './types';
 import { loadAppData, saveAppData, checkAndUpdatePRs, INITIAL_DATA } from './storage';
-import { Dashboard } from './components/Dashboard';
 import { WorkoutLog } from './components/WorkoutLog';
-import { PRTracker } from './components/PRTracker';
-import { ExercisesList } from './components/ExercisesList';
 import { HistoryView } from './components/HistoryView';
-import { SettingsView } from './components/SettingsView';
-import { LayoutGrid, Dumbbell, History, Trophy, Settings, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ProfileView } from './components/ProfileView';
+import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy } from 'lucide-react';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_DATA);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('workout'); // Default to workout tab as it's the middle/heart of the app
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   
   // PR congratulations modal state
@@ -22,7 +19,6 @@ export default function App() {
     const data = loadAppData();
     setAppData(data);
     
-    // Check if there was an active workout saved in localStorage (session storage equivalent)
     const savedActiveWorkout = localStorage.getItem('strongpr_active_workout');
     if (savedActiveWorkout) {
       try {
@@ -33,7 +29,7 @@ export default function App() {
     }
   }, []);
 
-  // Save active workout to localStorage whenever it changes
+  // Save active workout to localStorage
   useEffect(() => {
     if (activeWorkout) {
       localStorage.setItem('strongpr_active_workout', JSON.stringify(activeWorkout));
@@ -61,7 +57,7 @@ export default function App() {
     setActiveTab('workout');
   };
 
-  // Update active workout during training
+  // Update active workout
   const handleUpdateActiveWorkout = (updated: Workout) => {
     setActiveWorkout(updated);
   };
@@ -70,7 +66,6 @@ export default function App() {
   const handleSaveWorkout = () => {
     if (!activeWorkout) return;
 
-    // Filter exercises that have at least one completed set
     const completedExercises = activeWorkout.exercises
       .map((ex) => ({
         ...ex,
@@ -86,13 +81,10 @@ export default function App() {
     const finalWorkout: Workout = {
       ...activeWorkout,
       exercises: completedExercises,
-      date: new Date().toISOString(), // finalize date to completion time
+      date: new Date().toISOString(),
     };
 
-    // Check for new Personal Records
     const { updatedPRs, newPRsCount } = checkAndUpdatePRs(finalWorkout, appData.prs);
-
-    // Save workout to history
     const updatedWorkouts = [finalWorkout, ...appData.workouts];
 
     const updatedData: AppData = {
@@ -107,7 +99,7 @@ export default function App() {
     if (newPRsCount > 0) {
       setNewPRsModal({ isOpen: true, count: newPRsCount });
     } else {
-      setActiveTab('dashboard');
+      setActiveTab('profile'); // Redirect to profile to see updated stats/grid
     }
   };
 
@@ -115,16 +107,12 @@ export default function App() {
   const handleCancelWorkout = () => {
     if (confirm('Tens a certeza que queres apagar o treino atual? Todas as séries não gravadas serão perdidas.')) {
       setActiveWorkout(null);
-      setActiveTab('dashboard');
     }
   };
 
   // Delete a workout from history
   const handleDeleteWorkout = (workoutId: string) => {
     const updatedWorkouts = appData.workouts.filter(w => w.id !== workoutId);
-    
-    // Note: We don't delete PRs set during this workout automatically, 
-    // to preserve historical highest weights, but we update the workouts database.
     updateAppDataState({
       ...appData,
       workouts: updatedWorkouts
@@ -133,7 +121,7 @@ export default function App() {
 
   // Add custom exercise
   const handleAddExercise = (name: string, category: string) => {
-    const newExercise: Exercise = {
+    const newExercise = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
       name,
       category,
@@ -161,7 +149,7 @@ export default function App() {
 
     const est1RM = Math.round(weight * (1 + 0.0333 * reps) * 10) / 10;
     
-    const newPR: PersonalRecord = {
+    const newPR = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
       exerciseId,
       exerciseName: exercise.name,
@@ -188,31 +176,24 @@ export default function App() {
   // Import backup data
   const handleImportData = (newData: AppData) => {
     setAppData(newData);
-    // If active workout tab was open, we reset it
     setActiveWorkout(null);
-    setActiveTab('dashboard');
+    setActiveTab('profile');
   };
 
   // Reset all application data
   const handleResetData = () => {
     updateAppDataState(INITIAL_DATA);
     setActiveWorkout(null);
-    setActiveTab('dashboard');
+    setActiveTab('profile');
   };
 
-  // Switch tabs & handle active workout subviews
   const renderContent = () => {
     switch (activeTab) {
-      case 'dashboard':
+      case 'history':
         return (
-          <Dashboard 
+          <HistoryView 
             workouts={appData.workouts}
-            prs={appData.prs}
-            onStartWorkout={handleStartWorkout}
-            onNavigate={(tab) => {
-              if (tab === 'workout') handleStartWorkout();
-              else setActiveTab(tab);
-            }}
+            onDeleteWorkout={handleDeleteWorkout}
           />
         );
       case 'workout':
@@ -224,45 +205,37 @@ export default function App() {
             onUpdateWorkout={handleUpdateActiveWorkout}
             onSaveWorkout={handleSaveWorkout}
             onCancelWorkout={handleCancelWorkout}
+            onStartWorkout={handleStartWorkout}
           />
         );
-      case 'history':
+      case 'profile':
         return (
-          <HistoryView 
+          <ProfileView 
             workouts={appData.workouts}
-            onDeleteWorkout={handleDeleteWorkout}
-          />
-        );
-      case 'prs':
-        return (
-          <PRTracker 
             prs={appData.prs}
             exercises={appData.exercises}
-            onAddManualPR={handleAddManualPR}
-          />
-        );
-      case 'exercises':
-        return (
-          <ExercisesList 
-            exercises={appData.exercises}
-            onAddExercise={handleAddExercise}
-            onDeleteExercise={handleDeleteExercise}
-          />
-        );
-      case 'settings':
-        return (
-          <SettingsView 
             settings={appData.settings}
             appData={appData}
             onUpdateSettings={handleUpdateSettings}
             onImportData={handleImportData}
             onResetData={handleResetData}
-            // Navigate to catalog
-            onNavigateCatalog={() => setActiveTab('exercises')}
+            onAddManualPR={handleAddManualPR}
+            onAddCustomExercise={handleAddExercise}
+            onDeleteCustomExercise={handleDeleteExercise}
           />
         );
       default:
-        return <Dashboard workouts={appData.workouts} prs={appData.prs} onStartWorkout={handleStartWorkout} onNavigate={setActiveTab} />;
+        return (
+          <WorkoutLog 
+            activeWorkout={activeWorkout}
+            exercises={appData.exercises}
+            settings={appData.settings}
+            onUpdateWorkout={handleUpdateActiveWorkout}
+            onSaveWorkout={handleSaveWorkout}
+            onCancelWorkout={handleCancelWorkout}
+            onStartWorkout={handleStartWorkout}
+          />
+        );
     }
   };
 
@@ -271,7 +244,7 @@ export default function App() {
       
       {/* App Header */}
       <header className="app-header">
-        <h1 className="app-title" onClick={() => setActiveTab('dashboard')} style={{ cursor: 'pointer' }}>
+        <h1 className="app-title" onClick={() => setActiveTab('workout')} style={{ cursor: 'pointer' }}>
           <Dumbbell size={22} style={{ transform: 'rotate(-45deg)' }} />
           StrongPR
         </h1>
@@ -284,9 +257,9 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              backgroundColor: 'rgba(249, 115, 22, 0.15)',
-              border: '1px solid var(--accent)',
-              color: 'var(--accent)',
+              backgroundColor: 'rgba(255, 94, 58, 0.08)',
+              border: '1px solid var(--accent-color)',
+              color: 'var(--accent-color)',
               padding: '6px 12px',
               borderRadius: '20px',
               fontSize: '0.75rem',
@@ -305,68 +278,45 @@ export default function App() {
         {renderContent()}
       </main>
 
-      {/* Bottom Sticky Navigation */}
+      {/* Bottom Floating Capsule Navigation */}
       <nav className="bottom-nav">
         <button 
-          className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
+          className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
+          onClick={() => setActiveTab('history')}
         >
-          <LayoutGrid size={20} />
-          Início
+          <History size={18} />
+          Histórico
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'workout' ? 'active' : ''}`}
-          onClick={() => {
-            if (!activeWorkout) {
-              handleStartWorkout();
-            } else {
-              setActiveTab('workout');
-            }
-          }}
+          onClick={() => setActiveTab('workout')}
           style={{ position: 'relative' }}
         >
-          <Dumbbell size={20} />
-          Treino
-          {/* Active Workout Badge Dot */}
+          <Dumbbell size={18} />
+          Treinar
           {activeWorkout && (
             <span 
               style={{
                 position: 'absolute',
-                top: '6px',
-                right: '16px',
-                width: '8px',
-                height: '8px',
-                backgroundColor: 'var(--accent)',
+                top: '4px',
+                right: '20px',
+                width: '6px',
+                height: '6px',
+                backgroundColor: 'var(--accent-color)',
                 borderRadius: '50%',
-                boxShadow: '0 0 8px var(--accent)'
+                boxShadow: '0 0 6px var(--accent-color)'
               }}
             />
           )}
         </button>
 
         <button 
-          className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
-          onClick={() => setActiveTab('history')}
+          className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
         >
-          <History size={20} />
-          Histórico
-        </button>
-
-        <button 
-          className={`nav-item ${activeTab === 'prs' ? 'active' : ''}`}
-          onClick={() => setActiveTab('prs')}
-        >
-          <Trophy size={20} />
-          Recordes
-        </button>
-
-        <button 
-          className={`nav-item ${activeTab === 'settings' || activeTab === 'exercises' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          <Settings size={20} />
-          Definições
+          <User size={18} />
+          Perfil
         </button>
       </nav>
 
@@ -374,20 +324,20 @@ export default function App() {
       {newPRsModal.isOpen && (
         <div className="modal-overlay" onClick={() => setNewPRsModal({ isOpen: false, count: 0 })}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: '30px 20px' }}>
-            <div style={{ display: 'inline-flex', padding: '16px', borderRadius: '50%', backgroundColor: 'rgba(234, 179, 8, 0.1)', color: '#eab308', marginBottom: '16px' }}>
-              <Trophy size={48} fill="#eab308" />
+            <div style={{ display: 'inline-flex', padding: '16px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', marginBottom: '16px' }}>
+              <Trophy size={44} fill="#f59e0b" style={{ color: '#f59e0b' }} />
             </div>
 
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#eab308', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-              <Sparkles size={20} />
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px', fontFamily: 'var(--font-display)' }}>
+              <Sparkles size={18} />
               Novo Recorde Pessoal!
             </h3>
 
-            <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 600, lineHeight: '1.4', marginBottom: '20px' }}>
-              Parabéns! Superaste as tuas marcas anteriores em <span style={{ color: '#eab308', fontWeight: 800 }}>{newPRsModal.count}</span> {newPRsModal.count === 1 ? 'exercício' : 'exercícios'} neste treino!
+            <p style={{ color: 'var(--text-primary)', fontSize: '0.92rem', fontWeight: 700, lineHeight: '1.4', marginBottom: '20px' }}>
+              Parabéns! Superaste as tuas marcas anteriores em <span style={{ color: 'var(--accent-color)', fontWeight: 800 }}>{newPRsModal.count}</span> {newPRsModal.count === 1 ? 'exercício' : 'exercícios'} neste treino!
             </p>
 
-            <div style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '24px' }}>
+            <div style={{ backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '0.8rem', marginBottom: '24px', fontWeight: 600 }}>
               <CheckCircle2 size={16} style={{ color: 'var(--success)' }} /> Treino guardado no histórico.
             </div>
 
@@ -395,7 +345,7 @@ export default function App() {
               className="btn btn-primary" 
               onClick={() => {
                 setNewPRsModal({ isOpen: false, count: 0 });
-                setActiveTab('dashboard');
+                setActiveTab('profile');
               }}
               style={{ width: '100%', padding: '14px' }}
             >
@@ -408,9 +358,9 @@ export default function App() {
       {/* Inline styles for pulse animations */}
       <style>{`
         @keyframes pulse {
-          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); }
-          70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(249, 115, 22, 0); }
-          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(249, 115, 22, 0); }
+          0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 94, 58, 0.4); }
+          70% { transform: scale(1.02); box-shadow: 0 0 0 8px rgba(255, 94, 58, 0); }
+          100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 94, 58, 0); }
         }
       `}</style>
 

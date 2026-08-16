@@ -39,7 +39,7 @@ export interface PersonalRecord {
   workoutId?: string;
 }
 
-export type ActiveTab = 'dashboard' | 'workout' | 'history' | 'prs' | 'exercises' | 'settings';
+export type ActiveTab = 'history' | 'workout' | 'profile';
 
 export interface AppSettings {
   defaultRestDuration: number; // in seconds

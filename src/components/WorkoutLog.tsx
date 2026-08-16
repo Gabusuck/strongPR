@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings } from '../types';
-import { Plus, Trash2, Check, X } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell } from 'lucide-react';
 
 interface WorkoutLogProps {
   activeWorkout: Workout | null;
@@ -9,6 +9,7 @@ interface WorkoutLogProps {
   onUpdateWorkout: (workout: Workout) => void;
   onSaveWorkout: () => void;
   onCancelWorkout: () => void;
+  onStartWorkout: () => void;
 }
 
 export const WorkoutLog: React.FC<WorkoutLogProps> = ({
@@ -18,6 +19,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   onUpdateWorkout,
   onSaveWorkout,
   onCancelWorkout,
+  onStartWorkout,
 }) => {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,12 +110,21 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   if (!activeWorkout) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', textAlign: 'center', gap: '16px' }}>
-        <DumbbellIllustration />
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Nenhum treino ativo</h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '280px' }}>
-          Clica em "Iniciar Novo Treino" para começar a registar as tuas séries.
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: '20px' }}>
+        <div style={{ display: 'flex', padding: '20px', borderRadius: '50%', backgroundColor: 'rgba(255, 94, 58, 0.05)', color: 'var(--accent-color)', marginBottom: '8px' }}>
+          <Dumbbell size={48} style={{ transform: 'rotate(-45deg)' }} />
+        </div>
+        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Pronto para o Treino?</h3>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '280px', lineHeight: '1.4' }}>
+          Cria o teu treino em tempo real, regista cargas e bate os teus recordes pessoais!
         </p>
+        <button 
+          className="btn btn-primary" 
+          onClick={onStartWorkout}
+          style={{ padding: '14px 28px', fontSize: '1rem', width: '220px' }}
+        >
+          Iniciar Novo Treino
+        </button>
       </div>
     );
   }
