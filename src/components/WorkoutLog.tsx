@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings } from '../types';
-import { Plus, Trash2, Check, Timer, X } from 'lucide-react';
+import { Plus, Trash2, Check, X } from 'lucide-react';
 
 interface WorkoutLogProps {
   activeWorkout: Workout | null;
@@ -24,7 +24,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   
   // Timer State for rest periods
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
-  
+  const [restDuration, setRestDuration] = useState<number>(settings.defaultRestDuration);
   const timerIntervalRef = useRef<number | null>(null);
 
   // Active workout duration timer state
@@ -34,7 +34,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   useEffect(() => {
     if (!activeWorkout) return;
     
-    // Calculate initial elapsed time in case it was already running or saved
     const startTime = activeWorkout.date ? new Date(activeWorkout.date).getTime() : Date.now();
     
     const interval = window.setInterval(() => {
@@ -80,12 +79,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     if (settings.enableVibration && 'vibrate' in navigator) {
       navigator.vibrate([200, 100, 200]);
     }
-    // 2. Play Audio beep using web audio API so we don't need audio asset file
+    // 2. Play Audio beep using web audio API
     if (settings.enableSound) {
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        
-        // Short high-pitched double beep
         const playBeep = (time: number, freq: number) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
@@ -101,7 +98,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         };
         
         const now = audioCtx.currentTime;
-        playBeep(now, 880); // A5 note
+        playBeep(now, 880);
         playBeep(now + 0.25, 880);
       } catch (err) {
         console.error('Audio beep error', err);
@@ -130,7 +127,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Add exercise to active workout
   const handleAddExercise = (exercise: Exercise) => {
-    // Avoid duplicates
     if (activeWorkout.exercises.some((e) => e.id === exercise.id)) {
       setShowAddExerciseModal(false);
       return;
@@ -174,7 +170,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       exercises: activeWorkout.exercises.map((ex) => {
         if (ex.id !== exerciseId) return ex;
 
-        // Copy weight and reps from the last set as default values
         const lastSet = ex.sets[ex.sets.length - 1];
         const defaultWeight = lastSet ? lastSet.weight : 0;
         const defaultReps = lastSet ? lastSet.reps : 0;
@@ -201,7 +196,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       ...activeWorkout,
       exercises: activeWorkout.exercises.map((ex) => {
         if (ex.id !== exerciseId) return ex;
-        // Don't leave exercise with 0 sets (or we can let it be empty)
         const updatedSets = ex.sets.filter((s) => s.id !== setId);
         return {
           ...ex,
@@ -224,11 +218,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           sets: ex.sets.map((s) => {
             if (s.id !== setId) return s;
             
-            // Check if marking as completed to trigger rest timer
             const isMarkingComplete = updates.isCompleted === true && !s.isCompleted;
             if (isMarkingComplete) {
               setRestTimeLeft(settings.defaultRestDuration);
-              
+              setRestDuration(settings.defaultRestDuration);
             }
 
             return { ...s, ...updates };
@@ -244,7 +237,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
       
       {/* Workout Header Info */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -255,57 +248,59 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             value={activeWorkout.name}
             onChange={(e) => onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
             style={{
-              fontSize: '1.25rem',
-              fontWeight: 800,
+              fontSize: '1.4rem',
+              fontWeight: 850,
               fontFamily: 'var(--font-display)',
               background: 'transparent',
               border: 'none',
               padding: '4px 0',
-              width: '240px',
+              width: '220px',
               borderBottom: '1px solid transparent',
               borderRadius: 0
             }}
             placeholder="Nome do Treino"
-            onFocus={(e) => e.target.style.borderBottom = '1px solid var(--accent)'}
+            onFocus={(e) => e.target.style.borderBottom = '1px solid var(--accent-color)'}
             onBlur={(e) => e.target.style.borderBottom = '1px solid transparent'}
           />
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: 'var(--accent)', borderRadius: '50%' }}></span>
-            Em progresso...
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: 'var(--accent-color)', borderRadius: '50%', boxShadow: '0 0 6px var(--accent-color)' }}></span>
+            A treinar...
           </div>
         </div>
 
         {/* Workout Duration */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '8px 14px', borderRadius: '20px', border: '1px solid var(--border-color)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
           ⏱️ {formatElapsed(elapsedSeconds)}
         </div>
       </div>
 
       {/* Exercises List in Workout */}
       {activeWorkout.exercises.map((workoutExercise) => (
-        <div key={workoutExercise.id} className="glass-card" style={{ padding: '16px 14px' }}>
+        <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
           
           {/* Exercise Title */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
                 {workoutExercise.name}
               </h4>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
                 {workoutExercise.category}
               </span>
             </div>
             <button 
               onClick={() => handleRemoveExercise(workoutExercise.id)}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6 }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
             >
               <Trash2 size={16} />
             </button>
           </div>
 
           {/* Sets Headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 1fr 50px', gap: '10px', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '6px', paddingLeft: '8px' }}>
-            <span>Série</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '40px 1.2fr 1fr 40px', gap: '10px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ textAlign: 'center' }}>Série</span>
             <span style={{ textAlign: 'center' }}>Peso (kg)</span>
             <span style={{ textAlign: 'center' }}>Reps</span>
             <span style={{ textAlign: 'center' }}>OK</span>
@@ -318,34 +313,41 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                 key={set.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '40px 1fr 1fr 50px',
+                  gridTemplateColumns: '40px 1.2fr 1fr 40px',
                   gap: '10px',
                   alignItems: 'center',
-                  padding: '4px 6px',
-                  borderRadius: '8px',
-                  backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.04)' : 'transparent',
-                  border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.15)' : '1px solid transparent',
-                  transition: 'background var(--transition-fast)'
+                  padding: '6px 8px',
+                  borderRadius: '10px',
+                  backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)',
+                  border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)',
+                  transition: 'all var(--transition-fast)'
                 }}
               >
                 {/* Set Number */}
                 <div 
                   style={{
                     fontFamily: 'var(--font-display)',
-                    fontWeight: 700,
-                    fontSize: '0.9rem',
+                    fontWeight: 800,
+                    fontSize: '0.95rem',
                     textAlign: 'center',
                     color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)',
                     cursor: 'pointer'
                   }}
                   onClick={() => handleRemoveSet(workoutExercise.id, set.id)}
-                  title="Clique para remover série"
+                  title="Remover série"
                 >
                   {setIdx + 1}
                 </div>
 
-                {/* Weight Input */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                {/* Weight Input with +/- Helpers */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                  <button 
+                    className="btn-inc-dec" 
+                    disabled={set.isCompleted}
+                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
                     pattern="[0-9]*"
@@ -356,18 +358,35 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { weight: parseFloat(e.target.value) || 0 })}
                     style={{
                       textAlign: 'center',
-                      padding: '6px',
-                      maxWidth: '80px',
+                      padding: '5px',
+                      maxWidth: '45px',
+                      fontSize: '0.9rem',
                       fontFamily: 'var(--font-display)',
-                      fontWeight: 700,
+                      fontWeight: 800,
+                      border: 'none',
+                      background: 'transparent',
                       opacity: set.isCompleted ? 0.6 : 1
                     }}
                     placeholder="0"
                   />
+                  <button 
+                    className="btn-inc-dec" 
+                    disabled={set.isCompleted}
+                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}
+                  >
+                    +
+                  </button>
                 </div>
 
-                {/* Reps Input */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                {/* Reps Input with +/- Helpers */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                  <button 
+                    className="btn-inc-dec" 
+                    disabled={set.isCompleted}
+                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}
+                  >
+                    -
+                  </button>
                   <input
                     type="number"
                     pattern="[0-9]*"
@@ -378,14 +397,24 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { reps: parseInt(e.target.value, 10) || 0 })}
                     style={{
                       textAlign: 'center',
-                      padding: '6px',
-                      maxWidth: '80px',
+                      padding: '5px',
+                      maxWidth: '35px',
+                      fontSize: '0.9rem',
                       fontFamily: 'var(--font-display)',
-                      fontWeight: 700,
+                      fontWeight: 800,
+                      border: 'none',
+                      background: 'transparent',
                       opacity: set.isCompleted ? 0.6 : 1
                     }}
                     placeholder="0"
                   />
+                  <button 
+                    className="btn-inc-dec" 
+                    disabled={set.isCompleted}
+                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}
+                  >
+                    +
+                  </button>
                 </div>
 
                 {/* Checkbox (Complete) */}
@@ -409,20 +438,26 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
               background: 'none',
               border: '1px dashed var(--border-color)',
               color: 'var(--text-secondary)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              padding: '8px',
-              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              padding: '10px',
+              borderRadius: '10px',
               cursor: 'pointer',
-              marginTop: '12px',
+              marginTop: '14px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              transition: 'background var(--transition-fast)'
+              transition: 'all var(--transition-fast)'
             }}
-            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-            onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'none';
+              e.currentTarget.style.borderColor = 'var(--border-color)';
+            }}
           >
             <Plus size={14} /> Adicionar Série
           </button>
@@ -435,7 +470,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         <button
           className="btn btn-secondary"
           onClick={() => setShowAddExerciseModal(true)}
-          style={{ flex: 1, padding: '14px' }}
+          style={{ flex: 1, padding: '15px' }}
         >
           <Plus size={18} /> Adicionar Exercício
         </button>
@@ -443,7 +478,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         <button
           className="btn btn-primary"
           onClick={onSaveWorkout}
-          style={{ flex: 1, padding: '14px' }}
+          style={{ flex: 1, padding: '15px' }}
         >
           Gravar Treino
         </button>
@@ -452,31 +487,67 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       <button
         className="btn btn-danger btn-small"
         onClick={onCancelWorkout}
-        style={{ marginTop: '10px', width: '100%' }}
+        style={{ marginTop: '10px', width: '100%', padding: '12px' }}
       >
-        Cancelar e Descartar Treino
+        Descartar Treino
       </button>
 
-      {/* Rest Timer Floating Pill */}
+      {/* Circular Floating Rest Timer */}
       {restTimeLeft !== null && (
         <div 
-          className="timer-pill" 
+          className="circular-timer-container" 
           onClick={() => {
-            // Clicking the timer adds 30 seconds
             setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30));
           }}
           title="Clique para adicionar +30s"
         >
-          <Timer size={18} />
-          <span>Resto: {Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}</span>
+          <svg className="circular-timer-svg">
+            <defs>
+              <linearGradient id="timer-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#ff5e3a" />
+                <stop offset="100%" stopColor="#ff2a68" />
+              </linearGradient>
+            </defs>
+            <circle cx="43" cy="43" r="36" className="circular-timer-bg" />
+            <circle 
+              cx="43" 
+              cy="43" 
+              r="36" 
+              className="circular-timer-progress" 
+              strokeDasharray="226" 
+              strokeDashoffset={226 - (226 * restTimeLeft) / restDuration} 
+            />
+          </svg>
+          <div className="circular-timer-text">
+            <span>{Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}</span>
+            <span className="circular-timer-sub">+30s</span>
+          </div>
           <button 
             onClick={(e) => {
-              e.stopPropagation(); // Avoid adding time when cancelling
+              e.stopPropagation();
               setRestTimeLeft(null);
             }}
-            style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', padding: '2px' }}
+            style={{
+              position: 'absolute',
+              top: '-4px',
+              right: '-4px',
+              backgroundColor: '#ef4444',
+              border: 'none',
+              borderRadius: '50%',
+              width: '18px',
+              height: '18px',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifycontent: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.6)'
+            }}
           >
-            <X size={14} />
+            ×
           </button>
         </div>
       )}
@@ -485,8 +556,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       {showAddExerciseModal && (
         <div className="modal-overlay" onClick={() => setShowAddExerciseModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Escolher Exercício</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Escolher Exercício</h3>
               <button 
                 onClick={() => setShowAddExerciseModal(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
@@ -498,10 +569,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             <input
               type="text"
               className="form-input"
-              placeholder="Pesquisar por nome ou grupo muscular..."
+              placeholder="Pesquisar exercício ou grupo muscular..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ marginBottom: '16px' }}
+              style={{ marginBottom: '18px' }}
             />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
@@ -517,8 +588,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        padding: '12px 14px',
-                        borderRadius: '10px',
+                        padding: '14px 16px',
+                        borderRadius: '12px',
                         background: isAlreadyAdded ? 'rgba(255, 255, 255, 0.01)' : 'rgba(255, 255, 255, 0.03)',
                         border: '1px solid var(--border-color)',
                         color: isAlreadyAdded ? 'var(--text-muted)' : 'var(--text-primary)',
@@ -534,13 +605,13 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{ex.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{ex.category}</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{ex.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{ex.category}</div>
                       </div>
                       {isAlreadyAdded ? (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Adicionado</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>Adicionado</span>
                       ) : (
-                        <Plus size={16} style={{ color: 'var(--accent)' }} />
+                        <Plus size={18} style={{ color: 'var(--accent-color)' }} />
                       )}
                     </button>
                   );
@@ -560,7 +631,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 };
 
 const DumbbellIllustration: React.FC = () => (
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
     <path d="m6.5 6.5 11 11" />
     <path d="m21 21-1.5-1.5" />
     <path d="m3 3 1.5 1.5" />
