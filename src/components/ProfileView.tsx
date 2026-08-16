@@ -3,7 +3,7 @@ import type { Workout, PersonalRecord, Exercise, AppSettings, AppData } from '..
 import { PRTracker } from './PRTracker';
 import { ExercisesList } from './ExercisesList';
 import { exportBackup, importBackup } from '../storage';
-import { Trophy, Flame, Dumbbell, Calendar, Volume2, VolumeX, Smartphone, Download, Upload, RotateCcw, Timer, ShieldAlert, ArrowLeft, User } from 'lucide-react';
+import { Trophy, Flame, Dumbbell, Calendar, Volume2, VolumeX, Smartphone, Download, Upload, RotateCcw, Timer, ShieldAlert, ArrowLeft, User, TrendingUp } from 'lucide-react';
 
 interface ProfileViewProps {
   workouts: Workout[];
@@ -19,7 +19,7 @@ interface ProfileViewProps {
   onDeleteCustomExercise: (id: string) => void;
 }
 
-type ProfileSubView = 'main' | 'prs' | 'exercises' | 'settings';
+type ProfileSubView = 'main' | 'prs' | 'exercises';
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   workouts,
@@ -72,6 +72,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const activityDays = getActivityGridDays();
 
+  // Calculate workouts count per week for the last 6 weeks (Monday to Sunday)
+  const getWeeklyWorkoutStats = () => {
+    const stats = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const monday = new Date();
+      const daysSinceMonday = (now.getDay() + 6) % 7;
+      monday.setDate(now.getDate() - daysSinceMonday - (i * 7));
+      monday.setHours(0, 0, 0, 0);
+      
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      
+      const count = workouts.filter((w) => {
+        const wDate = new Date(w.date);
+        return wDate >= monday && wDate <= sunday;
+      }).length;
+      
+      const label = `${monday.getDate()}/${monday.getMonth() + 1}`;
+      stats.push({ label, count });
+    }
+    return stats;
+  };
+
+  const weeklyStats = getWeeklyWorkoutStats();
+
   const handleRestTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);
     onUpdateSettings({
@@ -105,6 +133,101 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       onResetData();
       setSubView('main');
     }
+  };
+
+  // Render weekly bar chart
+  const renderWeeklyChart = () => {
+    const width = 340;
+    const height = 120;
+    const paddingX = 30;
+    const paddingY = 20;
+    const barWidth = 22;
+    
+    const maxCount = Math.max(...weeklyStats.map(s => s.count), 4); // Scale up to at least 4 workouts/week
+    
+    const chartWidth = width - paddingX * 2;
+    const chartHeight = height - paddingY * 2;
+    const stepX = chartWidth / (weeklyStats.length - 1);
+
+    return (
+      <div style={{ backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '16px', marginTop: '12px', boxShadow: '0 2px 10px rgba(15,23,42,0.02)' }}>
+        <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} />
+          Treinos Semanais (Últimas 6 sem.)
+        </h4>
+        
+        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', display: 'block', overflow: 'visible' }}>
+          <defs>
+            <linearGradient id="bar-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent-color)" />
+              <stop offset="100%" stopColor="#ff7a00" />
+            </linearGradient>
+          </defs>
+          
+          {/* Horizontal lines */}
+          {[0, 0.5, 1].map((ratio, i) => {
+            const y = paddingY + ratio * chartHeight;
+            const val = Math.round(maxCount * (1 - ratio));
+            return (
+              <g key={i}>
+                <line x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                <text x={paddingX - 8} y={y + 3} textAnchor="end" fontSize="8" fontWeight="700" fill="var(--text-secondary)">{val}</text>
+              </g>
+            );
+          })}
+
+          {/* Render Bars */}
+          {weeklyStats.map((stat, idx) => {
+            const x = paddingX + idx * stepX - barWidth / 2;
+            const barHeight = (stat.count / maxCount) * chartHeight;
+            const y = height - paddingY - barHeight;
+            
+            return (
+              <g key={idx}>
+                {/* Background ghost bar */}
+                <rect x={x} y={paddingY} width={barWidth} height={chartHeight} fill="#f8fafc" rx="4" opacity="0.5" />
+                
+                {/* Active bar */}
+                {stat.count > 0 && (
+                  <rect 
+                    x={x} 
+                    y={y} 
+                    width={barWidth} 
+                    height={barHeight} 
+                    fill="url(#bar-grad)" 
+                    rx="4" 
+                  />
+                )}
+                
+                {/* Number of workouts on top */}
+                <text 
+                  x={x + barWidth / 2} 
+                  y={y - 5} 
+                  textAnchor="middle" 
+                  fontSize="9" 
+                  fontWeight="800" 
+                  fill={stat.count > 0 ? 'var(--text-primary)' : 'var(--text-muted)'}
+                >
+                  {stat.count}
+                </text>
+                
+                {/* Date Label */}
+                <text 
+                  x={x + barWidth / 2} 
+                  y={height - paddingY + 12} 
+                  textAnchor="middle" 
+                  fontSize="8" 
+                  fontWeight="700" 
+                  fill="var(--text-secondary)"
+                >
+                  {stat.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    );
   };
 
   // RENDER SUBVIEWS
@@ -162,30 +285,119 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
   }
 
-  if (subView === 'settings') {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        
-        {/* Settings Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button 
-            onClick={() => setSubView('main')}
-            style={{ background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all var(--transition-fast)' }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800 }}>Definições</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Configura as preferências da tua aplicação.</p>
-          </div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+      
+      {/* Profile Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px var(--accent-glow)' }}>
+          <User size={30} />
         </div>
+        <div>
+          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Atleta Gabin</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>Nível: Superador 💪</p>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="stat-grid">
+        <div className="stat-box">
+          <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--accent-color)', marginBottom: '4px' }}>
+            <Dumbbell size={16} />
+          </div>
+          <div className="stat-val">{totalWorkouts}</div>
+          <div className="stat-lbl">Treinos</div>
+        </div>
+        
+        <div className="stat-box">
+          <div style={{ display: 'flex', justifyContent: 'center', color: '#f59e0b', marginBottom: '4px' }}>
+            <Trophy size={16} />
+          </div>
+          <div className="stat-val">{totalPRs}</div>
+          <div className="stat-lbl">PRs</div>
+        </div>
+
+        <div className="stat-box">
+          <div style={{ display: 'flex', justifyContent: 'center', color: '#ef4444', marginBottom: '4px' }}>
+            <Flame size={16} />
+          </div>
+          <div className="stat-val">{recentWorkouts}</div>
+          <div className="stat-lbl">Streak</div>
+        </div>
+      </div>
+
+      {/* Consistency Activity Grid */}
+      <div className="glass-card" style={{ marginBottom: 0, padding: '16px' }}>
+        <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Calendar size={14} style={{ color: 'var(--accent-color)' }} />
+          Consistência de Treinos
+        </h3>
+        
+        <div className="activity-grid">
+          {activityDays.map((day, idx) => (
+            <div 
+              key={idx}
+              className={`activity-day ${day.count > 1 ? 'active-2' : day.count === 1 ? 'active-1' : ''}`}
+              title={`${day.count} treinos em ${day.date}`}
+            />
+          ))}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
+          <span>Há 50 dias</span>
+          <span>Hoje</span>
+        </div>
+      </div>
+
+      {/* Weekly Accumulated Bar Chart */}
+      {renderWeeklyChart()}
+
+      {/* Navigation Sub-Pages */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        
+        {/* Recordes Pessoais (PR Tracker) */}
+        <div 
+          className="glass-card interactive" 
+          onClick={() => setSubView('prs')}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Trophy size={18} style={{ color: '#f59e0b' }} />
+            <div>
+              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Os Meus PRs</span>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Recordes pessoais e gráficos de evolução.</div>
+            </div>
+          </div>
+          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
+        </div>
+
+        {/* Catálogo de Exercícios */}
+        <div 
+          className="glass-card interactive" 
+          onClick={() => setSubView('exercises')}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Dumbbell size={18} style={{ color: 'var(--accent-color)' }} />
+            <div>
+              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Catálogo de Exercícios</span>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Pesquisa, filtros e exercícios personalizados.</div>
+            </div>
+          </div>
+          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
+        </div>
+
+      </div>
+
+      {/* DEFINIÇÕES INTEGRADAS DIRETAMENTE NO PERFIL */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '10px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Definições da Aplicação</h3>
 
         {/* Preferences */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 0 }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Timer size={18} style={{ color: 'var(--accent-color)' }} />
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Timer size={16} style={{ color: 'var(--accent-color)' }} />
             Preferências de Treino
-          </h3>
+          </h4>
 
           {/* Rest Timer */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -264,12 +476,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* Backups */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 0 }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Download size={18} style={{ color: '#10b981' }} />
-            Backup de Dados
-          </h3>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-            Faz cópias de segurança locais regularmente. Limpar a cache do telemóvel apaga os dados locais.
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Download size={16} style={{ color: '#10b981' }} />
+            Cópia de Segurança
+          </h4>
+          <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+            Exporta ou importa os teus dados em formato JSON.
           </p>
 
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -318,137 +530,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* Danger Zone */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: 0 }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ShieldAlert size={18} />
+          <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ShieldAlert size={16} />
             Zona de Perigo
-          </h3>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Elimina definitivamente o teu progresso na aplicação.</p>
+          </h4>
           <button 
             className="btn btn-danger btn-small"
             onClick={handleResetClick}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
           >
-            <RotateCcw size={14} /> Apagar Tudo e Reiniciar
+            <RotateCcw size={14} /> Eliminar Progresso
           </button>
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-      
-      {/* Profile Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px var(--accent-glow)' }}>
-          <User size={30} />
+        <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '10px' }}>
+          StrongPR PWA • Versão 1.1.0 (Light Theme)
         </div>
-        <div>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Atleta Gabin</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>Nível: Superador 💪</p>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="stat-grid">
-        <div className="stat-box">
-          <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--accent-color)', marginBottom: '4px' }}>
-            <Dumbbell size={16} />
-          </div>
-          <div className="stat-val">{totalWorkouts}</div>
-          <div className="stat-lbl">Treinos</div>
-        </div>
-        
-        <div className="stat-box">
-          <div style={{ display: 'flex', justifyContent: 'center', color: '#f59e0b', marginBottom: '4px' }}>
-            <Trophy size={16} />
-          </div>
-          <div className="stat-val">{totalPRs}</div>
-          <div className="stat-lbl">PRs</div>
-        </div>
-
-        <div className="stat-box">
-          <div style={{ display: 'flex', justifyContent: 'center', color: '#ef4444', marginBottom: '4px' }}>
-            <Flame size={16} />
-          </div>
-          <div className="stat-val">{recentWorkouts}</div>
-          <div className="stat-lbl">Streak</div>
-        </div>
-      </div>
-
-      {/* Consistency activity grid */}
-      <div className="glass-card" style={{ marginBottom: 0, padding: '16px' }}>
-        <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Calendar size={14} style={{ color: 'var(--accent-color)' }} />
-          Consistência de Treinos
-        </h3>
-        
-        <div className="activity-grid">
-          {activityDays.map((day, idx) => (
-            <div 
-              key={idx}
-              className={`activity-day ${day.count > 1 ? 'active-2' : day.count === 1 ? 'active-1' : ''}`}
-              title={`${day.count} treinos em ${day.date}`}
-            />
-          ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
-          <span>Há 50 dias</span>
-          <span>Hoje</span>
-        </div>
-      </div>
-
-      {/* Navigation list for subviews */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        
-        {/* Recordes Pessoais (PR Tracker) */}
-        <div 
-          className="glass-card interactive" 
-          onClick={() => setSubView('prs')}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Trophy size={18} style={{ color: '#f59e0b' }} />
-            <div>
-              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Os Meus PRs</span>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Recordes pessoais e gráficos de evolução.</div>
-            </div>
-          </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
-        </div>
-
-        {/* Catálogo de Exercícios */}
-        <div 
-          className="glass-card interactive" 
-          onClick={() => setSubView('exercises')}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Dumbbell size={18} style={{ color: 'var(--accent-color)' }} />
-            <div>
-              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Catálogo de Exercícios</span>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Pesquisa, filtros e exercícios personalizados.</div>
-            </div>
-          </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
-        </div>
-
-        {/* Definições */}
-        <div 
-          className="glass-card interactive" 
-          onClick={() => setSubView('settings')}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <RotateCcw size={18} style={{ color: 'var(--text-secondary)' }} />
-            <div>
-              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Definições da Aplicação</span>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Temporizadores, som/vibração e backups.</div>
-            </div>
-          </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
-        </div>
-
       </div>
 
     </div>
