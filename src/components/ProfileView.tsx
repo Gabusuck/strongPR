@@ -226,7 +226,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all var(--transition-fast)'
               }}
@@ -253,7 +252,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all var(--transition-fast)'
