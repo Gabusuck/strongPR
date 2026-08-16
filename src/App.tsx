@@ -390,7 +390,7 @@ export default function App() {
 }
 
 interface OnboardWizardProps {
-  onComplete: (profile: { name: string; weight: number; height: number; age: number; avatarUrl: string; avatarType: 'emoji' | 'image' }) => void;
+  onComplete: (profile: { name: string; weight: number; height: number; age: number; avatarUrl: string; avatarType: 'emoji' | 'image' | 'silhouette' }) => void;
 }
 
 const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
