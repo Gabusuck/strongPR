@@ -3,7 +3,7 @@ import type { Workout, PersonalRecord, Exercise, AppSettings, AppData, UserProfi
 import { PRTracker } from './PRTracker';
 import { ExercisesList } from './ExercisesList';
 import { exportBackup, importBackup } from '../storage';
-import { Trophy, Flame, Dumbbell, Calendar, Volume2, VolumeX, Smartphone, Download, Upload, RotateCcw, Timer, ShieldAlert, ArrowLeft, User, TrendingUp, X } from 'lucide-react';
+import { Trophy, Flame, Dumbbell, Calendar, Volume2, VolumeX, Smartphone, Download, Upload, RotateCcw, Timer, ShieldAlert, ArrowLeft, TrendingUp, X } from 'lucide-react';
 
 interface ProfileViewProps {
   workouts: Workout[];

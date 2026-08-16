@@ -167,6 +167,7 @@ export function importBackup(file: File): Promise<AppData> {
             exercises: Array.isArray(parsed.exercises) ? parsed.exercises : DEFAULT_EXERCISES,
             prs: Array.isArray(parsed.prs) ? parsed.prs : [],
             settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
+            profile: parsed.profile || DEFAULT_PROFILE,
           };
           saveAppData(appData);
           resolve(appData);
