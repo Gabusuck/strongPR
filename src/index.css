@@ -75,7 +75,11 @@ body {
   overflow: hidden;
 }
 
-@media (min-width: 481px) {
+html {
+  background-color: var(--bg-primary);
+}
+
+@media (min-width: 576px) {
   body {
     background-color: #cbd5e1; /* Fundo cinza para focar no telemóvel */
     display: flex;
@@ -418,7 +422,7 @@ body {
   animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@media (min-width: 481px) {
+@media (min-width: 576px) {
   .modal-overlay {
     align-items: center;
   }
