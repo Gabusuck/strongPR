@@ -48,35 +48,30 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   background-color: var(--bg-primary);
+}
+
+body {
   color: var(--text-primary);
   font-family: var(--font-sans);
-  overflow: hidden;
-  height: 100vh;
-  height: 100dvh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
 }
 
 /* Container Principal (Simulação Móvel) */
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
+  width: 100%;
   max-width: 480px;
   margin: 0 auto;
   background-color: var(--bg-primary);
   position: relative;
   overflow: hidden;
-}
-
-html {
-  background-color: var(--bg-primary);
 }
 
 @media (min-width: 576px) {
