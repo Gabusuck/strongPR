@@ -310,6 +310,110 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     );
   };
 
+  // Render IMC gauge
+  const renderIMCGauge = () => {
+    const value = imcData.value;
+    const percentage = Math.min(Math.max((value - 15) / 20, 0), 1); // 15 to 35
+    const angleRad = Math.PI - (percentage * Math.PI);
+    
+    const cx = 120;
+    const cy = 110;
+    const needleLength = 65;
+    
+    const needleX = cx + needleLength * Math.cos(angleRad);
+    const needleY = cy - needleLength * Math.sin(angleRad);
+
+    return (
+      <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 0, padding: '20px' }}>
+        <h4 style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <TrendingUp size={14} style={{ color: 'var(--accent-color)' }} />
+          Índice de Massa Corporal (IMC)
+        </h4>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+          
+          {/* Gauge SVG Column */}
+          <div style={{ flex: '1 1 200px', display: 'flex', justifyContent: 'center' }}>
+            <svg viewBox="0 0 240 135" style={{ width: '100%', maxWidth: '240px', height: 'auto', display: 'block', overflow: 'visible' }}>
+              <defs>
+                <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#eab308" />   {/* Yellow */}
+                  <stop offset="35%" stopColor="#10b981" />  {/* Green */}
+                  <stop offset="70%" stopColor="#f97316" />  {/* Orange */}
+                  <stop offset="100%" stopColor="#ef4444" /> {/* Red */}
+                </linearGradient>
+              </defs>
+              
+              {/* Background Arc */}
+              <path 
+                d="M 40 110 A 80 80 0 0 1 200 110" 
+                fill="none" 
+                stroke="#f1f5f9" 
+                strokeWidth="14" 
+                strokeLinecap="round" 
+              />
+              
+              {/* Active Color Gradient Arc */}
+              <path 
+                d="M 40 110 A 80 80 0 0 1 200 110" 
+                fill="none" 
+                stroke="url(#gauge-grad)" 
+                strokeWidth="14" 
+                strokeLinecap="round" 
+              />
+              
+              {/* Gauge needle */}
+              <line 
+                x1={cx} 
+                y1={cy} 
+                x2={needleX} 
+                y2={needleY} 
+                stroke="var(--text-primary)" 
+                strokeWidth="3.5" 
+                strokeLinecap="round" 
+              />
+              
+              {/* Hub cap */}
+              <circle cx={cx} cy={cy} r="7" fill="var(--text-primary)" />
+              <circle cx={cx} cy={cy} r="3" fill="#ffffff" />
+              
+              {/* Tick Labels */}
+              <text x="36" y="124" textAnchor="middle" fontSize="8" fontWeight="800" fill="var(--text-secondary)">15</text>
+              <text x="120" y="24" textAnchor="middle" fontSize="8" fontWeight="800" fill="var(--text-secondary)">25</text>
+              <text x="204" y="124" textAnchor="middle" fontSize="8" fontWeight="800" fill="var(--text-secondary)">35</text>
+            </svg>
+          </div>
+
+          {/* Legend and stats column */}
+          <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+              Classificação atual:
+            </div>
+            
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {value}
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 8px', borderRadius: '20px', backgroundColor: `${imcData.color}15`, color: imcData.color, border: `1px solid ${imcData.color}30` }}>
+                {imcData.label}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '10px', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase' }}>Altura</span>
+                <div>{profile.height} cm</div>
+              </div>
+              <div>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.65rem', textTransform: 'uppercase' }}>Idade</span>
+                <div>{profile.age} anos</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    );
+  };
+
   // RENDER SUBVIEWS
   if (subView === 'prs') {
     return (
@@ -414,21 +518,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* IMC Display Card */}
-      <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', marginBottom: 0 }}>
-        <div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Índice de Massa Corporal (IMC)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{imcData.value}</span>
-            <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', backgroundColor: `${imcData.color}15`, color: imcData.color, border: `1px solid ${imcData.color}30` }}>
-              {imcData.label}
-            </span>
-          </div>
-        </div>
-        <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-          Altura: {profile.height} cm<br/>
-          Idade: {profile.age} anos
-        </div>
-      </div>
+      {renderIMCGauge()}
 
       {/* Stats Grid */}
       <div className="stat-grid">
