@@ -640,14 +640,4 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   );
 };
 
-const DumbbellIllustration: React.FC = () => (
-  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
-    <path d="m6.5 6.5 11 11" />
-    <path d="m21 21-1.5-1.5" />
-    <path d="m3 3 1.5 1.5" />
-    <path d="m18.5 5.5 3 3-2.5 2.5-3-3Z" />
-    <path d="m5.5 18.5 3 3-2.5 2.5-3-3Z" />
-    <path d="m8.5 14 1.5 1.5" />
-    <path d="m14 8.5 1.5 1.5" />
-  </svg>
-);
+
