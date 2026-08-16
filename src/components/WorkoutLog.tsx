@@ -539,7 +539,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
               color: '#fff',
               display: 'flex',
               alignItems: 'center',
-              justifycontent: 'center',
               justifyContent: 'center',
               cursor: 'pointer',
               fontSize: '10px',

@@ -267,7 +267,6 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
                   onClick={() => setSelectedExerciseId(pr.exerciseId)}
                   style={{
                     display: 'flex',
-                    justifycontent: 'space-between',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '18px 20px',
