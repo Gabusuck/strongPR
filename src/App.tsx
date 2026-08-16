@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import type { ActiveTab, AppData, Workout, AppSettings } from './types';
-import { loadAppData, saveAppData, checkAndUpdatePRs, INITIAL_DATA } from './storage';
+import { loadAppData, saveAppData, checkAndUpdatePRs, INITIAL_DATA, exportBackup, importBackup } from './storage';
 import { WorkoutLog } from './components/WorkoutLog';
 import { HistoryView } from './components/HistoryView';
 import { ProfileView } from './components/ProfileView';
-import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload } from 'lucide-react';
+import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X } from 'lucide-react';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_DATA);
@@ -13,6 +13,31 @@ export default function App() {
   
   // PR congratulations modal state
   const [newPRsModal, setNewPRsModal] = useState<{ isOpen: boolean, count: number }>({ isOpen: false, count: 0 });
+
+  // Settings modal states
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const backupInputRef = useRef<HTMLInputElement>(null);
+  const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
+
+  const handleImportClick = () => {
+    backupInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImportStatus({ type: null, message: '' });
+      const importedData = await importBackup(file);
+      handleImportData(importedData);
+      setImportStatus({ type: 'success', message: 'Dados importados com sucesso!' });
+      if (backupInputRef.current) backupInputRef.current.value = '';
+    } catch (err) {
+      console.error(err);
+      setImportStatus({ type: 'error', message: 'Erro ao importar backup. Verifica o ficheiro.' });
+    }
+  };
 
   // Load app data on mount
   useEffect(() => {
@@ -270,28 +295,52 @@ export default function App() {
           StrongPR
         </h1>
         
-        {/* Glow Indicators or Quick Active Workout link */}
-        {activeWorkout && activeTab !== 'workout' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Glow Indicators or Quick Active Workout link */}
+          {activeWorkout && activeTab !== 'workout' && (
+            <button
+              onClick={() => setActiveTab('workout')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: 'rgba(255, 94, 58, 0.08)',
+                border: '1px solid var(--accent-color)',
+                color: 'var(--accent-color)',
+                padding: '6px 12px',
+                borderRadius: '20px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                animation: 'pulse 2s infinite'
+              }}
+            >
+              Treino Ativo ⚡
+            </button>
+          )}
+
+          {/* 3-dots Settings Icon */}
           <button
-            onClick={() => setActiveTab('workout')}
+            onClick={() => setShowSettingsModal(true)}
             style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'rgba(255, 94, 58, 0.08)',
-              border: '1px solid var(--accent-color)',
-              color: 'var(--accent-color)',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              animation: 'pulse 2s infinite'
+              justifyContent: 'center',
+              transition: 'background var(--transition-fast)'
             }}
+            className="interactive"
+            title="Definições"
           >
-            Treino Ativo ⚡
+            <MoreVertical size={20} />
           </button>
-        )}
+        </div>
       </header>
 
       {/* Main Content Area */}
@@ -372,6 +421,192 @@ export default function App() {
             >
               Uau, incrível! 🚀
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Definições</h3>
+              <button 
+                onClick={() => setShowSettingsModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Preferences */}
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 0, padding: '16px' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Dumbbell size={16} style={{ color: 'var(--accent-color)' }} />
+                  Preferências de Treino
+                </h4>
+
+                {/* Rest Timer */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>Descanso Padrão</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Intervalo sugerido após séries.</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={appData.settings.defaultRestDuration}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        handleUpdateSettings({
+                          ...appData.settings,
+                          defaultRestDuration: isNaN(val) ? 90 : val
+                        });
+                      }}
+                      style={{ width: '70px', textAlign: 'center', fontWeight: 800, fontFamily: 'var(--font-display)', padding: '8px' }}
+                      min={10}
+                      max={600}
+                    />
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600 }}>seg</span>
+                  </div>
+                </div>
+
+                {/* Sound */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>Som do Alerta</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Som ao terminar o descanso.</div>
+                  </div>
+                  <button
+                    onClick={() => handleUpdateSettings({ ...appData.settings, enableSound: !appData.settings.enableSound })}
+                    style={{
+                      background: appData.settings.enableSound ? 'rgba(255, 94, 58, 0.08)' : '#f1f5f9',
+                      border: '1px solid',
+                      borderColor: appData.settings.enableSound ? 'var(--accent-color)' : 'var(--border-color)',
+                      color: appData.settings.enableSound ? 'var(--accent-color)' : 'var(--text-secondary)',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                  >
+                    {appData.settings.enableSound ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                  </button>
+                </div>
+
+                {/* Vibration */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>Vibrar Dispositivo</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Vibração no fim do descanso.</div>
+                  </div>
+                  <button
+                    onClick={() => handleUpdateSettings({ ...appData.settings, enableVibration: !appData.settings.enableVibration })}
+                    style={{
+                      background: appData.settings.enableVibration ? 'rgba(255, 94, 58, 0.08)' : '#f1f5f9',
+                      border: '1px solid',
+                      borderColor: appData.settings.enableVibration ? 'var(--accent-color)' : 'var(--border-color)',
+                      color: appData.settings.enableVibration ? 'var(--accent-color)' : 'var(--text-secondary)',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all var(--transition-fast)'
+                    }}
+                  >
+                    <Smartphone size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Backups */}
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 0, padding: '16px' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Download size={16} style={{ color: '#10b981' }} />
+                  Cópia de Segurança
+                </h4>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                  Exporta ou importa os teus dados em formato JSON.
+                </p>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    className="btn btn-secondary btn-small"
+                    onClick={() => exportBackup(appData)}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.78rem' }}
+                  >
+                    <Download size={14} /> Exportar
+                  </button>
+                  
+                  <button 
+                    className="btn btn-secondary btn-small"
+                    onClick={handleImportClick}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.78rem' }}
+                  >
+                    <Upload size={14} /> Importar
+                  </button>
+                </div>
+
+                <input
+                  type="file"
+                  ref={backupInputRef}
+                  onChange={handleFileChange}
+                  accept=".json"
+                  style={{ display: 'none' }}
+                />
+
+                {importStatus.type && (
+                  <div 
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      backgroundColor: importStatus.type === 'success' ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+                      color: importStatus.type === 'success' ? 'var(--success)' : 'var(--danger)',
+                      border: importStatus.type === 'success' ? '1px solid rgba(16,185,129,0.15)' : '1px solid rgba(239,68,68,0.15)',
+                      marginTop: '4px'
+                    }}
+                  >
+                    {importStatus.message}
+                  </div>
+                )}
+              </div>
+
+              {/* Danger Zone */}
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: 0, padding: '16px' }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldAlert size={16} />
+                  Zona de Perigo
+                </h4>
+                <button 
+                  className="btn btn-danger btn-small"
+                  onClick={() => {
+                    if (confirm('ATENÇÃO: Tens a certeza absoluta de que queres eliminar TODOS os teus dados de treinos, exercícios personalizados e recordes pessoais? Esta ação é irreversível.')) {
+                      handleResetData();
+                      setShowSettingsModal(false);
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', fontSize: '0.78rem' }}
+                >
+                  <RotateCcw size={14} /> Eliminar Progresso
+                </button>
+              </div>
+
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '10px' }}>
+                StrongPR PWA • Versão 1.3.0
+              </div>
+            </div>
           </div>
         </div>
       )}
