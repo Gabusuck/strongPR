@@ -5,12 +5,12 @@
   --font-display: 'Outfit', sans-serif;
 
   /* Cores Claras & Elegantes */
-  --bg-primary: #ffffff; /* Branco puro */
-  --bg-secondary: #f8fafc; /* Slate 50 */
+  --bg-primary: #f8fafc; /* Slate 50 */
+  --bg-secondary: #f1f5f9; /* Slate 100 */
   --bg-card: #ffffff; /* Branco puro */
   --bg-card-hover: #fafafa;
   
-  --border-color: #f1f5f9; /* Slate 100 */
+  --border-color: #e2e8f0; /* Slate 200 */
   --border-color-focus: #ff5e3a;
   
   --text-primary: #0f172a; /* Slate 900 */
@@ -162,10 +162,10 @@ html {
   bottom: 16px;
   left: 16px;
   right: 16px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(15, 23, 42, 0.05);
   border-radius: 32px;
   display: flex;
   justify-content: space-around;
