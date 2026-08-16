@@ -473,7 +473,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             {profile.avatarType === 'image' ? (
               <img src={profile.avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              profile.avatarUrl
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%', padding: '14px', color: 'var(--text-muted)' }}>
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             )}
           </div>
           <div>
@@ -786,19 +789,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   {editAvatarType === 'image' ? (
                     <img src={editAvatarUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
-                    editAvatarUrl
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%', padding: '18px', color: 'var(--text-muted)' }}>
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   )}
                 </div>
                 
                 {/* Upload Photo Button */}
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-small"
-                  onClick={() => avatarUploadRef.current?.click()}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Upload size={14} /> Carregar Foto
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-small"
+                    onClick={() => avatarUploadRef.current?.click()}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Upload size={14} /> Carregar Foto
+                  </button>
+                  {editAvatarType === 'image' && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-small"
+                      onClick={() => {
+                        setEditAvatarUrl('');
+                        setEditAvatarType('silhouette');
+                      }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+                    >
+                      Remover Foto
+                    </button>
+                  )}
+                </div>
                 <input
                   type="file"
                   ref={avatarUploadRef}
@@ -806,35 +827,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   onChange={handlePhotoUpload}
                   style={{ display: 'none' }}
                 />
-
-                {/* Quick Emoji selection */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginTop: '6px' }}>
-                  {['💪', '🏋️‍♂️', '🏃‍♂️', '🥊', '🏆', '🔥', '⚡', '👑', '🦈', '🦅'].map(emoji => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => {
-                        setEditAvatarUrl(emoji);
-                        setEditAvatarType('emoji');
-                      }}
-                      style={{
-                        fontSize: '1.4rem',
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        border: editAvatarType === 'emoji' && editAvatarUrl === emoji ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
-                        background: '#ffffff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all var(--transition-fast)'
-                      }}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Name Input */}

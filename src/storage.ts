@@ -29,8 +29,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   weight: 70,
   height: 175,
   age: 25,
-  avatarUrl: '💪',
-  avatarType: 'emoji',
+  avatarUrl: '',
+  avatarType: 'silhouette',
   onboarded: false,
 };
 

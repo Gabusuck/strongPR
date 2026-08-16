@@ -44,8 +44,8 @@ export interface UserProfile {
   weight: number;
   height: number; // in cm
   age: number;
-  avatarUrl: string; // base64 string or emoji string
-  avatarType: 'emoji' | 'image';
+  avatarUrl: string; // base64 string or silhouette/emoji
+  avatarType: 'emoji' | 'image' | 'silhouette';
   onboarded: boolean;
 }
 

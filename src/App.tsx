@@ -398,8 +398,8 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
   const [weight, setWeight] = useState('70');
   const [height, setHeight] = useState('175');
   const [age, setAge] = useState('25');
-  const [avatarUrl, setAvatarUrl] = useState('💪');
-  const [avatarType, setAvatarType] = useState<'emoji' | 'image'>('emoji');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarType, setAvatarType] = useState<'emoji' | 'image' | 'silhouette'>('silhouette');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -504,18 +504,36 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
             {avatarType === 'image' ? (
               <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              avatarUrl
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ width: '100%', height: '100%', padding: '18px', color: 'var(--text-muted)' }}>
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
             )}
           </div>
           
-          <button
-            type="button"
-            className="btn btn-secondary btn-small"
-            onClick={() => fileInputRef.current?.click()}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.78rem' }}
-          >
-            <Upload size={12} /> Carregar Foto
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary btn-small"
+              onClick={() => fileInputRef.current?.click()}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.78rem' }}
+            >
+              <Upload size={12} /> Carregar Foto
+            </button>
+            {avatarType === 'image' && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-small"
+                onClick={() => {
+                  setAvatarUrl('');
+                  setAvatarType('silhouette');
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.78rem', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}
+              >
+                Remover
+              </button>
+            )}
+          </div>
           <input
             type="file"
             ref={fileInputRef}

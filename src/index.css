@@ -48,6 +48,18 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Ocultar barra de scroll lateral no telemóvel e PC */
+html, body, .app-content {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.app-content::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
