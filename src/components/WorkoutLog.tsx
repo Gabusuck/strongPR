@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info } from 'lucide-react';
+import { translateExerciseName } from '../utils/translateExercise';
 
 // ─── Free Exercise DB types ───────────────────────────────────────────────────
 interface ApiExercise {
@@ -443,8 +444,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     <ChevronLeft size={22} />
                   </button>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedApiExercise.name}</h3>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{translateExerciseName(selectedApiExercise.name)}</h3>
+                    <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedApiExercise.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginTop: '2px' }}>
                       {selectedApiExercise.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}
                     </div>
                   </div>
@@ -457,14 +459,22 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
                   {/* Image Slideshow */}
                   {selectedApiExercise.images.length > 0 && (
-                    <div style={{ margin: '16px 0', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px' }}>
+                    <div style={{ margin: '16px 0', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', position: 'relative' }}>
                       <img
                         key={imageIdx}
                         src={`${DB_BASE}/exercises/${selectedApiExercise.images[imageIdx]}`}
                         alt={selectedApiExercise.name}
-                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', transition: 'opacity 0.4s ease' }}
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
+                      {/* Slide indicator dots */}
+                      {selectedApiExercise.images.length > 1 && (
+                        <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px' }}>
+                          {selectedApiExercise.images.map((_, i) => (
+                            <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: imageIdx === i ? 'var(--accent-color)' : 'rgba(0,0,0,0.2)', transition: 'background 0.3s' }} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -619,10 +629,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                             <button
                               key={ex.id}
                               onClick={() => setSelectedApiExercise(ex)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border-color)', background: added ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '14px', border: '1px solid var(--border-color)', background: added ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
                             >
-                              {/* Thumbnail */}
-                              <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {/* Thumbnail — bigger and taller */}
+                              <div style={{ width: '80px', height: '72px', borderRadius: '10px', backgroundColor: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <img
                                   src={`${DB_BASE}/exercises/${ex.images[0]}`}
                                   alt={ex.name}
@@ -630,14 +640,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   onError={(e) => {
                                     const el = e.currentTarget;
                                     el.style.display = 'none';
-                                    el.parentElement!.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg>';
+                                    el.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg></div>';
                                   }}
                                 />
                               </div>
                               {/* Info */}
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: added ? 'var(--success)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.name}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{ex.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}</div>
+                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: added ? 'var(--success)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{translateExerciseName(ex.name)}</div>
+                                <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>{ex.name}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '3px' }}>{ex.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}</div>
                               </div>
                               {/* Action */}
                               {added ? (
