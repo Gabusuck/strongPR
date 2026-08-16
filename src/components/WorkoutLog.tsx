@@ -1,7 +1,45 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info } from 'lucide-react';
 
+// ─── Free Exercise DB types ───────────────────────────────────────────────────
+interface ApiExercise {
+  id: string;
+  name: string;
+  force: string | null;
+  level: string;
+  mechanic: string | null;
+  equipment: string;
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  instructions: string[];
+  category: string;
+  images: string[];
+}
+
+const DB_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main';
+const DB_JSON = `${DB_BASE}/dist/exercises.json`;
+
+const MUSCLE_LABELS: Record<string, string> = {
+  chest: 'Peito', back: 'Costas', shoulders: 'Ombros',
+  biceps: 'Bíceps', triceps: 'Tríceps', abdominals: 'Abdominais',
+  quadriceps: 'Quadríceps', hamstrings: 'Isquiotibiais',
+  glutes: 'Glúteos', calves: 'Gémeos', forearms: 'Antebraços',
+  'lower back': 'Lombar', 'middle back': 'Costas Médias',
+  traps: 'Trapézio', lats: 'Grande Dorsal', neck: 'Pescoço',
+  abductors: 'Abdutores', adductors: 'Adutores',
+};
+
+const mapCategory = (primaryMuscles: string[]): string => {
+  return MUSCLE_LABELS[primaryMuscles[0]?.toLowerCase()] || primaryMuscles[0] || 'Outro';
+};
+
+const ALL_FILTER_MUSCLES = [
+  'chest', 'back', 'shoulders', 'biceps', 'triceps',
+  'abdominals', 'quadriceps', 'hamstrings', 'glutes', 'calves',
+];
+
+// ─── Props ─────────────────────────────────────────────────────────────────────
 interface WorkoutLogProps {
   activeWorkout: Workout | null;
   exercises: Exercise[];
@@ -17,71 +55,88 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   exercises,
   settings,
   onUpdateWorkout,
-  onSaveWorkout,
   onCancelWorkout,
   onStartWorkout,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onSaveWorkout: _onSaveWorkout,
 }) => {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Timer State for rest periods
+  const [muscleFilter, setMuscleFilter] = useState<string>('all');
+  const [selectedApiExercise, setSelectedApiExercise] = useState<ApiExercise | null>(null);
+  const [apiExercises, setApiExercises] = useState<ApiExercise[]>([]);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState(false);
+  const [imageIdx, setImageIdx] = useState(0);
+
+  // Rest timer
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
   const [restDuration, setRestDuration] = useState<number>(settings.defaultRestDuration);
   const timerIntervalRef = useRef<number | null>(null);
 
-  // Active workout duration timer state
+  // Elapsed workout time
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Slideshow auto-switch for selected exercise detail
+  useEffect(() => {
+    if (!selectedApiExercise) return;
+    setImageIdx(0);
+    const t = window.setInterval(() => setImageIdx(i => (i === 0 ? 1 : 0)), 1800);
+    return () => clearInterval(t);
+  }, [selectedApiExercise]);
 
   // Active workout duration tick
   useEffect(() => {
     if (!activeWorkout) return;
-    
     const startTime = activeWorkout.date ? new Date(activeWorkout.date).getTime() : Date.now();
-    
     const interval = window.setInterval(() => {
       const seconds = Math.floor((Date.now() - startTime) / 1000);
       setElapsedSeconds(seconds >= 0 ? seconds : 0);
     }, 1000);
-    
     return () => window.clearInterval(interval);
   }, [activeWorkout]);
 
-  // Handle saving elapsed duration on component unmount / update
+  // Save elapsed duration on each tick
   useEffect(() => {
     if (activeWorkout) {
-      onUpdateWorkout({
-        ...activeWorkout,
-        duration: elapsedSeconds
-      });
+      onUpdateWorkout({ ...activeWorkout, duration: elapsedSeconds });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsedSeconds]);
 
-  // Handle rest timer countdown
+  // Rest timer countdown
   useEffect(() => {
     if (restTimeLeft === null) return;
-
     if (restTimeLeft <= 0) {
       triggerRestEndNotifications();
       setRestTimeLeft(null);
       return;
     }
-
     timerIntervalRef.current = window.setInterval(() => {
       setRestTimeLeft((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
-
-    return () => {
-      if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current);
-    };
+    return () => { if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current); };
   }, [restTimeLeft]);
 
+  // Fetch exercises from API when modal opens
+  useEffect(() => {
+    if (!showAddExerciseModal || apiExercises.length > 0 || apiLoading) return;
+    setApiLoading(true);
+    setApiError(false);
+    fetch(DB_JSON)
+      .then(r => r.json())
+      .then((data: ApiExercise[]) => {
+        setApiExercises(data);
+        setApiLoading(false);
+      })
+      .catch(() => {
+        setApiError(true);
+        setApiLoading(false);
+      });
+  }, [showAddExerciseModal]);
+
   const triggerRestEndNotifications = () => {
-    // 1. Vibration API
-    if (settings.enableVibration && 'vibrate' in navigator) {
-      navigator.vibrate([200, 100, 200]);
-    }
-    // 2. Play Audio beep using web audio API
+    if (settings.enableVibration && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
     if (settings.enableSound) {
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -90,21 +145,16 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           const gain = audioCtx.createGain();
           osc.connect(gain);
           gain.connect(audioCtx.destination);
-          
           osc.frequency.value = freq;
           gain.gain.setValueAtTime(0.15, time);
           gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
-          
           osc.start(time);
           osc.stop(time + 0.15);
         };
-        
         const now = audioCtx.currentTime;
         playBeep(now, 880);
         playBeep(now + 0.25, 880);
-      } catch (err) {
-        console.error('Audio beep error', err);
-      }
+      } catch (err) { console.error('Audio beep error', err); }
     }
   };
 
@@ -118,8 +168,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '280px', lineHeight: '1.4' }}>
           Cria o teu treino em tempo real, regista cargas e bate os teus recordes pessoais!
         </p>
-        <button 
-          className="btn btn-primary" 
+        <button
+          className="btn btn-primary"
           onClick={onStartWorkout}
           style={{ padding: '14px 28px', fontSize: '1rem', width: '220px' }}
         >
@@ -137,36 +187,35 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   };
 
   // Add exercise to active workout
-  const handleAddExercise = (exercise: Exercise) => {
-    if (activeWorkout.exercises.some((e) => e.id === exercise.id)) {
+  const handleAddExercise = (exercise: Exercise | ApiExercise) => {
+    const id = exercise.id;
+    if (activeWorkout.exercises.some((e) => e.id === id)) {
       setShowAddExerciseModal(false);
       return;
     }
 
-    const newWorkoutExercise: WorkoutExercise = {
-      id: exercise.id,
-      name: exercise.name,
-      category: exercise.category,
-      sets: [
-        {
-          id: Math.random().toString(36).substring(2, 9),
-          weight: 0,
-          reps: 0,
-          isCompleted: false,
-        },
-      ],
-    };
+    let category = '';
+    if ('primaryMuscles' in exercise) {
+      category = mapCategory(exercise.primaryMuscles);
+    } else {
+      category = (exercise as Exercise).category;
+    }
 
-    onUpdateWorkout({
-      ...activeWorkout,
-      exercises: [...activeWorkout.exercises, newWorkoutExercise],
-    });
+    const newWorkoutExercise: WorkoutExercise = {
+      id,
+      name: exercise.name,
+      category,
+      sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
+    };
+    onUpdateWorkout({ ...activeWorkout, exercises: [...activeWorkout.exercises, newWorkoutExercise] });
     setShowAddExerciseModal(false);
+    setSelectedApiExercise(null);
+    setSearchQuery('');
+    setMuscleFilter('all');
   };
 
-  // Remove exercise from active workout
   const handleRemoveExercise = (exerciseId: string) => {
-    if (confirm('Tens a certeza que queres remover este exercício do treino atual?')) {
+    if (confirm('Remover este exercício do treino atual?')) {
       onUpdateWorkout({
         ...activeWorkout,
         exercises: activeWorkout.exercises.filter((e) => e.id !== exerciseId),
@@ -174,51 +223,31 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }
   };
 
-  // Add a set to an exercise
   const handleAddSet = (exerciseId: string) => {
     onUpdateWorkout({
       ...activeWorkout,
       exercises: activeWorkout.exercises.map((ex) => {
         if (ex.id !== exerciseId) return ex;
-
         const lastSet = ex.sets[ex.sets.length - 1];
-        const defaultWeight = lastSet ? lastSet.weight : 0;
-        const defaultReps = lastSet ? lastSet.reps : 0;
-
         return {
           ...ex,
-          sets: [
-            ...ex.sets,
-            {
-              id: Math.random().toString(36).substring(2, 9),
-              weight: defaultWeight,
-              reps: defaultReps,
-              isCompleted: false,
-            },
-          ],
+          sets: [...ex.sets, { id: Math.random().toString(36).substring(2, 9), weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, isCompleted: false }],
         };
       }),
     });
   };
 
-  // Remove a set from an exercise
   const handleRemoveSet = (exerciseId: string, setId: string) => {
     onUpdateWorkout({
       ...activeWorkout,
       exercises: activeWorkout.exercises.map((ex) => {
         if (ex.id !== exerciseId) return ex;
         const updatedSets = ex.sets.filter((s) => s.id !== setId);
-        return {
-          ...ex,
-          sets: updatedSets.length > 0 ? updatedSets : [
-            { id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }
-          ],
-        };
+        return { ...ex, sets: updatedSets.length > 0 ? updatedSets : [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }] };
       }),
     });
   };
 
-  // Update set field (weight, reps, or completed status)
   const handleUpdateSet = (exerciseId: string, setId: string, updates: Partial<Set>) => {
     onUpdateWorkout({
       ...activeWorkout,
@@ -228,13 +257,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           ...ex,
           sets: ex.sets.map((s) => {
             if (s.id !== setId) return s;
-            
-            const isMarkingComplete = updates.isCompleted === true && !s.isCompleted;
-            if (isMarkingComplete) {
+            if (updates.isCompleted === true && !s.isCompleted) {
               setRestTimeLeft(settings.defaultRestDuration);
               setRestDuration(settings.defaultRestDuration);
             }
-
             return { ...s, ...updates };
           }),
         };
@@ -242,15 +268,23 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     });
   };
 
-  const filteredExercises = exercises.filter(ex =>
-    ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ex.category.toLowerCase().includes(searchQuery.toLowerCase())
+  // Combine local custom exercises + filter API exercises
+  const localExercises = exercises.filter(ex => ex.isCustom);
+
+  const filteredApiExercises = apiExercises.filter(ex => {
+    const matchesMuscle = muscleFilter === 'all' || ex.primaryMuscles.some(m => m.toLowerCase() === muscleFilter);
+    const matchesSearch = !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase()) || ex.primaryMuscles.some(m => m.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesMuscle && matchesSearch;
+  });
+
+  const filteredLocalExercises = localExercises.filter(ex =>
+    !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase()) || ex.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-      
-      {/* Workout Header Info */}
+
+      {/* Workout Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <input
@@ -258,182 +292,94 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             className="form-input"
             value={activeWorkout.name}
             onChange={(e) => onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
-            style={{
-              fontSize: '1.4rem',
-              fontWeight: 850,
-              fontFamily: 'var(--font-display)',
-              background: 'transparent',
-              border: 'none',
-              padding: '4px 0',
-              width: '220px',
-              borderBottom: '1px solid transparent',
-              borderRadius: 0
-            }}
+            style={{ fontSize: '1.4rem', fontWeight: 850, fontFamily: 'var(--font-display)', background: 'transparent', border: 'none', padding: '4px 0', width: '200px', borderBottom: '1px solid transparent', borderRadius: 0 }}
             placeholder="Nome do Treino"
             onFocus={(e) => e.target.style.borderBottom = '1px solid var(--accent-color)'}
             onBlur={(e) => e.target.style.borderBottom = '1px solid transparent'}
           />
           <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: 'var(--accent-color)', borderRadius: '50%', boxShadow: '0 0 6px var(--accent-color)' }}></span>
+            <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: 'var(--accent-color)', borderRadius: '50%', boxShadow: '0 0 6px var(--accent-color)' }} />
             A treinar...
           </div>
         </div>
 
-        {/* Workout Duration */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '8px 14px', borderRadius: '20px', border: '1px solid var(--border-color)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
-          ⏱️ {formatElapsed(elapsedSeconds)}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Timer */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+            ⏱️ {formatElapsed(elapsedSeconds)}
+          </div>
+          {/* Discard button — subtle trash icon */}
+          <button
+            onClick={onCancelWorkout}
+            style={{ background: 'none', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
+            title="Descartar treino"
+          >
+            <Trash2 size={15} />
+          </button>
         </div>
       </div>
 
-      {/* Exercises List in Workout */}
+      {/* Exercises */}
       {activeWorkout.exercises.map((workoutExercise) => (
         <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
-          
-          {/* Exercise Title */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
-                {workoutExercise.name}
-              </h4>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                {workoutExercise.category}
-              </span>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>{workoutExercise.name}</h4>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{workoutExercise.category}</span>
             </div>
-            <button 
-              onClick={() => handleRemoveExercise(workoutExercise.id)}
-              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6 }}
-              onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-              onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}
-            >
-              <Trash2 size={16} />
+            <button onClick={() => handleRemoveExercise(workoutExercise.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6 }}>
+              <X size={16} />
             </button>
           </div>
 
-          {/* Sets Headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '40px 1.2fr 1fr 40px', gap: '10px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', paddingLeft: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          {/* Set headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '40px 1.2fr 1fr 40px', gap: '10px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span style={{ textAlign: 'center' }}>Série</span>
             <span style={{ textAlign: 'center' }}>Peso (kg)</span>
             <span style={{ textAlign: 'center' }}>Reps</span>
             <span style={{ textAlign: 'center' }}>OK</span>
           </div>
 
-          {/* Sets Rows */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {workoutExercise.sets.map((set, setIdx) => (
-              <div 
-                key={set.id}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '40px 1.2fr 1fr 40px',
-                  gap: '10px',
-                  alignItems: 'center',
-                  padding: '6px 8px',
-                  borderRadius: '10px',
-                  backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)',
-                  border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)',
-                  transition: 'all var(--transition-fast)'
-                }}
-              >
-                {/* Set Number */}
-                <div 
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 800,
-                    fontSize: '0.95rem',
-                    textAlign: 'center',
-                    color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => handleRemoveSet(workoutExercise.id, set.id)}
-                  title="Remover série"
-                >
+              <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '40px 1.2fr 1fr 40px', gap: '10px', alignItems: 'center', padding: '6px 8px', borderRadius: '10px', backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)', border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)', transition: 'all var(--transition-fast)' }}>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', textAlign: 'center', color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => handleRemoveSet(workoutExercise.id, set.id)} title="Remover série">
                   {setIdx + 1}
                 </div>
 
-                {/* Weight Input with +/- Helpers */}
+                {/* Weight */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                  <button 
-                    className="btn-inc-dec" 
-                    disabled={set.isCompleted}
-                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}
-                  >
-                    -
-                  </button>
+                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}>-</button>
                   <input
                     type="number"
-                    pattern="[0-9]*"
-                    inputMode="decimal"
-                    className="form-input"
+                    className="form-input set-input"
                     value={set.weight || ''}
-                    disabled={set.isCompleted}
+                    readOnly={set.isCompleted}
                     onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { weight: parseFloat(e.target.value) || 0 })}
-                    style={{
-                      textAlign: 'center',
-                      padding: '5px',
-                      maxWidth: '45px',
-                      fontSize: '0.9rem',
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 800,
-                      border: 'none',
-                      background: 'transparent',
-                      opacity: set.isCompleted ? 0.6 : 1
-                    }}
                     placeholder="0"
+                    style={{ width: '54px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem', padding: '6px 4px', opacity: set.isCompleted ? 0.7 : 1 }}
                   />
-                  <button 
-                    className="btn-inc-dec" 
-                    disabled={set.isCompleted}
-                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}
-                  >
-                    +
-                  </button>
+                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}>+</button>
                 </div>
 
-                {/* Reps Input with +/- Helpers */}
+                {/* Reps */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                  <button 
-                    className="btn-inc-dec" 
-                    disabled={set.isCompleted}
-                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}
-                  >
-                    -
-                  </button>
+                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}>-</button>
                   <input
                     type="number"
-                    pattern="[0-9]*"
-                    inputMode="numeric"
-                    className="form-input"
+                    className="form-input set-input"
                     value={set.reps || ''}
-                    disabled={set.isCompleted}
+                    readOnly={set.isCompleted}
                     onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { reps: parseInt(e.target.value, 10) || 0 })}
-                    style={{
-                      textAlign: 'center',
-                      padding: '5px',
-                      maxWidth: '35px',
-                      fontSize: '0.9rem',
-                      fontFamily: 'var(--font-display)',
-                      fontWeight: 800,
-                      border: 'none',
-                      background: 'transparent',
-                      opacity: set.isCompleted ? 0.6 : 1
-                    }}
                     placeholder="0"
+                    style={{ width: '44px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem', padding: '6px 4px', opacity: set.isCompleted ? 0.7 : 1 }}
                   />
-                  <button 
-                    className="btn-inc-dec" 
-                    disabled={set.isCompleted}
-                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}
-                  >
-                    +
-                  </button>
+                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}>+</button>
                 </div>
 
-                {/* Checkbox (Complete) */}
+                {/* Check */}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button
-                    className={`set-checkbox ${set.isCompleted ? 'checked' : ''}`}
-                    onClick={() => handleUpdateSet(workoutExercise.id, set.id, { isCompleted: !set.isCompleted })}
-                  >
+                  <button className={`set-checkbox ${set.isCompleted ? 'checked' : ''}`} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { isCompleted: !set.isCompleted })}>
                     <Check size={16} strokeWidth={3} />
                   </button>
                 </div>
@@ -441,77 +387,25 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             ))}
           </div>
 
-          {/* Add Set Button */}
-          <button
-            onClick={() => handleAddSet(workoutExercise.id)}
-            style={{
-              width: '100%',
-              background: 'none',
-              border: '1px dashed var(--border-color)',
-              color: 'var(--text-secondary)',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              padding: '10px',
-              borderRadius: '10px',
-              cursor: 'pointer',
-              marginTop: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              transition: 'all var(--transition-fast)'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'none';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
-            }}
-          >
+          {/* Add Set */}
+          <button onClick={() => handleAddSet(workoutExercise.id)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700, padding: '10px', borderRadius: '10px', cursor: 'pointer', marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <Plus size={14} /> Adicionar Série
           </button>
-
         </div>
       ))}
 
-      {/* Main Buttons */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
-        <button
-          className="btn btn-secondary"
-          onClick={() => setShowAddExerciseModal(true)}
-          style={{ flex: 1, padding: '15px' }}
-        >
-          <Plus size={18} /> Adicionar Exercício
-        </button>
-        
-        <button
-          className="btn btn-primary"
-          onClick={onSaveWorkout}
-          style={{ flex: 1, padding: '15px' }}
-        >
-          Gravar Treino
-        </button>
-      </div>
-
+      {/* Add Exercise button */}
       <button
-        className="btn btn-danger btn-small"
-        onClick={onCancelWorkout}
-        style={{ marginTop: '10px', width: '100%', padding: '12px' }}
+        className="btn btn-secondary"
+        onClick={() => setShowAddExerciseModal(true)}
+        style={{ padding: '15px', fontSize: '0.95rem' }}
       >
-        Descartar Treino
+        <Plus size={18} /> Adicionar Exercício
       </button>
 
-      {/* Circular Floating Rest Timer */}
+      {/* Circular Rest Timer */}
       {restTimeLeft !== null && (
-        <div 
-          className="circular-timer-container" 
-          onClick={() => {
-            setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30));
-          }}
-          title="Clique para adicionar +30s"
-        >
+        <div className="circular-timer-container" onClick={() => setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30))} title="Clique para adicionar +30s">
           <svg className="circular-timer-svg">
             <defs>
               <linearGradient id="timer-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -520,124 +414,255 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
               </linearGradient>
             </defs>
             <circle cx="43" cy="43" r="36" className="circular-timer-bg" />
-            <circle 
-              cx="43" 
-              cy="43" 
-              r="36" 
-              className="circular-timer-progress" 
-              strokeDasharray="226" 
-              strokeDashoffset={226 - (226 * restTimeLeft) / restDuration} 
-            />
+            <circle cx="43" cy="43" r="36" className="circular-timer-progress" strokeDasharray="226" strokeDashoffset={226 - (226 * restTimeLeft) / restDuration} />
           </svg>
           <div className="circular-timer-text">
             <span>{Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}</span>
             <span className="circular-timer-sub">+30s</span>
           </div>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setRestTimeLeft(null);
-            }}
-            style={{
-              position: 'absolute',
-              top: '-4px',
-              right: '-4px',
-              backgroundColor: '#ef4444',
-              border: 'none',
-              borderRadius: '50%',
-              width: '18px',
-              height: '18px',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: '10px',
-              fontWeight: 'bold',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.6)'
-            }}
-          >
-            ×
-          </button>
+          <button onClick={(e) => { e.stopPropagation(); setRestTimeLeft(null); }} style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', border: 'none', borderRadius: '50%', width: '18px', height: '18px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>×</button>
         </div>
       )}
 
-      {/* Add Exercise Modal */}
+      {/* ─── Add Exercise Modal ──────────────────────────────────────────────── */}
       {showAddExerciseModal && (
-        <div className="modal-overlay" onClick={() => setShowAddExerciseModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Escolher Exercício</h3>
-              <button 
-                onClick={() => setShowAddExerciseModal(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Pesquisar exercício ou grupo muscular..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ marginBottom: '18px' }}
-            />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '350px', overflowY: 'auto', paddingRight: '4px' }}>
-              {filteredExercises.length > 0 ? (
-                filteredExercises.map((ex) => {
-                  const isAlreadyAdded = activeWorkout.exercises.some((added) => added.id === ex.id);
-                  return (
-                    <button
-                      key={ex.id}
-                      onClick={() => handleAddExercise(ex)}
-                      disabled={isAlreadyAdded}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '14px 16px',
-                        borderRadius: '12px',
-                        background: isAlreadyAdded ? 'rgba(255, 255, 255, 0.01)' : 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid var(--border-color)',
-                        color: isAlreadyAdded ? 'var(--text-muted)' : 'var(--text-primary)',
-                        textAlign: 'left',
-                        cursor: isAlreadyAdded ? 'not-allowed' : 'pointer',
-                        transition: 'background var(--transition-fast)'
-                      }}
-                      onMouseOver={(e) => {
-                        if (!isAlreadyAdded) e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                      }}
-                      onMouseOut={(e) => {
-                        if (!isAlreadyAdded) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{ex.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{ex.category}</div>
-                      </div>
-                      {isAlreadyAdded ? (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700 }}>Adicionado</span>
-                      ) : (
-                        <Plus size={18} style={{ color: 'var(--accent-color)' }} />
-                      )}
-                    </button>
-                  );
-                })
-              ) : (
-                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0', fontSize: '0.85rem' }}>
-                  Nenhum exercício encontrado.
+        <div
+          onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); setSearchQuery(''); setMuscleFilter('all'); }}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '480px', height: '92vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', borderRadius: '24px 24px 0 0', overflow: 'hidden' }}
+          >
+            {/* ── Exercise Detail View ── */}
+            {selectedApiExercise ? (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
+                  <button onClick={() => setSelectedApiExercise(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
+                    <ChevronLeft size={22} />
+                  </button>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedApiExercise.name}</h3>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                      {selectedApiExercise.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}
+                    </div>
+                  </div>
+                  <button onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                    <X size={20} />
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {/* Scrollable content */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+                  {/* Image Slideshow */}
+                  {selectedApiExercise.images.length > 0 && (
+                    <div style={{ margin: '16px 0', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '220px' }}>
+                      <img
+                        key={imageIdx}
+                        src={`${DB_BASE}/exercises/${selectedApiExercise.images[imageIdx]}`}
+                        alt={selectedApiExercise.name}
+                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Meta badges */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                    {[
+                      { label: selectedApiExercise.level, color: selectedApiExercise.level === 'beginner' ? '#10b981' : selectedApiExercise.level === 'intermediate' ? '#f59e0b' : '#ef4444' },
+                      { label: selectedApiExercise.equipment, color: 'var(--accent-color)' },
+                      ...(selectedApiExercise.force ? [{ label: selectedApiExercise.force, color: 'var(--text-secondary)' }] : []),
+                    ].map((badge) => (
+                      <span key={badge.label} style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.03)', border: `1px solid ${badge.color}20`, color: badge.color, textTransform: 'capitalize' }}>
+                        {badge.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Muscles */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Músculos</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {selectedApiExercise.primaryMuscles.map(m => (
+                        <span key={m} style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(255,94,58,0.08)', color: 'var(--accent-color)', border: '1px solid rgba(255,94,58,0.2)' }}>
+                          {MUSCLE_LABELS[m] || m}
+                        </span>
+                      ))}
+                      {selectedApiExercise.secondaryMuscles.map(m => (
+                        <span key={m} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '10px', backgroundColor: '#f1f5f9', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+                          {MUSCLE_LABELS[m] || m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  {selectedApiExercise.instructions.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Execução</div>
+                      <ol style={{ paddingLeft: '0', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', listStyle: 'none' }}>
+                        {selectedApiExercise.instructions.map((step, i) => (
+                          <li key={i} style={{ display: 'flex', gap: '12px', fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: '1.5' }}>
+                            <span style={{ flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'rgba(255,94,58,0.08)', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.7rem', marginTop: '1px' }}>{i + 1}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add button */}
+                <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-color)', flexShrink: 0 }}>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleAddExercise(selectedApiExercise)}
+                    style={{ width: '100%', padding: '14px', fontSize: '0.95rem' }}
+                  >
+                    <Plus size={16} /> Adicionar ao Treino
+                  </button>
+                </div>
+              </div>
+
+            ) : (
+              // ── Exercise List View ──
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                {/* Header */}
+                <div style={{ padding: '16px 20px 12px', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Exercícios</h3>
+                    <button onClick={() => { setShowAddExerciseModal(false); setSearchQuery(''); setMuscleFilter('all'); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Search */}
+                  <div style={{ position: 'relative', marginBottom: '12px' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Pesquisar exercício ou músculo..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '36px' }}
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Muscle Filters */}
+                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                    {[{ key: 'all', label: 'Todos' }, ...ALL_FILTER_MUSCLES.map(m => ({ key: m, label: MUSCLE_LABELS[m] || m }))].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setMuscleFilter(key)}
+                        style={{
+                          flexShrink: 0, fontSize: '0.7rem', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all var(--transition-fast)',
+                          backgroundColor: muscleFilter === key ? 'var(--accent-color)' : 'transparent',
+                          borderColor: muscleFilter === key ? 'var(--accent-color)' : 'var(--border-color)',
+                          color: muscleFilter === key ? '#fff' : 'var(--text-secondary)',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* List */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
+                  {/* Local custom exercises */}
+                  {filteredLocalExercises.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Personalizados</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {filteredLocalExercises.map(ex => {
+                          const added = activeWorkout.exercises.some(a => a.id === ex.id);
+                          return (
+                            <button key={ex.id} disabled={added} onClick={() => handleAddExercise(ex)}
+                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--border-color)', background: added ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)', cursor: added ? 'not-allowed' : 'pointer', color: added ? 'var(--text-muted)' : 'var(--text-primary)', textAlign: 'left' }}>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{ex.name}</div>
+                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{ex.category}</div>
+                              </div>
+                              {added ? <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Adicionado</span> : <Plus size={16} style={{ color: 'var(--accent-color)' }} />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* API Exercises */}
+                  {apiLoading ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '40px 0', color: 'var(--text-secondary)' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', animation: 'spin 0.8s linear infinite' }} />
+                      <span style={{ fontSize: '0.85rem' }}>A carregar exercícios...</span>
+                    </div>
+                  ) : apiError ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '30px 0', fontSize: '0.85rem' }}>
+                      Sem ligação à internet.<br />Os exercícios personalizados continuam disponíveis.
+                    </div>
+                  ) : (
+                    <>
+                      {filteredApiExercises.length > 0 && (
+                        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+                          Base de Dados ({filteredApiExercises.length})
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {filteredApiExercises.map(ex => {
+                          const added = activeWorkout.exercises.some(a => a.id === ex.id);
+                          return (
+                            <button
+                              key={ex.id}
+                              onClick={() => setSelectedApiExercise(ex)}
+                              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border-color)', background: added ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                            >
+                              {/* Thumbnail */}
+                              <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <img
+                                  src={`${DB_BASE}/exercises/${ex.images[0]}`}
+                                  alt={ex.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => {
+                                    const el = e.currentTarget;
+                                    el.style.display = 'none';
+                                    el.parentElement!.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg>';
+                                  }}
+                                />
+                              </div>
+                              {/* Info */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: added ? 'var(--success)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ex.name}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{ex.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}</div>
+                              </div>
+                              {/* Action */}
+                              {added ? (
+                                <Check size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
+                              ) : (
+                                <Info size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                              )}
+                            </button>
+                          );
+                        })}
+                        {filteredApiExercises.length === 0 && !apiLoading && (
+                          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0', fontSize: '0.85rem' }}>Nenhum exercício encontrado.</div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
+      {/* Spin animation for loader */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
-
-

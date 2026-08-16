@@ -311,7 +311,28 @@ export default function App() {
         </h1>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Glow Indicators or Quick Active Workout link */}
+          {/* Workout header buttons */}
+          {activeWorkout && activeTab === 'workout' && (
+            <button
+              onClick={handleSaveWorkout}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#10b981',
+                border: 'none',
+                color: '#fff',
+                padding: '7px 14px',
+                borderRadius: '20px',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
+              }}
+            >
+              ✓ Finalizar
+            </button>
+          )}
           {activeWorkout && activeTab !== 'workout' && (
             <button
               onClick={() => setActiveTab('workout')}
@@ -330,7 +351,7 @@ export default function App() {
                 animation: 'pulse 2s infinite'
               }}
             >
-              Treino Ativo ⚡
+              ⚡ Ativo
             </button>
           )}
 
