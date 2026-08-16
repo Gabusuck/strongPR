@@ -52,14 +52,11 @@ html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  overflow: hidden;
-  height: 100vh;
-  height: 100dvh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  min-height: 100%;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto; /* Scroll nativo no telemóvel */
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -71,17 +68,22 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  height: auto;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: hidden;
+  overflow: visible; /* Deixa o conteúdo crescer */
 }
 
 @media (min-width: 576px) {
+  html, body {
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden; /* Tranca scroll no desktop */
+  }
   body {
     background-color: #f8fafc; /* Fundo cinza muito claro no desktop */
     display: flex;
@@ -96,10 +98,23 @@ body {
     overflow: hidden;
     border: 8px solid #ffffff; /* Borda branca imitando telemóvel */
   }
+  .app-content {
+    overflow-y: auto; /* Scroll apenas dentro do ecrã no desktop */
+  }
+  .bottom-nav {
+    position: absolute; /* Fixa o menu dentro do simulador */
+    bottom: 10px;
+    left: 16px;
+    right: 16px;
+    transform: none;
+    width: auto;
+  }
 }
 
 /* Header no topo */
 .app-header {
+  position: sticky;
+  top: 0;
   height: calc(64px + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   padding-left: 24px;
@@ -111,7 +126,7 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   background: rgba(248, 250, 252, 0.85);
-  z-index: 10;
+  z-index: 90;
 }
 
 .app-title {
@@ -130,9 +145,8 @@ body {
 /* Área de Conteúdo principal */
 .app-content {
   flex: 1;
-  overflow-y: auto;
+  overflow: visible; /* Scroll na página geral no telemóvel */
   padding: 24px 20px calc(58px + 10px + env(safe-area-inset-bottom, 0px) + 20px) 20px; /* Margem extra no fundo para a barra flutuante */
-  -webkit-overflow-scrolling: touch;
   background-color: var(--bg-primary);
 }
 
@@ -160,10 +174,12 @@ body {
 /* Barra de Navegação Estilo Cápsula Flutuante */
 .bottom-nav {
   height: 58px;
-  position: absolute;
+  position: fixed; /* Flutua na janela do browser no telemóvel */
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  left: 16px;
-  right: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 32px);
+  max-width: 448px;
   background: rgba(255, 255, 255, 0.5); /* Meia transparente */
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
