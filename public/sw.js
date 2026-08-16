@@ -73,7 +73,7 @@ self.addEventListener('fetch', (event) => {
         .catch(() => {
           // If offline and navigating, return index.html
           if (event.request.mode === 'navigate') {
-            return caches.match('./index.html') || caches.match('/');
+            return caches.match('./index.html').then((res) => res || caches.match('./') || caches.match('/'));
           }
         });
     })
