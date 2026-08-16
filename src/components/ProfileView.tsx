@@ -559,8 +559,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       </div>
 
-    </div>
-
       {/* EDIT PROFILE MODAL */}
       {showEditProfileModal && (
         <div className="modal-overlay" onClick={() => setShowEditProfileModal(false)}>
