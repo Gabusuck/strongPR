@@ -19,6 +19,26 @@ export default function App() {
   const backupInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
 
+  // Swipe-to-close for settings modal
+  const swipeTouchStartY = useRef<number>(0);
+  const onSettingsTouchStart = (e: React.TouchEvent) => {
+    swipeTouchStartY.current = e.touches[0].clientY;
+  };
+  const onSettingsTouchEnd = (e: React.TouchEvent) => {
+    const delta = e.changedTouches[0].clientY - swipeTouchStartY.current;
+    if (delta > 60) setShowSettingsModal(false);
+  };
+
+  // Lock body scroll when settings modal is open
+  useEffect(() => {
+    if (showSettingsModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [showSettingsModal]);
+
   const handleImportClick = () => {
     backupInputRef.current?.click();
   };
@@ -422,11 +442,43 @@ export default function App() {
 
       {/* Settings Modal */}
       {showSettingsModal && (
-        <div className="modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div
+          onClick={() => setShowSettingsModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.55)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={onSettingsTouchStart}
+            onTouchEnd={onSettingsTouchEnd}
+            style={{
+              width: '100%',
+              maxWidth: '480px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              backgroundColor: 'var(--bg-primary)',
+              borderRadius: '24px 24px 0 0',
+              padding: '12px 20px 32px',
+              boxShadow: '0 -8px 40px rgba(15, 23, 42, 0.15)',
+            }}
+          >
+            {/* Drag Handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', backgroundColor: 'var(--border-color)' }} />
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Definições</h3>
-              <button 
+              <button
                 onClick={() => setShowSettingsModal(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
               >
