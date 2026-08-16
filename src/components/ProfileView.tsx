@@ -170,7 +170,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button 
             onClick={() => setSubView('main')}
-            style={{ background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all var(--transition-fast)' }}
+            style={{ background: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all var(--transition-fast)' }}
           >
             <ArrowLeft size={18} />
           </button>
@@ -276,7 +276,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button 
               className="btn btn-secondary btn-small"
               onClick={() => exportBackup(appData)}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               <Download size={14} /> Exportar
             </button>
@@ -284,7 +284,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button 
               className="btn btn-secondary btn-small"
               onClick={handleImportClick}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', justifyContent: 'center', gap: '6px' }}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
               <Upload size={14} /> Importar
             </button>
@@ -326,7 +326,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <button 
             className="btn btn-danger btn-small"
             onClick={handleResetClick}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%' }}
           >
             <RotateCcw size={14} /> Apagar Tudo e Reiniciar
           </button>
@@ -340,7 +340,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       
       {/* Profile Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', borderBottom: '1px solid var(--border-color)', paddingBottom: '20px' }}>
-        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px var(--accent-glow)' }}>
+        <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px var(--accent-glow)' }}>
           <User size={30} />
         </div>
         <div>
@@ -352,7 +352,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Stats Grid */}
       <div className="stat-grid">
         <div className="stat-box">
-          <div style={{ display: 'flex', justifyContent: 'center', justifyContent: 'center', color: 'var(--accent-color)', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--accent-color)', marginBottom: '4px' }}>
             <Dumbbell size={16} />
           </div>
           <div className="stat-val">{totalWorkouts}</div>
@@ -360,7 +360,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
         
         <div className="stat-box">
-          <div style={{ display: 'flex', justifyContent: 'center', justifyContent: 'center', color: '#f59e0b', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', color: '#f59e0b', marginBottom: '4px' }}>
             <Trophy size={16} />
           </div>
           <div className="stat-val">{totalPRs}</div>
@@ -368,7 +368,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         <div className="stat-box">
-          <div style={{ display: 'flex', justifyContent: 'center', justifyContent: 'center', color: '#ef4444', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', color: '#ef4444', marginBottom: '4px' }}>
             <Flame size={16} />
           </div>
           <div className="stat-val">{recentWorkouts}</div>
