@@ -509,7 +509,10 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
           </div>
           
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn btn-secondary btn-small" onClick={() => fileInputRef.current?.click()} style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700 }}>Carregar Foto</button>
+            <button type="button" className="btn btn-secondary btn-small" onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700 }}>
+              <Upload size={12} style={{ marginRight: '6px' }} />
+              Carregar Foto
+            </button>
             {avatarType === 'image' && (
               <button type="button" className="btn btn-secondary btn-small" onClick={() => { setAvatarUrl(''); setAvatarType('silhouette'); }} style={{ padding: '6px 12px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>Remover</button>
             )}
