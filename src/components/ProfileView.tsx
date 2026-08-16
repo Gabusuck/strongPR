@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import type { Workout, PersonalRecord, Exercise, AppSettings, AppData, UserProfile } from '../types';
+import type { Workout, PersonalRecord, Exercise, UserProfile } from '../types';
 import { PRTracker } from './PRTracker';
 import { ExercisesList } from './ExercisesList';
 import { Trophy, Flame, Dumbbell, Calendar, Upload, ArrowLeft, TrendingUp, X } from 'lucide-react';
