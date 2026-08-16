@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ActiveTab, AppData, Workout, AppSettings } from './types';
 import { loadAppData, saveAppData, checkAndUpdatePRs, INITIAL_DATA } from './storage';
 import { WorkoutLog } from './components/WorkoutLog';
 import { HistoryView } from './components/HistoryView';
 import { ProfileView } from './components/ProfileView';
-import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy } from 'lucide-react';
+import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload } from 'lucide-react';
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_DATA);
@@ -241,6 +241,25 @@ export default function App() {
     }
   };
 
+  // Onboarding welcome flow if not onboarded
+  if (appData.profile && !appData.profile.onboarded) {
+    return (
+      <div className="app-container" style={{ padding: '24px 20px', overflowY: 'auto' }}>
+        <OnboardWizard 
+          onComplete={(profileData) => {
+            updateAppDataState({
+              ...appData,
+              profile: {
+                ...profileData,
+                onboarded: true
+              }
+            });
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       
@@ -369,3 +388,206 @@ export default function App() {
     </div>
   );
 }
+
+interface OnboardWizardProps {
+  onComplete: (profile: { name: string; weight: number; height: number; age: number; avatarUrl: string; avatarType: 'emoji' | 'image' }) => void;
+}
+
+const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
+  const [name, setName] = useState('');
+  const [weight, setWeight] = useState('70');
+  const [height, setHeight] = useState('175');
+  const [age, setAge] = useState('25');
+  const [avatarUrl, setAvatarUrl] = useState('💪');
+  const [avatarType, setAvatarType] = useState<'emoji' | 'image'>('emoji');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 150;
+          const MAX_HEIGHT = 150;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+            setAvatarUrl(compressed);
+            setAvatarType('image');
+          }
+        };
+        img.src = ev.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      alert('Por favor, indica o teu nome.');
+      return;
+    }
+    onComplete({
+      name,
+      weight: parseFloat(weight) || 70,
+      height: parseFloat(height) || 175,
+      age: parseInt(age, 10) || 25,
+      avatarUrl,
+      avatarType
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '22px', minHeight: '100%', justifyContent: 'center', padding: '10px 0' }}>
+      <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+        <div style={{ display: 'inline-flex', padding: '16px', borderRadius: '50%', backgroundColor: 'rgba(255, 94, 58, 0.06)', color: 'var(--accent-color)', marginBottom: '14px' }}>
+          <Dumbbell size={40} style={{ transform: 'rotate(-45deg)' }} />
+        </div>
+        <h2 style={{ fontSize: '1.7rem', fontWeight: 900, fontFamily: 'var(--font-display)', background: 'var(--accent-gradient)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.03em' }}>
+          Bem-vindo ao StrongPR!
+        </h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '6px', maxWidth: '300px', margin: '6px auto 0 auto', lineHeight: '1.4' }}>
+          Configura o teu perfil para poderes registar treinos, bater recordes e calcular o teu IMC.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} className="glass-card">
+        
+        {/* Avatar Pick */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '3px solid var(--accent-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', fontSize: '38px', boxShadow: '0 4px 15px rgba(0,0,0,0.06)' }}>
+            {avatarType === 'image' ? (
+              <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              avatarUrl
+            )}
+          </div>
+          
+          <button
+            type="button"
+            className="btn btn-secondary btn-small"
+            onClick={() => fileInputRef.current?.click()}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '0.78rem' }}
+          >
+            <Upload size={12} /> Carregar Foto
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*"
+            onChange={handlePhotoUpload}
+            style={{ display: 'none' }}
+          />
+
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center', marginTop: '4px' }}>
+            {['💪', '🏋️‍♂️', '🏃‍♂️', '🥊', '🏆', '🔥', '⚡', '👑'].map(emoji => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  setAvatarUrl(emoji);
+                  setAvatarType('emoji');
+                }}
+                style={{
+                  fontSize: '1.25rem',
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  border: avatarType === 'emoji' && avatarUrl === emoji ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                  background: '#ffffff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Name */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>O teu Nome</label>
+          <input
+            type="text"
+            required
+            placeholder="ex: Gabin Amaral"
+            className="form-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            style={{ fontWeight: 600 }}
+          />
+        </div>
+
+        {/* Weight & Height */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Peso (kg)</label>
+            <input
+              type="number"
+              step="0.1"
+              required
+              className="form-input"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              style={{ fontWeight: 700, fontFamily: 'var(--font-display)' }}
+            />
+          </div>
+
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Altura (cm)</label>
+            <input
+              type="number"
+              required
+              className="form-input"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              style={{ fontWeight: 700, fontFamily: 'var(--font-display)' }}
+            />
+          </div>
+        </div>
+
+        {/* Age */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Idade (Anos)</label>
+          <input
+            type="number"
+            required
+            className="form-input"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            style={{ fontWeight: 600 }}
+          />
+        </div>
+
+        <button type="submit" className="btn btn-primary" style={{ marginTop: '10px', padding: '14px', width: '100%' }}>
+          Começar a Treinar! ⚡
+        </button>
+      </form>
+    </div>
+  );
+};

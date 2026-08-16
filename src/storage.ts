@@ -25,10 +25,13 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export const DEFAULT_PROFILE: UserProfile = {
-  name: 'Atleta Gabin',
-  weight: 78,
+  name: '',
+  weight: 70,
+  height: 175,
+  age: 25,
   avatarUrl: '💪',
   avatarType: 'emoji',
+  onboarded: false,
 };
 
 // Initial App State

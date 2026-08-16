@@ -47,6 +47,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editName, setEditName] = useState(profile.name);
   const [editWeight, setEditWeight] = useState(profile.weight.toString());
+  const [editHeight, setEditHeight] = useState(profile.height.toString());
+  const [editAge, setEditAge] = useState(profile.age.toString());
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl);
   const [editAvatarType, setEditAvatarType] = useState(profile.avatarType);
 
@@ -112,6 +114,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const weeklyStats = getWeeklyWorkoutStats();
 
+  // Calculate IMC/BMI
+  const calculateIMC = () => {
+    if (!profile.height || !profile.weight) return { value: 0, label: 'N/A', color: 'var(--text-secondary)' };
+    const heightInMeters = profile.height / 100;
+    const value = Math.round((profile.weight / (heightInMeters * heightInMeters)) * 10) / 10;
+    
+    let label = 'Saudável 🟢';
+    let color = '#10b981'; // Green
+    if (value < 18.5) {
+      label = 'Abaixo do Peso 🟡';
+      color = '#eab308'; // Yellow
+    } else if (value >= 25 && value < 30) {
+      label = 'Sobrepeso 🟠';
+      color = '#f97316'; // Orange
+    } else if (value >= 30) {
+      label = 'Obesidade 🔴';
+      color = '#ef4444'; // Red
+    }
+    return { value, label, color };
+  };
+
+  const imcData = calculateIMC();
+
   const handleRestTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);
     onUpdateSettings({
@@ -144,6 +169,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (confirm('ATENÇÃO: Tens a certeza absoluta de que queres eliminar TODOS os teus dados de treinos, exercícios personalizados e recordes pessoais? Esta ação é irreversível.')) {
       onResetData();
       setSubView('main');
+    }
+  };
+
+  // Image resizing and compression to prevent localstorage quota errors
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 150;
+          const MAX_HEIGHT = 150;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Compress image to low-size JPEG
+            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+            setEditAvatarUrl(compressed);
+            setEditAvatarType('image');
+          }
+        };
+        img.src = ev.target?.result as string;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -308,6 +376,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             onClick={() => {
               setEditName(profile.name);
               setEditWeight(profile.weight.toString());
+              setEditHeight(profile.height.toString());
+              setEditAge(profile.age.toString());
               setEditAvatarUrl(profile.avatarUrl);
               setEditAvatarType(profile.avatarType);
               setShowEditProfileModal(true);
@@ -320,9 +390,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
           <div>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>{profile.name}</h2>
+            <h2 style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>{profile.name || 'Sem Nome'}</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700 }}>
-              ⚖️ {profile.weight} kg • Nível: Superador
+              ⚖️ {profile.weight} kg • {profile.age} anos
             </p>
           </div>
         </div>
@@ -331,6 +401,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           onClick={() => {
             setEditName(profile.name);
             setEditWeight(profile.weight.toString());
+            setEditHeight(profile.height.toString());
+            setEditAge(profile.age.toString());
             setEditAvatarUrl(profile.avatarUrl);
             setEditAvatarType(profile.avatarType);
             setShowEditProfileModal(true);
@@ -339,6 +411,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         >
           Editar
         </button>
+      </div>
+
+      {/* IMC Display Card */}
+      <div className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', marginBottom: 0 }}>
+        <div>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800 }}>Índice de Massa Corporal (IMC)</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 900, fontFamily: 'var(--font-display)' }}>{imcData.value}</span>
+            <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', backgroundColor: `${imcData.color}15`, color: imcData.color, border: `1px solid ${imcData.color}30` }}>
+              {imcData.label}
+            </span>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+          Altura: {profile.height} cm<br/>
+          Idade: {profile.age} anos
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -586,7 +675,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '10px' }}>
-          StrongPR PWA • Versão 1.1.0 (Light Theme)
+          StrongPR PWA • Versão 1.2.0 (IMC & Setup)
         </div>
       </div>
 
@@ -609,8 +698,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               onUpdateProfile({
                 name: editName,
                 weight: parseFloat(editWeight) || 0,
+                height: parseFloat(editHeight) || 0,
+                age: parseInt(editAge, 10) || 0,
                 avatarUrl: editAvatarUrl,
-                avatarType: editAvatarType
+                avatarType: editAvatarType,
+                onboarded: true
               });
               setShowEditProfileModal(false);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -638,19 +730,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   type="file"
                   ref={avatarUploadRef}
                   accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => {
-                        if (ev.target?.result) {
-                          setEditAvatarUrl(ev.target.result as string);
-                          setEditAvatarType('image');
-                        }
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
+                  onChange={handlePhotoUpload}
                   style={{ display: 'none' }}
                 />
 
@@ -690,6 +770,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <input
                   type="text"
                   required
+                  placeholder="ex: Gabin Amaral"
                   className="form-input"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
@@ -697,17 +778,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 />
               </div>
 
-              {/* Weight Input */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                {/* Weight Input */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peso (kg)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    required
+                    className="form-input"
+                    value={editWeight}
+                    onChange={(e) => setEditWeight(e.target.value)}
+                    style={{ fontWeight: 700, fontFamily: 'var(--font-display)' }}
+                  />
+                </div>
+
+                {/* Height Input */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Altura (cm)</label>
+                  <input
+                    type="number"
+                    required
+                    className="form-input"
+                    value={editHeight}
+                    onChange={(e) => setEditHeight(e.target.value)}
+                    style={{ fontWeight: 700, fontFamily: 'var(--font-display)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Age Input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peso Corporal (kg)</label>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Idade (Anos)</label>
                 <input
                   type="number"
-                  step="0.1"
                   required
                   className="form-input"
-                  value={editWeight}
-                  onChange={(e) => setEditWeight(e.target.value)}
-                  style={{ fontWeight: 700, fontFamily: 'var(--font-display)' }}
+                  value={editAge}
+                  onChange={(e) => setEditAge(e.target.value)}
+                  style={{ fontWeight: 600 }}
                 />
               </div>
 

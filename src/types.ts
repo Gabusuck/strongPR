@@ -42,8 +42,11 @@ export interface PersonalRecord {
 export interface UserProfile {
   name: string;
   weight: number;
+  height: number; // in cm
+  age: number;
   avatarUrl: string; // base64 string or emoji string
   avatarType: 'emoji' | 'image';
+  onboarded: boolean;
 }
 
 export type ActiveTab = 'history' | 'workout' | 'profile';
