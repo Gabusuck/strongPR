@@ -239,13 +239,8 @@ export default function App() {
             workouts={appData.workouts}
             prs={appData.prs}
             exercises={appData.exercises}
-            settings={appData.settings}
-            appData={appData}
             profile={appData.profile}
             onUpdateProfile={(updatedProfile) => updateAppDataState({ ...appData, profile: updatedProfile })}
-            onUpdateSettings={handleUpdateSettings}
-            onImportData={handleImportData}
-            onResetData={handleResetData}
             onAddManualPR={handleAddManualPR}
             onAddCustomExercise={handleAddExercise}
             onDeleteCustomExercise={handleDeleteExercise}

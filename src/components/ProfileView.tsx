@@ -8,13 +8,8 @@ interface ProfileViewProps {
   workouts: Workout[];
   prs: PersonalRecord[];
   exercises: Exercise[];
-  settings: AppSettings;
-  appData: AppData;
   profile: UserProfile;
   onUpdateProfile: (profile: UserProfile) => void;
-  onUpdateSettings: (settings: AppSettings) => void;
-  onImportData: (data: AppData) => void;
-  onResetData: () => void;
   onAddManualPR: (exerciseId: string, weight: number, reps: number, date: string) => void;
   onAddCustomExercise: (name: string, category: string) => void;
   onDeleteCustomExercise: (id: string) => void;
@@ -26,13 +21,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   workouts,
   prs,
   exercises,
-  settings,
-  appData,
   profile,
   onUpdateProfile,
-  onUpdateSettings,
-  onImportData,
-  onResetData,
   onAddManualPR,
   onAddCustomExercise,
   onDeleteCustomExercise,
