@@ -158,6 +158,52 @@ export default function App() {
     setActiveTab('workout');
   };
 
+  // Start workout from a pre-defined template
+  const handleStartWorkoutFromTemplate = (template: any) => {
+    const newWorkout: Workout = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+      templateId: template.id,
+      name: template.name,
+      date: new Date().toISOString(),
+      exercises: template.exercises.map((ex: any) => ({
+        ...ex,
+        sets: ex.sets.map((s: any) => ({
+          ...s,
+          id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+          isCompleted: false // Começa sempre limpo
+        }))
+      })),
+      duration: 0
+    };
+    setActiveWorkout(newWorkout);
+    setActiveTab('workout');
+  };
+
+  // Add a new template
+  const handleAddTemplate = (name: string, templateExercises: any[]) => {
+    const newTemplate = {
+      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+      name,
+      exercises: templateExercises.map((ex: any) => ({
+        ...ex,
+        sets: ex.sets.map((s: any) => ({ ...s, isCompleted: false }))
+      }))
+    };
+    
+    updateAppDataState({
+      ...appData,
+      templates: [...appData.templates, newTemplate]
+    });
+  };
+
+  // Delete an existing template
+  const handleDeleteTemplate = (templateId: string) => {
+    updateAppDataState({
+      ...appData,
+      templates: appData.templates.filter(t => t.id !== templateId)
+    });
+  };
+
   // Update active workout
   const handleUpdateActiveWorkout = (updated: Workout) => {
     setActiveWorkout(updated);
@@ -188,10 +234,29 @@ export default function App() {
     const { updatedPRs, newPRsCount } = checkAndUpdatePRs(finalWorkout, appData.prs);
     const updatedWorkouts = [finalWorkout, ...appData.workouts];
 
+    // Atualizar os pesos/reps no template correspondente se este treino veio de um template
+    let updatedTemplates = [...appData.templates];
+    if (finalWorkout.templateId) {
+      const templateIdx = updatedTemplates.findIndex(t => t.id === finalWorkout.templateId);
+      if (templateIdx !== -1) {
+        updatedTemplates[templateIdx] = {
+          ...updatedTemplates[templateIdx],
+          exercises: completedExercises.map(ex => ({
+            ...ex,
+            sets: ex.sets.map(s => ({
+              ...s,
+              isCompleted: false // Reset para a próxima sessão
+            }))
+          }))
+        };
+      }
+    }
+
     const updatedData: AppData = {
       ...appData,
       workouts: updatedWorkouts,
       prs: updatedPRs,
+      templates: updatedTemplates
     };
 
     updateAppDataState(updatedData);
@@ -307,10 +372,14 @@ export default function App() {
             activeWorkout={activeWorkout}
             exercises={appData.exercises}
             settings={appData.settings}
+            templates={appData.templates}
             onUpdateWorkout={handleUpdateActiveWorkout}
             onSaveWorkout={handleSaveWorkout}
             onCancelWorkout={handleCancelWorkout}
             onStartWorkout={handleStartWorkout}
+            onAddTemplate={handleAddTemplate}
+            onDeleteTemplate={handleDeleteTemplate}
+            onStartWorkoutFromTemplate={handleStartWorkoutFromTemplate}
           />
         );
       case 'profile':
@@ -332,10 +401,14 @@ export default function App() {
             activeWorkout={activeWorkout}
             exercises={appData.exercises}
             settings={appData.settings}
+            templates={appData.templates}
             onUpdateWorkout={handleUpdateActiveWorkout}
             onSaveWorkout={handleSaveWorkout}
             onCancelWorkout={handleCancelWorkout}
             onStartWorkout={handleStartWorkout}
+            onAddTemplate={handleAddTemplate}
+            onDeleteTemplate={handleDeleteTemplate}
+            onStartWorkoutFromTemplate={handleStartWorkoutFromTemplate}
           />
         );
     }

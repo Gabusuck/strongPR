@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Workout, Exercise, WorkoutExercise, Set, AppSettings } from '../types';
+import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
 
@@ -66,19 +66,27 @@ interface WorkoutLogProps {
   activeWorkout: Workout | null;
   exercises: Exercise[];
   settings: AppSettings;
+  templates: WorkoutTemplate[];
   onUpdateWorkout: (workout: Workout) => void;
   onSaveWorkout: () => void;
   onCancelWorkout: () => void;
   onStartWorkout: () => void;
+  onAddTemplate: (name: string, exercises: WorkoutExercise[]) => void;
+  onDeleteTemplate: (id: string) => void;
+  onStartWorkoutFromTemplate: (template: WorkoutTemplate) => void;
 }
 
 export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   activeWorkout,
   exercises,
   settings,
+  templates,
   onUpdateWorkout,
   onCancelWorkout,
   onStartWorkout,
+  onAddTemplate,
+  onDeleteTemplate,
+  onStartWorkoutFromTemplate,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onSaveWorkout: _onSaveWorkout,
 }) => {
@@ -90,6 +98,12 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState(false);
   const [imageIdx, setImageIdx] = useState(0);
+
+  // Template creation state
+  const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
+  const [templateSearchQuery, setTemplateSearchQuery] = useState('');
 
   // Rest timer
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
@@ -213,23 +227,237 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }
   };
 
+  const handleCreateTemplateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTemplateName.trim()) {
+      window.customAlert('Nome Inválido', 'Tens de introduzir um nome para o treino.');
+      return;
+    }
+    if (selectedExerciseIds.length === 0) {
+      window.customAlert('Nenhum Exercício', 'Seleciona pelo menos um exercício para a rotina.');
+      return;
+    }
+
+    const templateExercises: WorkoutExercise[] = selectedExerciseIds.map(id => {
+      const ex = exercises.find(e => e.id === id);
+      return {
+        id,
+        name: ex ? ex.name : 'Exercício',
+        category: ex ? ex.category : 'Outro',
+        sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }]
+      };
+    });
+
+    onAddTemplate(newTemplateName, templateExercises);
+    setNewTemplateName('');
+    setSelectedExerciseIds([]);
+    setShowCreateTemplateModal(false);
+  };
+
+  const toggleSelectExercise = (id: string) => {
+    setSelectedExerciseIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const filteredTemplateExercises = exercises.filter(ex => 
+    !templateSearchQuery || ex.name.toLowerCase().includes(templateSearchQuery.toLowerCase()) || ex.category.toLowerCase().includes(templateSearchQuery.toLowerCase())
+  );
+
   if (!activeWorkout) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', gap: '20px' }}>
-        <div style={{ display: 'flex', padding: '20px', borderRadius: '50%', backgroundColor: 'rgba(255, 94, 58, 0.05)', color: 'var(--accent-color)', marginBottom: '8px' }}>
-          <Dumbbell size={48} style={{ transform: 'rotate(-45deg)' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+        
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Iniciar Treino</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+              Escolhe uma rotina ou começa do zero.
+            </p>
+          </div>
+          <button 
+            className="btn btn-secondary btn-small"
+            onClick={() => setShowCreateTemplateModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Plus size={16} /> Nova Rotina
+          </button>
         </div>
-        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Pronto para o Treino?</h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '280px', lineHeight: '1.4' }}>
-          Cria o teu treino em tempo real, regista cargas e bate os teus recordes pessoais!
-        </p>
-        <button
-          className="btn btn-primary"
+
+        {/* Quick Start Blank Workout */}
+        <div 
+          className="glass-card interactive" 
           onClick={onStartWorkout}
-          style={{ padding: '14px 28px', fontSize: '1rem', width: '220px' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px', cursor: 'pointer', border: '1px dashed var(--accent-color)' }}
         >
-          Iniciar Novo Treino
-        </button>
+          <div style={{ display: 'flex', padding: '12px', borderRadius: '50%', backgroundColor: 'rgba(255, 94, 58, 0.08)', color: 'var(--accent-color)' }}>
+            <Plus size={24} />
+          </div>
+          <div>
+            <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Iniciar Treino Vazio</h4>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Regista um treino livre adicionando os exercícios no momento</p>
+          </div>
+        </div>
+
+        {/* Templates Section */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rotinas Guardadas</h3>
+          
+          {templates.length === 0 ? (
+            <div style={{ padding: '38px 20px', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border-color)', borderRadius: '20px', fontSize: '0.82rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+              Não tens nenhum treino pré-definido. Cria rotinas para poupar tempo no início de cada sessão!
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {templates.map((template) => (
+                <div 
+                  key={template.id} 
+                  className="glass-card" 
+                  style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0 }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                        {template.name}
+                      </h4>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: '1.4' }}>
+                        {template.exercises.map((ex: any) => translateExerciseName(ex.name)).join(', ')}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        window.customConfirm(
+                          'Eliminar Rotina',
+                          `Tens a certeza que desejas eliminar a rotina "${template.name}"?`,
+                          () => onDeleteTemplate(template.id)
+                        );
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', opacity: 0.7 }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => onStartWorkoutFromTemplate(template)}
+                    style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem' }}
+                  >
+                    <Dumbbell size={16} /> Iniciar Treino
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Modal: Create Template */}
+        {showCreateTemplateModal && (
+          <div className="modal-overlay" onClick={() => setShowCreateTemplateModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: '20px 20px 16px' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Nova Rotina de Treino</h3>
+                <button 
+                  onClick={() => setShowCreateTemplateModal(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <form onSubmit={handleCreateTemplateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0 }}>
+                
+                {/* Template Name */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nome da Rotina</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    placeholder="ex: Treino A - Empurrar"
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    style={{ fontWeight: 600 }}
+                  />
+                </div>
+
+                {/* Exercises Selection */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minHeight: 0 }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Selecionar Exercícios ({selectedExerciseIds.length})
+                  </label>
+                  
+                  {/* Search inside modal */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Procurar exercício..."
+                      value={templateSearchQuery}
+                      onChange={(e) => setTemplateSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '36px' }}
+                    />
+                  </div>
+
+                  {/* Scrollable list */}
+                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', backgroundColor: 'rgba(0,0,0,0.02)' }}>
+                    {filteredTemplateExercises.map((ex) => {
+                      const isSelected = selectedExerciseIds.includes(ex.id);
+                      return (
+                        <div 
+                          key={ex.id}
+                          onClick={() => toggleSelectExercise(ex.id)}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: `1px solid ${isSelected ? 'rgba(255, 94, 58, 0.2)' : 'transparent'}`,
+                            backgroundColor: isSelected ? 'rgba(255, 94, 58, 0.04)' : 'transparent',
+                            cursor: 'pointer',
+                            transition: 'all var(--transition-fast)'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isSelected ? 'var(--accent-color)' : 'var(--text-primary)' }}>
+                              {translateExerciseName(ex.name)}
+                            </div>
+                            <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{ex.category}</div>
+                          </div>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '6px',
+                            border: `2px solid ${isSelected ? 'var(--accent-color)' : 'var(--border-color)'}`,
+                            backgroundColor: isSelected ? 'var(--accent-color)' : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#fff',
+                            transition: 'all var(--transition-fast)'
+                          }}>
+                            {isSelected && <Check size={14} strokeWidth={3} />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Footer buttons */}
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', flexShrink: 0 }}>
+                  Criar Rotina de Treino
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     );
   }

@@ -41,6 +41,7 @@ export const INITIAL_DATA: AppData = {
   prs: [],
   settings: DEFAULT_SETTINGS,
   profile: DEFAULT_PROFILE,
+  templates: [],
 };
 
 // Calculate Estimated 1-Rep Max (1RM) using Epley's formula
@@ -69,6 +70,7 @@ export function loadAppData(): AppData {
       prs: parsed.prs || [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       profile: parsed.profile || DEFAULT_PROFILE,
+      templates: parsed.templates || [],
     };
   } catch (error) {
     console.error('Failed to load data from localStorage', error);
@@ -171,6 +173,7 @@ export function importBackup(file: File): Promise<AppData> {
             prs: Array.isArray(parsed.prs) ? parsed.prs : [],
             settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
             profile: parsed.profile || DEFAULT_PROFILE,
+            templates: Array.isArray(parsed.templates) ? parsed.templates : [],
           };
           saveAppData(appData);
           resolve(appData);

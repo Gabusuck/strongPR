@@ -14,6 +14,7 @@ export interface WorkoutExercise {
 
 export interface Workout {
   id: string;
+  templateId?: string; // ID do template a partir do qual o treino foi iniciado
   name: string;
   date: string; // ISO string
   exercises: WorkoutExercise[];
@@ -57,11 +58,18 @@ export interface AppSettings {
   enableSound: boolean;
 }
 
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  exercises: WorkoutExercise[];
+}
+
 export interface AppData {
   workouts: Workout[];
   exercises: Exercise[];
   prs: PersonalRecord[];
   settings: AppSettings;
   profile: UserProfile;
+  templates: WorkoutTemplate[];
 }
 
