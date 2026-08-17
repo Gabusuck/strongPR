@@ -178,6 +178,36 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         playBeep(now + 0.25, 880);
       } catch (err) { console.error('Audio beep error', err); }
     }
+
+    // System Push Notification (via Service Worker or local notification)
+    if ('Notification' in window && Notification.permission === 'granted') {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.showNotification('Tempo de Descanso Concluído! ⏱️', {
+            body: 'Está na hora de começares a próxima série!',
+            icon: '/logo.png',
+            badge: '/logo.png',
+            tag: 'rest-timer-end',
+            renotify: true,
+            vibrate: [200, 100, 200]
+          } as any);
+        }).catch(() => {
+          new Notification('Tempo de Descanso Concluído! ⏱️', {
+            body: 'Está na hora de começares a próxima série!',
+            icon: '/logo.png',
+            tag: 'rest-timer-end',
+            renotify: true
+          } as any);
+        });
+      } else {
+        new Notification('Tempo de Descanso Concluído! ⏱️', {
+          body: 'Está na hora de começares a próxima série!',
+          icon: '/logo.png',
+          tag: 'rest-timer-end',
+          renotify: true
+        } as any);
+      }
+    }
   };
 
   if (!activeWorkout) {
@@ -286,6 +316,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             if (updates.isCompleted === true && !s.isCompleted) {
               setRestTimeLeft(settings.defaultRestDuration);
               setRestDuration(settings.defaultRestDuration);
+
+              // Pedir permissão de notificações no telemóvel quando inicia o primeiro temporizador
+              if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+              }
             }
             return { ...s, ...updates };
           }),
