@@ -305,8 +305,8 @@ export default function App() {
       
       {/* App Header */}
       <header className="app-header">
-        <h1 className="app-title" onClick={() => setActiveTab('workout')} style={{ cursor: 'pointer' }}>
-          <Dumbbell size={22} style={{ transform: 'rotate(-45deg)' }} />
+        <h1 className="app-title" onClick={() => setActiveTab('workout')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img src="/logo.png" alt="StrongPR Logo" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
           StrongPR
         </h1>
         
@@ -786,11 +786,12 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minHeight: '100%', justifyContent: 'center', padding: '20px 0' }}>
-      <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
+      <div style={{ textAlign: 'center', marginBottom: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+        <img src="/logo.png" alt="StrongPR Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
           StrongPR
         </h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '6px', fontWeight: 600 }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '2px', fontWeight: 600 }}>
           Configuração de Perfil Inicial
         </p>
       </div>
