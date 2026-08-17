@@ -61,6 +61,21 @@ const muscleMatchesFilter = (primaryMuscles: string[], filter: string): boolean 
   return primaryMuscles.some(m => group.includes(m.toLowerCase()));
 };
 
+const DEFAULT_EXERCISE_IMAGE_MAPPING: Record<string, string> = {
+  '1': 'Barbell_Full_Squat',                    // Agachamento (Squat)
+  '2': 'Barbell_Bench_Press_-_Medium_Grip',     // Supino Plano (Bench Press)
+  '3': 'Barbell_Deadlift',                      // Peso Morto (Deadlift)
+  '4': 'Standing_Military_Press',               // Press Militar (Overhead Press)
+  '5': 'Pullups',                               // Elevações (Pull-ups)
+  '6': 'Bent_Over_Barbell_Row',                 // Remada com Barra (Barbell Row)
+  '7': 'Dumbbell_Bicep_Curl',                   // Bicep Curl com Halteres
+  '8': 'Triceps_Pushdown',                      // Tricep Pushdown
+  '9': 'Leg_Press',                             // Prensa de Pernas (Leg Press)
+  '10': 'Crunch_-_Hands_Overhead',              // Abdominais (Crunches)
+  '11': 'Side_Lateral_Raise',                   // Elevações Laterais (Lateral Raises)
+  '12': 'Barbell_Incline_Bench_Press_-_Medium_Grip', // Supino Inclinado (Incline Press)
+};
+
 // ─── Props ─────────────────────────────────────────────────────────────────────
 interface WorkoutLogProps {
   activeWorkout: Workout | null;
@@ -670,7 +685,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
       {/* Exercises */}
       {activeWorkout.exercises.map((workoutExercise) => {
-        const apiEx = apiExercises.find(e => e.id === workoutExercise.id);
+        const resolvedId = DEFAULT_EXERCISE_IMAGE_MAPPING[workoutExercise.id] || workoutExercise.id;
+        const apiEx = apiExercises.find(e => 
+          e.id === resolvedId || 
+          e.name.toLowerCase() === workoutExercise.name.toLowerCase()
+        );
         const imageUrl = apiEx && apiEx.images && apiEx.images.length > 0
           ? `${DB_BASE}/exercises/${apiEx.images[0]}`
           : null;
