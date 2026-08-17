@@ -29,6 +29,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 }) => {
   const [subView, setSubView] = useState<ProfileSubView>('main');
   const avatarUploadRef = useRef<HTMLInputElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Consistency Year Modal states
+  const [showYearGridModal, setShowYearGridModal] = useState(false);
+
+  // Auto-scroll the full-year grid to the end (today) on load
+  React.useEffect(() => {
+    if (showYearGridModal && scrollContainerRef.current) {
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [showYearGridModal]);
 
   // Modal edit states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -71,7 +87,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return days;
   };
 
+  const getFullYearGridDays = () => {
+    const days = [];
+    const today = new Date();
+    // 53 columns * 7 rows = 371 days
+    for (let i = 370; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const count = workouts.filter((w) => {
+        const wDateStr = new Date(w.date).toISOString().split('T')[0];
+        return wDateStr === dateStr;
+      }).length;
+      
+      days.push({ date: d, count });
+    }
+    return days;
+  };
+
   const activityDays = getActivityGridDays();
+  const fullYearDays = getFullYearGridDays();
 
   // Calculate workouts count per week for the last 6 weeks (Monday to Sunday)
   const getWeeklyWorkoutStats = () => {
@@ -488,7 +524,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* Consistency Activity Grid */}
-      <div className="glass-card" style={{ marginBottom: 0, padding: '16px' }}>
+      <div 
+        className="glass-card interactive" 
+        onClick={() => setShowYearGridModal(true)}
+        style={{ marginBottom: 0, padding: '16px', cursor: 'pointer' }}
+      >
         <h3 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 800, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
           <Calendar size={14} style={{ color: 'var(--accent-color)' }} />
           Consistência de Treinos
@@ -504,7 +544,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           ))}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
-          <span>Há 50 dias</span>
+          <span style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '3px' }}>Ver ano inteiro →</span>
           <span>Hoje</span>
         </div>
       </div>
@@ -686,6 +726,114 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Consistency Year Modal */}
+      {showYearGridModal && (() => {
+        // Calculate month labels and their column positions
+        const monthLabels: { label: string; colIdx: number }[] = [];
+        let prevMonth = -1;
+        fullYearDays.forEach((day, idx) => {
+          if (idx % 7 === 0) {
+            const m = day.date.getMonth();
+            if (m !== prevMonth) {
+              const label = day.date.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '').toUpperCase();
+              monthLabels.push({ label, colIdx: Math.floor(idx / 7) });
+              prevMonth = m;
+            }
+          }
+        });
+
+        return (
+          <div 
+            onClick={() => setShowYearGridModal(false)}
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              style={{ width: '100%', maxWidth: '480px', backgroundColor: 'var(--bg-primary)', borderRadius: '24px 24px 0 0', padding: '16px 20px 32px', boxShadow: '0 -8px 40px rgba(15, 23, 42, 0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+            >
+              {/* Drag Handle */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: '36px', height: '4px', borderRadius: '2px', backgroundColor: 'var(--border-color)' }} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Consistência Anual</h3>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Últimos 365 dias de treinos realizados</p>
+                </div>
+                <button 
+                  onClick={() => setShowYearGridModal(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Grid content container */}
+              <div style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '16px 12px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Weekday labels */}
+                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '102px', fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 800, paddingRight: '4px', paddingTop: '15px' }}>
+                    <span>Seg</span>
+                    <span>Qua</span>
+                    <span>Sex</span>
+                  </div>
+
+                  {/* Horizontal Scroll Area */}
+                  <div 
+                    ref={scrollContainerRef}
+                    style={{ flex: 1, overflowX: 'auto', paddingBottom: '6px' }}
+                  >
+                    <div style={{ width: 'max-content' }}>
+                      {/* Month Headers */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 12px)', gap: '3px', marginBottom: '6px', fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 800 }}>
+                        {Array.from({ length: 53 }).map((_, colIdx) => {
+                          const monthLabel = monthLabels.find(ml => ml.colIdx === colIdx);
+                          return (
+                            <div key={colIdx} style={{ gridColumnStart: colIdx + 1, width: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                              {monthLabel ? monthLabel.label : ''}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Day Cells Grid */}
+                      <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 12px)', gridAutoFlow: 'column', gap: '3px' }}>
+                        {fullYearDays.map((day, idx) => {
+                          const formattedDate = day.date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+                          return (
+                            <div 
+                              key={idx}
+                              className={`activity-day ${day.count > 1 ? 'active-2' : day.count === 1 ? 'active-1' : ''}`}
+                              style={{ width: '12px', height: '12px', borderRadius: '2px', cursor: 'pointer' }}
+                              title={`${day.count} treinos em ${formattedDate}`}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend and total count */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 650, padding: '0 4px' }}>
+                <div>
+                  Total: <span style={{ color: 'var(--accent-color)', fontWeight: 800 }}>{workouts.filter(w => new Date(w.date) >= new Date(Date.now() - 365*24*60*60*1000)).length} treinos</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>Menos</span>
+                  <div className="activity-day" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
+                  <div className="activity-day active-1" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
+                  <div className="activity-day active-2" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
+                  <span>Mais</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

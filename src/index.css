@@ -64,11 +64,10 @@ html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  min-height: 100%;
-  height: auto;
-  overflow-x: hidden;
-  overflow-y: auto; /* Scroll nativo no telemóvel */
-  -webkit-overflow-scrolling: touch;
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* Evita que o viewport inteiro faça scroll */
+  position: fixed; /* Previne o bounce elástico do body no iOS */
 }
 
 body {
@@ -80,14 +79,13 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  height: auto;
+  height: 100%;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: visible; /* Deixa o conteúdo crescer */
+  overflow: hidden; /* O conteúdo interno faz scroll, não a app */
 }
 
 @media (min-width: 576px) {
@@ -156,8 +154,10 @@ body {
 /* Área de Conteúdo principal */
 .app-content {
   flex: 1;
-  overflow: visible; /* Scroll na página geral no telemóvel */
-  padding: 24px 20px calc(58px + 10px + env(safe-area-inset-bottom, 0px) + 20px) 20px; /* Margem extra no fundo para a barra flutuante */
+  overflow-y: auto; /* Apenas esta área faz scroll! */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 24px 20px calc(62px + 24px + env(safe-area-inset-bottom, 0px)) 20px; /* Margem adequada para a barra flutuante */
   background-color: var(--bg-primary);
 }
 
@@ -185,8 +185,8 @@ body {
 /* Barra de Navegação Estilo Cápsula Flutuante */
 .bottom-nav {
   height: 62px; /* Mais larga (alta) */
-  position: fixed; /* Flutua na janela do browser no telemóvel */
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  position: absolute; /* Ancorada na base da app-container de forma estática */
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: 230px; /* Menos comprida (largura estreita) */
