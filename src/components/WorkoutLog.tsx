@@ -345,6 +345,50 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         </div>
       </div>
 
+      {/* Sleek Inline Rest Timer */}
+      {restTimeLeft !== null && (
+        <div style={{
+          background: 'rgba(255, 94, 58, 0.04)',
+          border: '1px solid rgba(255, 94, 58, 0.15)',
+          borderRadius: '16px',
+          padding: '12px 16px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1rem' }}>⏱️</span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>Descanso Ativo</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Tempo para recuperar</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 900, color: 'var(--accent-color)', letterSpacing: '-0.02em' }}>
+                {Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}
+              </span>
+              <button 
+                onClick={() => setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30))}
+                style={{ backgroundColor: 'rgba(255, 94, 58, 0.08)', border: 'none', borderRadius: '8px', padding: '4px 8px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent-color)', cursor: 'pointer' }}
+              >
+                +30s
+              </button>
+              <button 
+                onClick={() => setRestTimeLeft(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', marginLeft: '2px' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+          {/* Progress Bar */}
+          <div style={{ height: '3px', backgroundColor: 'rgba(255, 94, 58, 0.1)', borderRadius: '1.5px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(restTimeLeft / restDuration) * 100}%`, background: 'linear-gradient(90deg, var(--accent-color), #ff8a00)', borderRadius: '1.5px', transition: 'width 1s linear' }} />
+          </div>
+        </div>
+      )}
+
       {/* Exercises */}
       {activeWorkout.exercises.map((workoutExercise) => (
         <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
@@ -421,7 +465,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         </div>
       ))}
 
-      {/* Add Exercise button */}
+      {/* Add Exercise Button */}
       <button
         className="btn btn-secondary"
         onClick={() => setShowAddExerciseModal(true)}
@@ -429,61 +473,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       >
         <Plus size={18} /> Adicionar Exercício
       </button>
-
-      {/* Sleek Floating Rest Timer */}
-      {restTimeLeft !== null && (
-        <div style={{
-          position: 'fixed',
-          top: '76px', // logo below the app header
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 'calc(100% - 32px)',
-          maxWidth: '440px',
-          background: 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(15, 23, 42, 0.08)',
-          borderRadius: '16px',
-          padding: '12px 16px',
-          boxShadow: '0 8px 30px rgba(15, 23, 42, 0.1)',
-          zIndex: 95,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-          animation: 'slideDown var(--transition-fast) ease-out'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '1rem' }}>⏱️</span>
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>Descanso</span>
-                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Tempo para recuperar</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-color)', letterSpacing: '-0.02em' }}>
-                {Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}
-              </span>
-              <button 
-                onClick={() => setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30))}
-                style={{ backgroundColor: 'rgba(255, 94, 58, 0.06)', border: '1px solid rgba(255,94,58,0.12)', borderRadius: '8px', padding: '4px 8px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent-color)', cursor: 'pointer' }}
-              >
-                +30s
-              </button>
-              <button 
-                onClick={() => setRestTimeLeft(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', marginLeft: '2px' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </div>
-          {/* Progress Bar */}
-          <div style={{ height: '3px', backgroundColor: '#f1f5f9', borderRadius: '1.5px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${(restTimeLeft / restDuration) * 100}%`, background: 'linear-gradient(90deg, var(--accent-color), #ff8a00)', borderRadius: '1.5px', transition: 'width 1s linear' }} />
-          </div>
-        </div>
-      )}
 
       {/* ─── Add Exercise Modal ──────────────────────────────────────────────── */}
       {showAddExerciseModal && (
