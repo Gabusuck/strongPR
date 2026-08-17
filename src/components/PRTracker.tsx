@@ -1,12 +1,24 @@
 import React, { useState } from 'react';
 import type { PersonalRecord, Exercise } from '../types';
-import { Trophy, TrendingUp, Calendar, Plus, X, ArrowLeft } from 'lucide-react';
+import { Trophy, TrendingUp, Calendar, Plus, X, ArrowLeft, Search, Filter } from 'lucide-react';
+import { translateExerciseName } from '../utils/translateExercise';
 
 interface PRTrackerProps {
   prs: PersonalRecord[];
   exercises: Exercise[];
   onAddManualPR: (exerciseId: string, weight: number, reps: number, date: string) => void;
 }
+
+const getExerciseCategoryPt = (category: string) => {
+  const cat = category.toLowerCase();
+  if (cat.includes('chest') || cat.includes('peito')) return 'Peito';
+  if (cat.includes('back') || cat.includes('costas') || cat.includes('lats')) return 'Costas';
+  if (cat.includes('shoulder') || cat.includes('ombros') || cat.includes('militar')) return 'Ombros';
+  if (cat.includes('bicep') || cat.includes('tricep') || cat.includes('braço') || cat.includes('arm')) return 'Braços';
+  if (cat.includes('leg') || cat.includes('quad') || cat.includes('hamstring') || cat.includes('glute') || cat.includes('calf') || cat.includes('perna')) return 'Pernas';
+  if (cat.includes('abs') || cat.includes('abdominal') || cat.includes('core')) return 'Abdominais';
+  return 'Outros';
+};
 
 export const PRTracker: React.FC<PRTrackerProps> = ({
   prs,
@@ -16,6 +28,11 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null);
   const [showAddManualPRModal, setShowAddManualPRModal] = useState(false);
   
+  // Search, Category and Sort States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<'date' | 'weight' | 'name'>('date');
+
   // State for manual PR form
   const [formExerciseId, setFormExerciseId] = useState(exercises[0]?.id || '');
   const [formWeight, setFormWeight] = useState('');
@@ -45,6 +62,60 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const exercisePRsDescending = [...exercisePRs].reverse();
+
+  // Filter and Sort the best PRs
+  const getFilteredPRs = () => {
+    let filtered = [...bestPRs];
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(pr => {
+        const engName = pr.exerciseName.toLowerCase();
+        const ptName = translateExerciseName(pr.exerciseName).toLowerCase();
+        return engName.includes(q) || ptName.includes(q);
+      });
+    }
+
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(pr => {
+        const exercise = exercises.find(e => e.id === pr.exerciseId);
+        if (!exercise) return false;
+        return getExerciseCategoryPt(exercise.category) === categoryFilter;
+      });
+    }
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'date') {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      }
+      if (sortBy === 'weight') {
+        return b.weight - a.weight;
+      }
+      const nameA = translateExerciseName(a.exerciseName).toLowerCase();
+      const nameB = translateExerciseName(b.exerciseName).toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    return filtered;
+  };
+
+  const filteredBestPRs = getFilteredPRs();
+
+  // Calculate evolution progress
+  const calculateProgress = (history: PersonalRecord[]) => {
+    if (history.length < 2) return null;
+    const firstPR = history[0];
+    const latestPR = history[history.length - 1];
+    const diffWeight = latestPR.weight - firstPR.weight;
+    const diffPct = firstPR.weight > 0 ? (diffWeight / firstPR.weight) * 100 : 0;
+    return {
+      weight: diffWeight,
+      pct: diffPct,
+      isPositive: diffWeight > 0
+    };
+  };
+
+  const progress = calculateProgress(exercisePRs);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,12 +252,35 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
               <ArrowLeft size={18} />
             </button>
             <div>
-              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>{selectedExercise.name}</h2>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>{translateExerciseName(selectedExercise.name)}</h2>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
                 Evolução • {selectedExercise.category}
               </span>
             </div>
           </div>
+
+          {/* Progress Highlight Box */}
+          {progress && (
+            <div style={{
+              background: progress.isPositive ? 'rgba(16, 185, 129, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+              border: `1px solid ${progress.isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)'}`,
+              borderRadius: '16px',
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+            }}>
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Evolução Total</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 500 }}>Desde o primeiro registo gravado</div>
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: progress.isPositive ? 'var(--success)' : 'var(--danger)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <TrendingUp size={16} />
+                +{progress.weight} kg (+{progress.pct.toFixed(1)}%)
+              </div>
+            </div>
+          )}
 
           {/* Chart */}
           {renderSVGChart(exercisePRs)}
@@ -210,10 +304,12 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {index === 0 && (
-                    <span className="pr-badge">Coroa 👑</span>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 800, backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b', padding: '3px 8px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      Melhor Marca 👑
+                    </span>
                   )}
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}>
-                    <Calendar size={14} style={{ color: 'var(--text-muted)' }} />
+                    {index !== 0 && <Calendar size={14} style={{ color: 'var(--text-muted)' }} />}
                     {formatDate(pr.date)}
                   </span>
                 </div>
@@ -258,9 +354,78 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
             </button>
           </div>
 
-          {bestPRs.length > 0 ? (
+          {/* Search bar */}
+          <div style={{ position: 'relative', width: '100%' }}>
+            <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              className="form-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Pesquisar recordes..."
+              style={{ paddingLeft: '40px', width: '100%' }}
+            />
+          </div>
+
+          {/* Category Filter Horizontal Scroll */}
+          <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px', margin: '0 -4px', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+            {['all', 'Peito', 'Costas', 'Ombros', 'Braços', 'Pernas', 'Abdominais', 'Outros'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                style={{
+                  flexShrink: 0,
+                  padding: '8px 14px',
+                  borderRadius: '12px',
+                  fontSize: '0.78rem',
+                  fontWeight: 750,
+                  border: '1px solid',
+                  borderColor: categoryFilter === cat ? 'rgba(255, 94, 58, 0.2)' : 'var(--border-color)',
+                  backgroundColor: categoryFilter === cat ? 'rgba(255, 94, 58, 0.06)' : 'rgba(255,255,255,0.01)',
+                  color: categoryFilter === cat ? 'var(--accent-color)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
+                }}
+              >
+                {cat === 'all' ? 'Tudo' : cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Sorting Dropdown/Control */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 700 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Filter size={12} style={{ color: 'var(--text-muted)' }} />
+              <span>Ordenar por:</span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              {[
+                { key: 'date', label: 'Recente' },
+                { key: 'weight', label: 'Carga' },
+                { key: 'name', label: 'Nome' }
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSortBy(opt.key as any)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: sortBy === opt.key ? 'var(--accent-color)' : 'var(--text-muted)',
+                    fontWeight: sortBy === opt.key ? 800 : 600,
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    padding: '2px 4px'
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredBestPRs.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {bestPRs.map((pr) => (
+              {filteredBestPRs.map((pr) => (
                 <div 
                   key={pr.id}
                   className="glass-card interactive"
@@ -276,7 +441,7 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
                 >
                   <div>
                     <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
-                      {pr.exerciseName}
+                      {translateExerciseName(pr.exerciseName)}
                     </h4>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', fontWeight: 500 }}>
                       🏆 {formatDate(pr.date)}
@@ -295,7 +460,7 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
             </div>
           ) : (
             <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border-color)', borderRadius: '20px', fontSize: '0.85rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
-              Ainda não tens nenhum recorde pessoal registado. Completa séries no ecrã de treino para começares a bater recordes!
+              Ainda não tens nenhum recorde pessoal registado para os filtros selecionados.
             </div>
           )}
 
@@ -326,7 +491,7 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
                   style={{ background: 'var(--bg-secondary)', fontWeight: 600 }}
                 >
                   {exercises.map((ex) => (
-                    <option key={ex.id} value={ex.id}>{ex.name} ({ex.category})</option>
+                    <option key={ex.id} value={ex.id}>{translateExerciseName(ex.name)} ({ex.category})</option>
                   ))}
                 </select>
               </div>
