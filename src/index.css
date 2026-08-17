@@ -64,11 +64,9 @@ html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   width: 100%;
   overflow: hidden; /* Evita que o viewport inteiro faça scroll */
-  position: fixed; /* Previne o bounce elástico do body no iOS */
 }
 
 body {
@@ -80,8 +78,7 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
@@ -159,7 +156,8 @@ body {
   overflow-y: auto; /* Apenas esta área faz scroll! */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  padding: 24px 20px calc(62px + 24px + env(safe-area-inset-bottom, 0px)) 20px; /* Margem adequada para a barra flutuante */
+  overscroll-behavior-y: contain; /* Impede a propagação do scroll elástico para o body (rubber-banding) */
+  padding: 24px 20px calc(62px + 24px) 20px; /* Margem adequada para a barra flutuante */
   background-color: var(--bg-primary);
 }
 
