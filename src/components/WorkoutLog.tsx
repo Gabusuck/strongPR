@@ -359,7 +359,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           </div>
 
           {/* Set headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '40px 1.2fr 1fr 40px', gap: '10px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span style={{ textAlign: 'center' }}>Série</span>
             <span style={{ textAlign: 'center' }}>Peso (kg)</span>
             <span style={{ textAlign: 'center' }}>Reps</span>
@@ -368,14 +368,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {workoutExercise.sets.map((set, setIdx) => (
-              <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '40px 1.2fr 1fr 40px', gap: '10px', alignItems: 'center', padding: '6px 8px', borderRadius: '10px', backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)', border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)', transition: 'all var(--transition-fast)' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', textAlign: 'center', color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => handleRemoveSet(workoutExercise.id, set.id)} title="Remover série">
+              <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', alignItems: 'center', padding: '6px 8px', borderRadius: '10px', backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)', border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)', transition: 'all var(--transition-fast)' }}>
+                {/* Set Number */}
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => handleRemoveSet(workoutExercise.id, set.id)} title="Remover série">
                   {setIdx + 1}
                 </div>
 
                 {/* Weight */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}>-</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
+                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}>-</button>
                   <input
                     type="number"
                     className="form-input set-input"
@@ -383,14 +384,14 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     readOnly={set.isCompleted}
                     onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { weight: parseFloat(e.target.value) || 0 })}
                     placeholder="0"
-                    style={{ width: '54px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem', padding: '6px 4px', opacity: set.isCompleted ? 0.7 : 1 }}
+                    style={{ width: '46px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', padding: '4px 2px', opacity: set.isCompleted ? 0.7 : 1, minHeight: 'auto', height: '32px' }}
                   />
-                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}>+</button>
+                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}>+</button>
                 </div>
 
                 {/* Reps */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}>-</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
+                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}>-</button>
                   <input
                     type="number"
                     className="form-input set-input"
@@ -398,15 +399,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     readOnly={set.isCompleted}
                     onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { reps: parseInt(e.target.value, 10) || 0 })}
                     placeholder="0"
-                    style={{ width: '44px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1rem', padding: '6px 4px', opacity: set.isCompleted ? 0.7 : 1 }}
+                    style={{ width: '36px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', padding: '4px 2px', opacity: set.isCompleted ? 0.7 : 1, minHeight: 'auto', height: '32px' }}
                   />
-                  <button className="btn-inc-dec" disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}>+</button>
+                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}>+</button>
                 </div>
 
                 {/* Check */}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button className={`set-checkbox ${set.isCompleted ? 'checked' : ''}`} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { isCompleted: !set.isCompleted })}>
-                    <Check size={16} strokeWidth={3} />
+                  <button className={`set-checkbox ${set.isCompleted ? 'checked' : ''}`} style={{ width: '26px', height: '26px' }} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { isCompleted: !set.isCompleted })}>
+                    <Check size={14} strokeWidth={3} />
                   </button>
                 </div>
               </div>
@@ -429,24 +430,58 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         <Plus size={18} /> Adicionar Exercício
       </button>
 
-      {/* Circular Rest Timer */}
+      {/* Sleek Floating Rest Timer */}
       {restTimeLeft !== null && (
-        <div className="circular-timer-container" onClick={() => setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30))} title="Clique para adicionar +30s">
-          <svg className="circular-timer-svg">
-            <defs>
-              <linearGradient id="timer-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#ff5e3a" />
-                <stop offset="100%" stopColor="#ff2a68" />
-              </linearGradient>
-            </defs>
-            <circle cx="43" cy="43" r="36" className="circular-timer-bg" />
-            <circle cx="43" cy="43" r="36" className="circular-timer-progress" strokeDasharray="226" strokeDashoffset={226 - (226 * restTimeLeft) / restDuration} />
-          </svg>
-          <div className="circular-timer-text">
-            <span>{Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}</span>
-            <span className="circular-timer-sub">+30s</span>
+        <div style={{
+          position: 'fixed',
+          top: '76px', // logo below the app header
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'calc(100% - 32px)',
+          maxWidth: '440px',
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(15, 23, 42, 0.08)',
+          borderRadius: '16px',
+          padding: '12px 16px',
+          boxShadow: '0 8px 30px rgba(15, 23, 42, 0.1)',
+          zIndex: 95,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          animation: 'slideDown var(--transition-fast) ease-out'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '1rem' }}>⏱️</span>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--text-primary)' }}>Descanso</span>
+                <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)' }}>Tempo para recuperar</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem', fontWeight: 900, color: 'var(--accent-color)', letterSpacing: '-0.02em' }}>
+                {Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}
+              </span>
+              <button 
+                onClick={() => setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30))}
+                style={{ backgroundColor: 'rgba(255, 94, 58, 0.06)', border: '1px solid rgba(255,94,58,0.12)', borderRadius: '8px', padding: '4px 8px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent-color)', cursor: 'pointer' }}
+              >
+                +30s
+              </button>
+              <button 
+                onClick={() => setRestTimeLeft(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', marginLeft: '2px' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); setRestTimeLeft(null); }} style={{ position: 'absolute', top: '-4px', right: '-4px', backgroundColor: '#ef4444', border: 'none', borderRadius: '50%', width: '18px', height: '18px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', boxShadow: '0 2px 6px rgba(0,0,0,0.6)' }}>×</button>
+          {/* Progress Bar */}
+          <div style={{ height: '3px', backgroundColor: '#f1f5f9', borderRadius: '1.5px', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(restTimeLeft / restDuration) * 100}%`, background: 'linear-gradient(90deg, var(--accent-color), #ff8a00)', borderRadius: '1.5px', transition: 'width 1s linear' }} />
+          </div>
         </div>
       )}
 
