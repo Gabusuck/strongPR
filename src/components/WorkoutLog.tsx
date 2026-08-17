@@ -18,7 +18,7 @@ interface ApiExercise {
   images: string[];
 }
 
-const DB_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main';
+const DB_BASE = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main';
 const DB_JSON = `${DB_BASE}/dist/exercises.json`;
 
 const MUSCLE_LABELS: Record<string, string> = {
@@ -154,9 +154,17 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     return () => { if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current); };
   }, [restTimeLeft]);
 
-  // Fetch exercises from API on component mount to support image rendering in active workout
+  // Fetch exercises from API on demand (modal open or active exercises need images) with self-healing retry
   useEffect(() => {
+    if (showAddExerciseModal) {
+      setApiError(false); // Reset errors on reopen to force clean state
+    }
+
     if (apiExercises.length > 0 || apiLoading) return;
+    
+    const shouldFetch = showAddExerciseModal || (activeWorkout && activeWorkout.exercises.length > 0);
+    if (!shouldFetch) return;
+
     setApiLoading(true);
     setApiError(false);
     fetch(DB_JSON)
@@ -165,11 +173,12 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         setApiExercises(data);
         setApiLoading(false);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error('Failed to fetch exercises:', err);
         setApiError(true);
         setApiLoading(false);
       });
-  }, []);
+  }, [showAddExerciseModal, activeWorkout, apiExercises.length, apiLoading]);
 
   const triggerRestEndNotifications = () => {
     if (settings.enableVibration && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
