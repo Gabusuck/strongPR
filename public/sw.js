@@ -1,9 +1,11 @@
-const CACHE_NAME = 'strongpr-cache-v1';
+const CACHE_NAME = 'strongpr-cache-v2';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './favicon.svg'
+  './logo.png',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install Event
