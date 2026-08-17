@@ -154,9 +154,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     return () => { if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current); };
   }, [restTimeLeft]);
 
-  // Fetch exercises from API when modal opens
+  // Fetch exercises from API on component mount to support image rendering in active workout
   useEffect(() => {
-    if (!showAddExerciseModal || apiExercises.length > 0 || apiLoading) return;
+    if (apiExercises.length > 0 || apiLoading) return;
     setApiLoading(true);
     setApiError(false);
     fetch(DB_JSON)
@@ -169,7 +169,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         setApiError(true);
         setApiLoading(false);
       });
-  }, [showAddExerciseModal]);
+  }, []);
 
   const triggerRestEndNotifications = () => {
     if (settings.enableVibration && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
@@ -660,17 +660,47 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       )}
 
       {/* Exercises */}
-      {activeWorkout.exercises.map((workoutExercise) => (
-        <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div>
-              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>{workoutExercise.name}</h4>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>{workoutExercise.category}</span>
+      {activeWorkout.exercises.map((workoutExercise) => {
+        const apiEx = apiExercises.find(e => e.id === workoutExercise.id);
+        const imageUrl = apiEx && apiEx.images && apiEx.images.length > 0
+          ? `${DB_BASE}/exercises/${apiEx.images[0]}`
+          : null;
+
+        return (
+          <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  {imageUrl ? (
+                    <img 
+                      src={imageUrl} 
+                      alt={workoutExercise.name} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        const parent = (e.target as HTMLImageElement).parentElement;
+                        if (parent) {
+                          parent.innerHTML = '<span style="font-size: 1.25rem;">💪</span>';
+                        }
+                      }}
+                    />
+                  ) : (
+                    <span style={{ fontSize: '1.25rem' }}>💪</span>
+                  )}
+                </div>
+                <div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                    {translateExerciseName(workoutExercise.name)}
+                  </h4>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                    {workoutExercise.category}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => handleRemoveExercise(workoutExercise.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6, marginTop: '4px' }}>
+                <X size={16} />
+              </button>
             </div>
-            <button onClick={() => handleRemoveExercise(workoutExercise.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6 }}>
-              <X size={16} />
-            </button>
-          </div>
 
           {/* Set headers */}
           <div style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -733,7 +763,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             <Plus size={14} /> Adicionar Série
           </button>
         </div>
-      ))}
+        );
+      })}`
 
       {/* Add Exercise Button */}
       <button
