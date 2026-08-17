@@ -134,6 +134,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       setRestTimeLeft(null);
       return;
     }
+    // Update lock-screen notification countdown (handling platforms)
+    updateCountdownNotification(restTimeLeft);
+
     timerIntervalRef.current = window.setInterval(() => {
       setRestTimeLeft((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
@@ -226,6 +229,56 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       
       const title = `⏱️ Descanso Ativo`;
       const body = `Termina às ${endTimeStr} (Duração: ${Math.floor(duration / 60)}m ${duration % 60}s)`;
+      
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.showNotification(title, {
+            body,
+            icon: '/logo.png',
+            badge: '/logo.png',
+            tag: 'rest-timer-countdown',
+            renotify: false,
+            silent: true
+          } as any);
+        }).catch(() => {
+          new Notification(title, {
+            body,
+            icon: '/logo.png',
+            tag: 'rest-timer-countdown',
+            renotify: false,
+            silent: true
+          } as any);
+        });
+      } else {
+        new Notification(title, {
+          body,
+          icon: '/logo.png',
+          tag: 'rest-timer-countdown',
+          renotify: false,
+          silent: true
+        } as any);
+      }
+    }
+  };
+
+  // Helper to dynamically update lock-screen notification countdown
+  const updateCountdownNotification = (timeLeft: number) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      
+      // O iOS Safari PWA não suporta atualizações silenciosas na mesma tag e força sempre um banner visual.
+      // Por isso, no iOS limitamos as atualizações para cada 10s e para os últimos 5s de forma a não encher o ecrã.
+      // Em Android/Computador, atualizamos a cada segundo pois suportam atualizações nativas 100% silenciosas.
+      const shouldUpdate = !isIOS || (timeLeft % 10 === 0) || (timeLeft <= 5);
+      
+      if (!shouldUpdate) return;
+
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      const title = `⏱️ Descanso: ${timeStr} restantes`;
+      const body = 'Prepara-te para a próxima série';
       
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then((registration) => {
