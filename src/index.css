@@ -64,9 +64,11 @@ html, body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-sans);
-  height: 100%;
-  width: 100%;
-  overflow: hidden; /* Evita que o viewport inteiro faça scroll */
+  min-height: 100%;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto; /* Restaura o scroll nativo no telemóvel */
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -78,13 +80,14 @@ body {
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 100vh;
+  height: auto;
   width: 100%;
   max-width: 480px;
   margin: 0 auto;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: hidden; /* O conteúdo interno faz scroll, não a app */
+  overflow: visible; /* Permite que o conteúdo cresça naturalmente */
 }
 
 @media (min-width: 576px) {
@@ -153,11 +156,8 @@ body {
 /* Área de Conteúdo principal */
 .app-content {
   flex: 1;
-  overflow-y: auto; /* Apenas esta área faz scroll! */
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain; /* Impede a propagação do scroll elástico para o body (rubber-banding) */
-  padding: 24px 20px calc(62px + 24px) 20px; /* Margem adequada para a barra flutuante */
+  overflow: visible; /* Scroll na página geral no telemóvel */
+  padding: 24px 20px 120px 20px; /* Margem de 120px garante que o conteúdo sobe totalmente acima da navbar */
   background-color: var(--bg-primary);
 }
 
