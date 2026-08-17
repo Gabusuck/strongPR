@@ -6,11 +6,67 @@ import { HistoryView } from './components/HistoryView';
 import { ProfileView } from './components/ProfileView';
 import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X } from 'lucide-react';
 
+interface CustomDialogConfig {
+  isOpen: boolean;
+  type: 'alert' | 'confirm';
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel?: () => void;
+}
+
+declare global {
+  interface Window {
+    customAlert: (title: string, message: string, onConfirm?: () => void) => void;
+    customConfirm: (title: string, message: string, onConfirm: () => void, onCancel?: () => void) => void;
+  }
+}
+
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_DATA);
   const [activeTab, setActiveTab] = useState<ActiveTab>('workout'); // Default to workout tab as it's the middle/heart of the app
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   
+  // Custom dialog alert/confirm state
+  const [dialog, setDialog] = useState<CustomDialogConfig>({
+    isOpen: false,
+    type: 'alert',
+    title: '',
+    message: '',
+    onConfirm: () => {},
+  });
+
+  // Assign dialog handlers to window
+  window.customAlert = (title, message, onConfirm) => {
+    setDialog({
+      isOpen: true,
+      type: 'alert',
+      title,
+      message,
+      onConfirm: () => {
+        setDialog(prev => ({ ...prev, isOpen: false }));
+        if (onConfirm) onConfirm();
+      }
+    });
+  };
+
+  window.customConfirm = (title, message, onConfirm, onCancel) => {
+    setDialog({
+      isOpen: true,
+      type: 'confirm',
+      title,
+      message,
+      onConfirm: () => {
+        setDialog(prev => ({ ...prev, isOpen: false }));
+        onConfirm();
+      },
+      onCancel: () => {
+        setDialog(prev => ({ ...prev, isOpen: false }));
+        if (onCancel) onCancel();
+      }
+    });
+  };
+
   // PR congratulations modal state
   const [newPRsModal, setNewPRsModal] = useState<{ isOpen: boolean, count: number }>({ isOpen: false, count: 0 });
 
@@ -119,7 +175,7 @@ export default function App() {
       .filter((ex) => ex.sets.length > 0);
 
     if (completedExercises.length === 0) {
-      alert('Não podes gravar um treino sem séries concluídas. Conclui pelo menos uma série clicando no visto (OK).');
+      window.customAlert('Séries Não Concluídas', 'Não podes gravar um treino sem séries concluídas. Conclui pelo menos uma série clicando no visto (OK).');
       return;
     }
 
@@ -150,9 +206,13 @@ export default function App() {
 
   // Cancel and discard active workout
   const handleCancelWorkout = () => {
-    if (confirm('Tens a certeza que queres apagar o treino atual? Todas as séries não gravadas serão perdidas.')) {
-      setActiveWorkout(null);
-    }
+    window.customConfirm(
+      'Cancelar Treino',
+      'Tens a certeza que queres apagar o treino atual? Todas as séries não gravadas serão perdidas.',
+      () => {
+        setActiveWorkout(null);
+      }
+    );
   };
 
   // Delete a workout from history
@@ -461,6 +521,47 @@ export default function App() {
         </div>
       )}
 
+      {/* Custom Alert/Confirm Dialog */}
+      {dialog.isOpen && (
+        <div 
+          onClick={dialog.type === 'alert' ? dialog.onConfirm : undefined}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: '100%', maxWidth: '340px', backgroundColor: 'var(--bg-card)', borderRadius: '24px', padding: '24px', boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-color)', animation: 'scaleUp var(--transition-fast) cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
+              {/* Icon badge based on context */}
+              <div style={{ display: 'inline-flex', alignSelf: 'center', padding: '12px', borderRadius: '50%', backgroundColor: dialog.title.toLowerCase().includes('eliminar') || dialog.title.toLowerCase().includes('apagar') || dialog.title.toLowerCase().includes('atenção') ? 'rgba(239, 68, 68, 0.08)' : 'rgba(255, 94, 58, 0.08)', color: dialog.title.toLowerCase().includes('eliminar') || dialog.title.toLowerCase().includes('apagar') || dialog.title.toLowerCase().includes('atenção') ? 'var(--danger)' : 'var(--accent-color)', marginBottom: '4px' }}>
+                <ShieldAlert size={26} />
+              </div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{dialog.title}</h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.45', fontWeight: 600 }}>{dialog.message}</p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+              {dialog.type === 'confirm' && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={dialog.onCancel}
+                  style={{ flex: 1, padding: '10px 14px', fontSize: '0.8rem', fontWeight: 800 }}
+                >
+                  Cancelar
+                </button>
+              )}
+              <button 
+                className="btn btn-primary" 
+                onClick={dialog.onConfirm}
+                style={{ flex: 1, padding: '10px 14px', fontSize: '0.8rem', fontWeight: 800, backgroundColor: dialog.title.toLowerCase().includes('eliminar') || dialog.title.toLowerCase().includes('apagar') || dialog.title.toLowerCase().includes('atenção') ? 'var(--danger)' : 'var(--accent-color)', borderColor: dialog.title.toLowerCase().includes('eliminar') || dialog.title.toLowerCase().includes('apagar') || dialog.title.toLowerCase().includes('atenção') ? 'var(--danger)' : 'var(--accent-color)', color: '#ffffff' }}
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings Modal */}
       {showSettingsModal && (
         <div
@@ -660,10 +761,14 @@ export default function App() {
                 <button 
                   className="btn btn-danger btn-small"
                   onClick={() => {
-                    if (confirm('ATENÇÃO: Tens a certeza absoluta de que queres eliminar TODOS os teus dados de treinos, exercícios personalizados e recordes pessoais? Esta ação é irreversível.')) {
-                      handleResetData();
-                      setShowSettingsModal(false);
-                    }
+                    window.customConfirm(
+                      'Eliminar Todo o Progresso',
+                      'ATENÇÃO: Tens a certeza absoluta de que queres eliminar TODOS os teus dados de treinos, exercícios personalizados e recordes pessoais? Esta ação é irreversível.',
+                      () => {
+                        handleResetData();
+                        setShowSettingsModal(false);
+                      }
+                    );
                   }}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', fontSize: '0.78rem' }}
                 >
@@ -771,7 +876,7 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('Por favor, indica o teu nome.');
+      window.customAlert('Campo Obrigatório', 'Por favor, indica o teu nome.');
       return;
     }
     onComplete({

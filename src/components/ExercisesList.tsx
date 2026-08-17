@@ -142,9 +142,13 @@ export const ExercisesList: React.FC<ExercisesListProps> = ({
               {ex.isCustom && (
                 <button
                   onClick={() => {
-                    if (confirm(`Queres mesmo apagar o exercício "${ex.name}"?`)) {
-                      onDeleteExercise(ex.id);
-                    }
+                    window.customConfirm(
+                      'Apagar Exercício',
+                      `Tem a certeza que deseja apagar o exercício personalizado "${ex.name}"?`,
+                      () => {
+                        onDeleteExercise(ex.id);
+                      }
+                    );
                   }}
                   style={{
                     background: 'none',

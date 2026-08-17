@@ -237,12 +237,16 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   };
 
   const handleRemoveExercise = (exerciseId: string) => {
-    if (confirm('Remover este exercício do treino atual?')) {
-      onUpdateWorkout({
-        ...activeWorkout,
-        exercises: activeWorkout.exercises.filter((e) => e.id !== exerciseId),
-      });
-    }
+    window.customConfirm(
+      'Remover Exercício',
+      'Tem a certeza que deseja remover este exercício do treino atual?',
+      () => {
+        onUpdateWorkout({
+          ...activeWorkout,
+          exercises: activeWorkout.exercises.filter((e) => e.id !== exerciseId),
+        });
+      }
+    );
   };
 
   const handleAddSet = (exerciseId: string) => {

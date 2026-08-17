@@ -249,9 +249,13 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                         <button
                           className="btn btn-danger btn-small"
                           onClick={() => {
-                            if (confirm('Eliminar este registo de treino? Esta ação é irreversível.')) {
-                              onDeleteWorkout(workout.id);
-                            }
+                            window.customConfirm(
+                              'Eliminar Treino',
+                              'Tem a certeza que deseja eliminar este registo de treino? Esta ação é irreversível.',
+                              () => {
+                                onDeleteWorkout(workout.id);
+                              }
+                            );
                           }}
                           style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', fontSize: '0.72rem' }}
                         >
