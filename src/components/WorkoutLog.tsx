@@ -134,9 +134,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       setRestTimeLeft(null);
       return;
     }
-    // Update lock-screen notification countdown
-    updateCountdownNotification(restTimeLeft);
-
     timerIntervalRef.current = window.setInterval(() => {
       setRestTimeLeft((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
@@ -220,15 +217,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }
   };
 
-  // Helper to silently update lock-screen notification timer
-  const updateCountdownNotification = (timeLeft: number) => {
+  // Helper to trigger a single notification when rest starts, showing target finish time
+  const startRestNotification = (duration: number) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      const now = new Date();
+      const endTime = new Date(now.getTime() + duration * 1000);
+      const endTimeStr = endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       
-      const title = `Descanso Ativo: ${timeStr} ⏱️`;
-      const body = 'Prepara-te para a próxima série';
+      const title = `⏱️ Descanso Ativo`;
+      const body = `Termina às ${endTimeStr} (Duração: ${Math.floor(duration / 60)}m ${duration % 60}s)`;
       
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then((registration) => {
@@ -382,6 +379,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             if (updates.isCompleted === true && !s.isCompleted) {
               setRestTimeLeft(settings.defaultRestDuration);
               setRestDuration(settings.defaultRestDuration);
+              startRestNotification(settings.defaultRestDuration);
 
               // Pedir permissão de notificações no telemóvel quando inicia o primeiro temporizador
               if ('Notification' in window && Notification.permission === 'default') {
