@@ -134,20 +134,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       setRestTimeLeft(null);
       return;
     }
-    // Update lock-screen notification countdown (handling platforms)
-    updateCountdownNotification(restTimeLeft);
-
     timerIntervalRef.current = window.setInterval(() => {
       setRestTimeLeft((prev) => (prev !== null ? prev - 1 : null));
     }, 1000);
     return () => { if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current); };
-  }, [restTimeLeft]);
-
-  // Clear notification when timer is stopped/reset
-  useEffect(() => {
-    if (restTimeLeft === null) {
-      clearCountdownNotification();
-    }
   }, [restTimeLeft]);
 
   // Fetch exercises from API when modal opens
@@ -189,46 +179,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       } catch (err) { console.error('Audio beep error', err); }
     }
 
-    // System Push Notification (reuses 'rest-timer-countdown' tag with renotify to beep and replace previous countdown)
+    // System Push Notification (triggers exactly once when the rest time ends)
     if ('Notification' in window && Notification.permission === 'granted') {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification('Tempo de Descanso Concluído! ⏱️', {
-            body: 'Está na hora de começares a próxima série!',
-            icon: '/logo.png',
-            badge: '/logo.png',
-            tag: 'rest-timer-countdown',
-            renotify: true,
-            vibrate: [200, 100, 200]
-          } as any);
-        }).catch(() => {
-          new Notification('Tempo de Descanso Concluído! ⏱️', {
-            body: 'Está na hora de começares a próxima série!',
-            icon: '/logo.png',
-            tag: 'rest-timer-countdown',
-            renotify: true
-          } as any);
-        });
-      } else {
-        new Notification('Tempo de Descanso Concluído! ⏱️', {
-          body: 'Está na hora de começares a próxima série!',
-          icon: '/logo.png',
-          tag: 'rest-timer-countdown',
-          renotify: true
-        } as any);
-      }
-    }
-  };
-
-  // Helper to trigger a single notification when rest starts, showing target finish time
-  const startRestNotification = (duration: number) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const now = new Date();
-      const endTime = new Date(now.getTime() + duration * 1000);
-      const endTimeStr = endTime.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      
-      const title = `⏱️ Descanso Ativo`;
-      const body = `Termina às ${endTimeStr} (Duração: ${Math.floor(duration / 60)}m ${duration % 60}s)`;
+      const title = 'Tempo de Descanso Concluído! ⏱️';
+      const body = 'Está na hora de começares a próxima série!';
       
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then((registration) => {
@@ -236,69 +190,25 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             body,
             icon: '/logo.png',
             badge: '/logo.png',
-            tag: 'rest-timer-countdown',
-            renotify: false,
-            silent: true
+            tag: 'rest-timer-end',
+            renotify: true,
+            vibrate: [200, 100, 200]
           } as any);
         }).catch(() => {
           new Notification(title, {
             body,
             icon: '/logo.png',
-            tag: 'rest-timer-countdown',
-            renotify: false,
-            silent: true
+            tag: 'rest-timer-end',
+            renotify: true
           } as any);
         });
       } else {
         new Notification(title, {
           body,
           icon: '/logo.png',
-          tag: 'rest-timer-countdown',
-          renotify: false,
-          silent: true
+          tag: 'rest-timer-end',
+          renotify: true
         } as any);
-      }
-    }
-  };
-
-  // Helper to dynamically update lock-screen notification countdown
-  const updateCountdownNotification = (timeLeft: number) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const minutes = Math.floor(timeLeft / 60);
-      const seconds = timeLeft % 60;
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      
-      const title = `⏱️ Descanso: ${timeStr} restantes`;
-      const body = 'Prepara-te para a próxima série';
-      
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification(title, {
-            body,
-            icon: '/logo.png',
-            badge: '/logo.png',
-            tag: 'rest-timer-countdown',
-            renotify: false,
-            silent: true
-          } as any);
-        }).catch((err) => {
-          console.warn('Could not update notification through Service Worker', err);
-        });
-      }
-    }
-  };
-
-  // Helper to completely dismiss lock-screen notification when timer finishes or is cancelled
-  const clearCountdownNotification = () => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.ready.then((registration) => {
-          if (registration.getNotifications) {
-            registration.getNotifications({ tag: 'rest-timer-countdown' }).then((notifications) => {
-              notifications.forEach((n) => n.close());
-            });
-          }
-        });
       }
     }
   };
@@ -409,7 +319,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             if (updates.isCompleted === true && !s.isCompleted) {
               setRestTimeLeft(settings.defaultRestDuration);
               setRestDuration(settings.defaultRestDuration);
-              startRestNotification(settings.defaultRestDuration);
 
               // Pedir permissão de notificações no telemóvel quando inicia o primeiro temporizador
               if ('Notification' in window && Notification.permission === 'default') {
