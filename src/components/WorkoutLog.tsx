@@ -264,15 +264,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   // Helper to dynamically update lock-screen notification countdown
   const updateCountdownNotification = (timeLeft: number) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-      
-      // O iOS Safari PWA não suporta atualizações silenciosas na mesma tag e força sempre um banner visual.
-      // Por isso, no iOS limitamos as atualizações para cada 10s e para os últimos 5s de forma a não encher o ecrã.
-      // Em Android/Computador, atualizamos a cada segundo pois suportam atualizações nativas 100% silenciosas.
-      const shouldUpdate = !isIOS || (timeLeft % 10 === 0) || (timeLeft <= 5);
-      
-      if (!shouldUpdate) return;
-
       const minutes = Math.floor(timeLeft / 60);
       const seconds = timeLeft % 60;
       const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -290,23 +281,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             renotify: false,
             silent: true
           } as any);
-        }).catch(() => {
-          new Notification(title, {
-            body,
-            icon: '/logo.png',
-            tag: 'rest-timer-countdown',
-            renotify: false,
-            silent: true
-          } as any);
+        }).catch((err) => {
+          console.warn('Could not update notification through Service Worker', err);
         });
-      } else {
-        new Notification(title, {
-          body,
-          icon: '/logo.png',
-          tag: 'rest-timer-countdown',
-          renotify: false,
-          silent: true
-        } as any);
       }
     }
   };
