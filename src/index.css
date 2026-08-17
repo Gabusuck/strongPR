@@ -186,7 +186,7 @@ body {
 .bottom-nav {
   height: 62px; /* Mais larga (alta) */
   position: fixed; /* Fixa de forma absoluta e segura no fundo da janela do telemóvel */
-  bottom: 10px;
+  bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   width: 230px; /* Menos comprida (largura estreita) */
