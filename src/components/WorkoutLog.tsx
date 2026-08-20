@@ -1,64 +1,112 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
 
 // ─── Free Exercise DB types ───────────────────────────────────────────────────
 interface ApiExercise {
   id: string;
   name: string;
-  force: string | null;
-  level: string;
-  mechanic: string | null;
-  equipment: string;
-  primaryMuscles: string[];
-  secondaryMuscles: string[];
+  muscle_group: string;
+  secondary_muscles: string[];
+  target: string;
+  media_id: string;
   instructions: string[];
-  category: string;
-  images: string[];
 }
 
-const DB_BASE = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main';
-const DB_JSON = `${DB_BASE}/dist/exercises.json`;
+const DB_JSON = '/exercises.json';
 
 const MUSCLE_LABELS: Record<string, string> = {
-  chest: 'Peito', back: 'Costas', shoulders: 'Ombros',
-  biceps: 'Bíceps', triceps: 'Tríceps', abdominals: 'Abdominais',
-  quadriceps: 'Quadríceps', hamstrings: 'Isquiotibiais',
-  glutes: 'Glúteos', calves: 'Gémeos', forearms: 'Antebraços',
-  'lower back': 'Lombar', 'middle back': 'Costas Médias',
-  traps: 'Trapézio', lats: 'Grande Dorsal', neck: 'Pescoço',
-  abductors: 'Abdutores', adductors: 'Adutores',
+  chest: 'Peito',
+  arms: 'Braços',
+  shoulders: 'Ombros',
+  back: 'Costas',
+  abdominals: 'Abs',
+  legs: 'Pernas',
+  // Individual muscles fallback translations
+  biceps: 'Bíceps',
+  triceps: 'Tríceps',
+  glutes: 'Glúteos',
+  quadriceps: 'Quadríceps',
+  hamstrings: 'Isquiotibiais',
+  calves: 'Gémeos',
+  forearms: 'Antebraço',
+  lats: 'Dorsais',
+  traps: 'Trapézio',
 };
 
-const mapCategory = (primaryMuscles: string[]): string => {
-  return MUSCLE_LABELS[primaryMuscles[0]?.toLowerCase()] || primaryMuscles[0] || 'Outro';
+const mapCategory = (muscleGroup: string): string => {
+  const lower = (muscleGroup || '').toLowerCase();
+  if (lower === 'chest') return 'Peito';
+  if (lower === 'biceps' || lower === 'triceps' || lower === 'forearms') return 'Braços';
+  if (lower === 'shoulders' || lower === 'deltoids') return 'Ombros';
+  if (lower === 'back' || lower === 'lats' || lower === 'traps' || lower === 'upper back' || lower === 'lower back') return 'Costas';
+  if (lower === 'abdominals' || lower === 'core' || lower === 'obliques') return 'Core';
+  if (lower === 'quadriceps' || lower === 'hamstrings' || lower === 'glutes' || lower === 'calves') return 'Pernas';
+  return MUSCLE_LABELS[lower] || muscleGroup || 'Outro';
 };
 
 const ALL_FILTER_MUSCLES = [
-  'chest', 'back', 'shoulders', 'biceps', 'triceps',
-  'abdominals', 'quadriceps', 'hamstrings', 'glutes', 'calves',
+  'chest', 'arms', 'shoulders', 'back', 'abdominals', 'legs',
 ];
 
 // Agrupa músculos da API por categoria de filtro
 const MUSCLE_GROUPS: Record<string, string[]> = {
   chest: ['chest', 'pectorals'],
-  back: ['lats', 'middle back', 'lower back', 'upper back', 'traps', 'back'],
-  shoulders: ['shoulders', 'deltoids', 'front deltoids', 'rear deltoids'],
-  biceps: ['biceps'],
-  triceps: ['triceps'],
-  abdominals: ['abdominals', 'core'],
-  quadriceps: ['quadriceps', 'quads'],
-  hamstrings: ['hamstrings'],
-  glutes: ['glutes', 'gluteus maximus'],
-  calves: ['calves'],
+  arms: ['biceps', 'triceps', 'forearms', 'wrist flexors', 'wrist extensors'],
+  shoulders: ['shoulders', 'deltoids', 'rotator cuff'],
+  back: ['back', 'lats', 'latissimus dorsi', 'lower back', 'upper back', 'traps', 'trapezius', 'rhomboids'],
+  abdominals: ['abdominals', 'core', 'obliques', 'hip flexors'],
+  legs: ['quadriceps', 'quads', 'hamstrings', 'glutes', 'gluteus maximus', 'calves', 'soleus', 'ankles', 'ankle stabilizers'],
 };
 
-const muscleMatchesFilter = (primaryMuscles: string[], filter: string): boolean => {
+const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
   if (filter === 'all') return true;
+  if (filter === 'bookmarked') return true; // Handled separately
   const group = MUSCLE_GROUPS[filter];
   if (!group) return false;
-  return primaryMuscles.some(m => group.includes(m.toLowerCase()));
+  return group.includes((muscleGroup || '').toLowerCase());
+};
+
+// Muscle body silhouette icon component
+const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group, active }) => {
+  const activeColor = '#ff5e3a'; // Neon accent orange color
+  const baseColor = active ? 'rgba(255, 94, 58, 0.4)' : 'rgba(15, 23, 42, 0.15)'; 
+  const outlineColor = active ? 'var(--accent-color)' : '#94a3b8';
+
+  const isBack = group === 'back';
+
+  if (isBack) {
+    return (
+      <svg width="22" height="30" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="14" cy="5" r="3.5" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M13 9h2v2h-2z" fill={baseColor} />
+        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={group === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M8 13h12l-2 8h-8z" fill={group === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M10 21h8l-1 5h-6z" fill={group === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 26h10l1 3-2 2h-8l-2-2z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 31h4.5v6H9z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M14.5 31h4.5v6h-4.5z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+      </svg>
+    );
+  } else {
+    return (
+      <svg width="22" height="30" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="14" cy="5" r="3.5" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M13 9h2v2h-2z" fill={baseColor} />
+        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={group === 'shoulders' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M8 13h12l-1 4h-10z" fill={group === 'chest' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 17h10l-1 5h-8z" fill={group === 'abdominals' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 23h10v3H9z" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 26h4.5v11H9z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M14.5 26h4.5v11h-4.5z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+      </svg>
+    );
+  }
 };
 
 const DEFAULT_EXERCISE_IMAGE_MAPPING: Record<string, string> = {
@@ -112,9 +160,27 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [apiExercises, setApiExercises] = useState<ApiExercise[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState(false);
-  const [imageIdx, setImageIdx] = useState(0);
 
-  // Template creation state
+  // Bookmarked exercises state
+  const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('strongpr_bookmarked_exercises');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleBookmark = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setBookmarkedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem('strongpr_bookmarked_exercises', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Template creation / exercise multi-select state
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
@@ -127,14 +193,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Elapsed workout time
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  // Slideshow auto-switch for selected exercise detail
-  useEffect(() => {
-    if (!selectedApiExercise) return;
-    setImageIdx(0);
-    const t = window.setInterval(() => setImageIdx(i => (i === 0 ? 1 : 0)), 1800);
-    return () => clearInterval(t);
-  }, [selectedApiExercise]);
 
   // Active workout duration tick
   useEffect(() => {
@@ -493,7 +551,45 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Add exercise to active workout
+  // Add multiple selected exercises to active workout
+  const handleConfirmAddExercises = () => {
+    if (selectedExerciseIds.length === 0) return;
+
+    const exercisesToAdd = apiExercises.filter(ex => selectedExerciseIds.includes(ex.id));
+    const newWorkoutExercises: WorkoutExercise[] = exercisesToAdd.map(exercise => {
+      const category = mapCategory(exercise.muscle_group);
+      return {
+        id: exercise.id,
+        name: exercise.name,
+        category,
+        sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
+      };
+    });
+
+    const localToAdd = localExercises.filter(ex => selectedExerciseIds.includes(ex.id));
+    const newLocalWorkoutExercises: WorkoutExercise[] = localToAdd.map(exercise => ({
+      id: exercise.id,
+      name: exercise.name,
+      category: exercise.category,
+      sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
+    }));
+
+    onUpdateWorkout({
+      ...activeWorkout,
+      exercises: [
+        ...activeWorkout.exercises,
+        ...newWorkoutExercises,
+        ...newLocalWorkoutExercises,
+      ],
+    });
+
+    setShowAddExerciseModal(false);
+    setSelectedExerciseIds([]);
+    setSearchQuery('');
+    setMuscleFilter('all');
+  };
+
+  // Add single exercise directly (fallback)
   const handleAddExercise = (exercise: Exercise | ApiExercise) => {
     const id = exercise.id;
     if (activeWorkout.exercises.some((e) => e.id === id)) {
@@ -502,8 +598,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }
 
     let category = '';
-    if ('primaryMuscles' in exercise) {
-      category = mapCategory(exercise.primaryMuscles);
+    if ('muscle_group' in exercise) {
+      category = mapCategory((exercise as ApiExercise).muscle_group);
     } else {
       category = (exercise as Exercise).category;
     }
@@ -517,8 +613,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     onUpdateWorkout({ ...activeWorkout, exercises: [...activeWorkout.exercises, newWorkoutExercise] });
     setShowAddExerciseModal(false);
     setSelectedApiExercise(null);
+    setSelectedExerciseIds([]);
     setSearchQuery('');
     setMuscleFilter('all');
+  };
+
+  const toggleExerciseSelection = (id: string) => {
+    setSelectedExerciseIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
   };
 
   const handleRemoveExercise = (exerciseId: string) => {
@@ -588,12 +691,14 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const localExercises = exercises.filter(ex => ex.isCustom);
 
   const filteredApiExercises = apiExercises.filter(ex => {
-    const matchesMuscle = muscleMatchesFilter(ex.primaryMuscles, muscleFilter);
+    const matchesMuscle = muscleFilter === 'bookmarked' 
+      ? bookmarkedIds.includes(ex.id)
+      : muscleMatchesFilter(ex.muscle_group, muscleFilter);
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q ||
       ex.name.toLowerCase().includes(q) ||
-      ex.primaryMuscles.some(m => m.toLowerCase().includes(q)) ||
-      ex.primaryMuscles.some(m => (MUSCLE_LABELS[m.toLowerCase()] || '').toLowerCase().includes(q));
+      ex.muscle_group.toLowerCase().includes(q) ||
+      (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
     return matchesMuscle && matchesSearch;
   });
 
@@ -685,25 +790,25 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
       {/* Exercises */}
       {activeWorkout.exercises.map((workoutExercise) => {
-        const resolvedId = DEFAULT_EXERCISE_IMAGE_MAPPING[workoutExercise.id] || workoutExercise.id;
         const apiEx = apiExercises.find(e => 
-          e.id === resolvedId || 
+          e.id === workoutExercise.id || 
           e.name.toLowerCase() === workoutExercise.name.toLowerCase()
         );
-        const imageUrl = apiEx && apiEx.images && apiEx.images.length > 0
-          ? `${DB_BASE}/exercises/${apiEx.images[0]}`
+        const imageUrl = apiEx && apiEx.media_id
+          ? `https://static.exercisedb.dev/media/${apiEx.media_id}.gif`
           : null;
 
         return (
           <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   {imageUrl ? (
                     <img 
                       src={imageUrl} 
                       alt={workoutExercise.name} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      style={{ width: '90%', height: '90%', objectFit: 'contain' }}
+                      loading="lazy"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                         const parent = (e.target as HTMLImageElement).parentElement;
@@ -789,29 +894,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           {/* Add Set */}
           <button onClick={() => handleAddSet(workoutExercise.id)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700, padding: '10px', borderRadius: '10px', cursor: 'pointer', marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <Plus size={14} /> Adicionar Série
-          </button>
-        </div>
-        );
-      })}`
-
-      {/* Add Exercise Button */}
-      <button
-        className="btn btn-secondary"
-        onClick={() => setShowAddExerciseModal(true)}
-        style={{ padding: '15px', fontSize: '0.95rem' }}
-      >
-        <Plus size={18} /> Adicionar Exercício
-      </button>
-
-      {/* ─── Add Exercise Modal ──────────────────────────────────────────────── */}
+          </but      {/* ─── Add Exercise Modal ──────────────────────────────────────────────── */}
       {showAddExerciseModal && (
         <div
-          onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); setSearchQuery(''); setMuscleFilter('all'); }}
+          onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); setSelectedExerciseIds([]); setSearchQuery(''); setMuscleFilter('all'); }}
           style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ width: '100%', maxWidth: '480px', height: '92vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', borderRadius: '24px 24px 0 0', overflow: 'hidden' }}
+            style={{ width: '100%', maxWidth: '480px', height: '92vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg-primary)', borderRadius: '24px 24px 0 0', overflow: 'hidden', position: 'relative' }}
           >
             {/* ── Exercise Detail View ── */}
             {selectedApiExercise ? (
@@ -825,76 +916,61 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     <h3 style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{translateExerciseName(selectedApiExercise.name)}</h3>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedApiExercise.name}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginTop: '2px' }}>
-                      {selectedApiExercise.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}
+                      {mapCategory(selectedApiExercise.muscle_group)}
                     </div>
                   </div>
-                  <button onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <button onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); setSelectedExerciseIds([]); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                     <X size={20} />
                   </button>
                 </div>
 
                 {/* Scrollable content */}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
-                  {/* Image Slideshow */}
-                  {selectedApiExercise.images.length > 0 && (
-                    <div style={{ margin: '16px 0', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', position: 'relative' }}>
+                  {/* GymVisual GIF Animation */}
+                  {selectedApiExercise.media_id && (
+                    <div style={{ margin: '16px 0', borderRadius: '16px', overflow: 'hidden', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '260px', position: 'relative', border: '1px solid var(--border-color)' }}>
                       <img
-                        key={imageIdx}
-                        src={`${DB_BASE}/exercises/${selectedApiExercise.images[imageIdx]}`}
+                        src={`https://static.exercisedb.dev/media/${selectedApiExercise.media_id}.gif`}
                         alt={selectedApiExercise.name}
-                        style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', transition: 'opacity 0.4s ease' }}
+                        style={{ maxHeight: '90%', maxWidth: '90%', objectFit: 'contain' }}
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
-                      {/* Slide indicator dots */}
-                      {selectedApiExercise.images.length > 1 && (
-                        <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px' }}>
-                          {selectedApiExercise.images.map((_, i) => (
-                            <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: imageIdx === i ? 'var(--accent-color)' : 'rgba(0,0,0,0.2)', transition: 'background 0.3s' }} />
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )}
 
-                  {/* Meta badges */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
-                    {[
-                      { label: selectedApiExercise.level, color: selectedApiExercise.level === 'beginner' ? '#10b981' : selectedApiExercise.level === 'intermediate' ? '#f59e0b' : '#ef4444' },
-                      { label: selectedApiExercise.equipment, color: 'var(--accent-color)' },
-                      ...(selectedApiExercise.force ? [{ label: selectedApiExercise.force, color: 'var(--text-secondary)' }] : []),
-                    ].map((badge) => (
-                      <span key={badge.label} style={{ fontSize: '0.68rem', fontWeight: 700, padding: '3px 8px', borderRadius: '8px', backgroundColor: 'rgba(0,0,0,0.03)', border: `1px solid ${badge.color}20`, color: badge.color, textTransform: 'capitalize' }}>
-                        {badge.label}
-                      </span>
-                    ))}
-                  </div>
-
                   {/* Muscles */}
                   <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Músculos</div>
+                    <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Músculo Principal</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {selectedApiExercise.primaryMuscles.map(m => (
-                        <span key={m} style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(255,94,58,0.08)', color: 'var(--accent-color)', border: '1px solid rgba(255,94,58,0.2)' }}>
-                          {MUSCLE_LABELS[m] || m}
-                        </span>
-                      ))}
-                      {selectedApiExercise.secondaryMuscles.map(m => (
-                        <span key={m} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '10px', backgroundColor: '#f1f5f9', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
-                          {MUSCLE_LABELS[m] || m}
-                        </span>
-                      ))}
+                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(255,94,58,0.08)', color: 'var(--accent-color)', border: '1px solid rgba(255,94,58,0.2)' }}>
+                        {mapCategory(selectedApiExercise.muscle_group)}
+                      </span>
                     </div>
                   </div>
 
+                  {/* Secondary muscles */}
+                  {selectedApiExercise.secondary_muscles.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Músculos Secundários</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {selectedApiExercise.secondary_muscles.map(m => (
+                          <span key={m} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Instructions */}
-                  {selectedApiExercise.instructions.length > 0 && (
+                  {selectedApiExercise.instructions && selectedApiExercise.instructions.length > 0 && (
                     <div>
                       <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Execução</div>
                       <ol style={{ paddingLeft: '0', margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', listStyle: 'none' }}>
                         {selectedApiExercise.instructions.map((step, i) => (
                           <li key={i} style={{ display: 'flex', gap: '12px', fontSize: '0.82rem', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                             <span style={{ flexShrink: 0, width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'rgba(255,94,58,0.08)', color: 'var(--accent-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.7rem', marginTop: '1px' }}>{i + 1}</span>
-                            <span style={{ color: 'var(--text-secondary)' }}>{step}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{step.replace(/^Step:\s*\d+\s*/i, '')}</span>
                           </li>
                         ))}
                       </ol>
@@ -916,128 +992,388 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
             ) : (
               // ── Exercise List View ──
-              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
                 {/* Header */}
-                <div style={{ padding: '16px 20px 12px', flexShrink: 0 }}>
+                <div style={{ padding: '16px 20px 8px', flexShrink: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Exercícios</h3>
-                    <button onClick={() => { setShowAddExerciseModal(false); setSearchQuery(''); setMuscleFilter('all'); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <X size={20} />
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Adicionar exercícios</h3>
+                    <button onClick={() => { setShowAddExerciseModal(false); setSelectedExerciseIds([]); setSearchQuery(''); setMuscleFilter('all'); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <X size={22} />
                     </button>
                   </div>
 
                   {/* Search */}
-                  <div style={{ position: 'relative', marginBottom: '12px' }}>
-                    <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input
                       type="text"
                       className="form-input"
-                      placeholder="Pesquisar exercício ou músculo..."
+                      placeholder="Pesquisar por nome ou músculo..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ paddingLeft: '36px' }}
+                      style={{ paddingLeft: '38px', borderRadius: '14px' }}
                       autoFocus
                     />
                   </div>
 
-                  {/* Muscle Filters */}
-                  <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                    {[{ key: 'all', label: 'Todos' }, ...ALL_FILTER_MUSCLES.map(m => ({ key: m, label: MUSCLE_LABELS[m] || m }))].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        onClick={() => setMuscleFilter(key)}
-                        style={{
-                          flexShrink: 0, fontSize: '0.7rem', fontWeight: 700, padding: '5px 12px', borderRadius: '20px', border: '1px solid', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all var(--transition-fast)',
-                          backgroundColor: muscleFilter === key ? 'var(--accent-color)' : 'transparent',
-                          borderColor: muscleFilter === key ? 'var(--accent-color)' : 'var(--border-color)',
-                          color: muscleFilter === key ? '#fff' : 'var(--text-secondary)',
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                  {/* Muscle Filters with custom body silhouettes */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '12px',
+                    overflowX: 'auto',
+                    paddingBottom: '8px',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
+                  }}>
+                    {/* Bookmark Filter */}
+                    <button
+                      onClick={() => setMuscleFilter(muscleFilter === 'bookmarked' ? 'all' : 'bookmarked')}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        flexShrink: 0
+                      }}
+                    >
+                      <div style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        backgroundColor: muscleFilter === 'bookmarked' ? 'rgba(255, 94, 58, 0.1)' : 'var(--bg-secondary)',
+                        border: '1px solid',
+                        borderColor: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--border-color)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--text-secondary)',
+                        transition: 'all var(--transition-fast)'
+                      }}>
+                        <Bookmark size={18} fill={muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'none'} />
+                      </div>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--text-secondary)' }}>Salvos</span>
+                    </button>
+
+                    {/* Muscle Silhouettes */}
+                    {ALL_FILTER_MUSCLES.map((muscle) => {
+                      const active = muscleFilter === muscle;
+                      return (
+                        <button
+                          key={muscle}
+                          onClick={() => setMuscleFilter(active ? 'all' : muscle)}
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                        >
+                          <div style={{
+                            width: '50px',
+                            height: '50px',
+                            borderRadius: '50%',
+                            backgroundColor: active ? 'rgba(255, 94, 58, 0.1)' : 'var(--bg-secondary)',
+                            border: '1px solid',
+                            borderColor: active ? 'var(--accent-color)' : 'var(--border-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all var(--transition-fast)'
+                          }}>
+                            <MuscleSilhouette group={muscle} active={active} />
+                          </div>
+                          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: active ? 'var(--accent-color)' : 'var(--text-secondary)' }}>
+                            {MUSCLE_LABELS[muscle]}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* List */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px' }}>
-                  {/* Local custom exercises */}
-                  {filteredLocalExercises.length > 0 && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Personalizados</div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {filteredLocalExercises.map(ex => {
-                          const added = activeWorkout.exercises.some(a => a.id === ex.id);
-                          return (
-                            <button key={ex.id} disabled={added} onClick={() => handleAddExercise(ex)}
-                              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--border-color)', background: added ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)', cursor: added ? 'not-allowed' : 'pointer', color: added ? 'var(--text-muted)' : 'var(--text-primary)', textAlign: 'left' }}>
-                              <div>
-                                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{ex.name}</div>
-                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{ex.category}</div>
-                              </div>
-                              {added ? <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Adicionado</span> : <Plus size={16} style={{ color: 'var(--accent-color)' }} />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* API Exercises */}
+                {/* Grid List Container */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 90px' }}>
                   {apiLoading ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '40px 0', color: 'var(--text-secondary)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '60px 0', color: 'var(--text-secondary)' }}>
                       <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', animation: 'spin 0.8s linear infinite' }} />
-                      <span style={{ fontSize: '0.85rem' }}>A carregar exercícios...</span>
+                      <span style={{ fontSize: '0.85rem' }}>A carregar base de dados...</span>
                     </div>
                   ) : apiError ? (
-                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '30px 0', fontSize: '0.85rem' }}>
+                    <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0', fontSize: '0.85rem' }}>
                       Sem ligação à internet.<br />Os exercícios personalizados continuam disponíveis.
                     </div>
                   ) : (
                     <>
-                      {filteredApiExercises.length > 0 && (
-                        <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                          Base de Dados ({filteredApiExercises.length})
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {filteredApiExercises.map(ex => {
-                          const added = activeWorkout.exercises.some(a => a.id === ex.id);
+                      {/* Subtitle */}
+                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                        {muscleFilter === 'bookmarked' ? 'Exercícios Salvos' : 'Todos os Exercícios'} ({filteredLocalExercises.length + filteredApiExercises.length})
+                      </div>
+
+                      {/* 2-Column Grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                        
+                        {/* Custom local exercises first */}
+                        {filteredLocalExercises.map(ex => {
+                          const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
+                          const isSelected = selectedExerciseIds.includes(ex.id);
+                          const checked = isAdded || isSelected;
+
                           return (
-                            <button
+                            <div
                               key={ex.id}
-                              onClick={() => setSelectedApiExercise(ex)}
-                              style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', borderRadius: '14px', border: '1px solid var(--border-color)', background: added ? 'rgba(16,185,129,0.04)' : 'rgba(255,255,255,0.03)', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                              onClick={() => { if (!isAdded) toggleExerciseSelection(ex.id); }}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                borderRadius: '16px',
+                                border: '1px solid',
+                                borderColor: checked ? 'var(--accent-color)' : 'var(--border-color)',
+                                backgroundColor: 'var(--bg-card)',
+                                overflow: 'hidden',
+                                cursor: isAdded ? 'not-allowed' : 'pointer',
+                                position: 'relative',
+                                transition: 'all var(--transition-fast)',
+                                opacity: isAdded ? 0.7 : 1
+                              }}
                             >
-                              {/* Thumbnail — bigger and taller */}
-                              <div style={{ width: '80px', height: '72px', borderRadius: '10px', backgroundColor: '#f1f5f9', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {/* Bookmark button */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleBookmark(ex.id); }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '8px',
+                                  left: '8px',
+                                  background: 'rgba(255, 255, 255, 0.85)',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '24px',
+                                  height: '24px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  zIndex: 5,
+                                  color: bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'var(--text-muted)'
+                                }}
+                              >
+                                <Bookmark size={12} fill={bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'none'} />
+                              </button>
+
+                              {/* Checked circle indicator */}
+                              <div style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                backgroundColor: checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.85)',
+                                border: '1.5px solid',
+                                borderColor: checked ? 'var(--accent-color)' : '#94a3b8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ffffff',
+                                zIndex: 5
+                              }}>
+                                {checked && <Check size={11} strokeWidth={3} />}
+                              </div>
+
+                              {/* Placeholder illustration */}
+                              <div style={{ height: '110px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyCenter: 'center', position: 'relative', justifyContent: 'center' }}>
+                                <Dumbbell size={28} style={{ color: 'var(--text-muted)' }} />
+                              </div>
+
+                              {/* Text info footer */}
+                              <div style={{ padding: '8px 10px', backgroundColor: 'rgba(0,0,0,0.01)', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                                <div>
+                                  <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {ex.name}
+                                  </div>
+                                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                    {ex.category}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.58rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.05em' }}>Personalizado</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* GymVisual illustrated database exercises */}
+                        {filteredApiExercises.map(ex => {
+                          const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
+                          const isSelected = selectedExerciseIds.includes(ex.id);
+                          const checked = isAdded || isSelected;
+
+                          return (
+                            <div
+                              key={ex.id}
+                              onClick={() => { if (!isAdded) toggleExerciseSelection(ex.id); }}
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                borderRadius: '16px',
+                                border: '1px solid',
+                                borderColor: checked ? 'var(--accent-color)' : 'var(--border-color)',
+                                backgroundColor: 'var(--bg-card)',
+                                overflow: 'hidden',
+                                cursor: isAdded ? 'not-allowed' : 'pointer',
+                                position: 'relative',
+                                transition: 'all var(--transition-fast)',
+                                opacity: isAdded ? 0.75 : 1
+                              }}
+                            >
+                              {/* Bookmark button */}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleBookmark(ex.id); }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '8px',
+                                  left: '8px',
+                                  background: 'rgba(255, 255, 255, 0.85)',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '24px',
+                                  height: '24px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  zIndex: 5,
+                                  color: bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'var(--text-muted)'
+                                }}
+                              >
+                                <Bookmark size={12} fill={bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'none'} />
+                              </button>
+
+                              {/* Checked circle indicator */}
+                              <div style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                backgroundColor: checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.85)',
+                                border: '1.5px solid',
+                                borderColor: checked ? 'var(--accent-color)' : '#94a3b8',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ffffff',
+                                zIndex: 5
+                              }}>
+                                {checked && <Check size={11} strokeWidth={3} />}
+                              </div>
+
+                              {/* Animation Thumbnail */}
+                              <div style={{ height: '110px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                                 <img
-                                  src={`${DB_BASE}/exercises/${ex.images[0]}`}
+                                  src={`https://static.exercisedb.dev/media/${ex.media_id}.gif`}
                                   alt={ex.name}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  style={{ height: '90%', width: '90%', objectFit: 'contain' }}
+                                  loading="lazy"
                                   onError={(e) => {
                                     const el = e.currentTarget;
                                     el.style.display = 'none';
-                                    el.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg></div>';
+                                    el.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg></div>';
                                   }}
                                 />
                               </div>
-                              {/* Info */}
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, fontSize: '0.88rem', color: added ? 'var(--success)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{translateExerciseName(ex.name)}</div>
-                                <div style={{ fontSize: '0.67rem', color: 'var(--text-muted)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontStyle: 'italic' }}>{ex.name}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '3px' }}>{ex.primaryMuscles.map(m => MUSCLE_LABELS[m] || m).join(', ')}</div>
+
+                              {/* Text info footer */}
+                              <div style={{ padding: '8px 10px', backgroundColor: 'rgba(0,0,0,0.01)', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+                                <div style={{ paddingRight: '14px' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {translateExerciseName(ex.name)}
+                                  </div>
+                                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                    {mapCategory(ex.muscle_group)}
+                                  </div>
+                                </div>
+
+                                {/* Info circle button */}
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setSelectedApiExercise(ex); }}
+                                  style={{
+                                    position: 'absolute',
+                                    bottom: '6px',
+                                    right: '6px',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <Info size={14} />
+                                </button>
                               </div>
-                              {/* Action */}
-                              {added ? (
-                                <Check size={16} style={{ color: 'var(--success)', flexShrink: 0 }} />
-                              ) : (
-                                <Info size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                              )}
-                            </button>
+                            </div>
                           );
                         })}
-                        {filteredApiExercises.length === 0 && !apiLoading && (
+
+                        {filteredLocalExercises.length === 0 && filteredApiExercises.length === 0 && (
+                          <div style={{ gridColumn: 'span 2', textAlign: 'center', color: 'var(--text-secondary)', padding: '40px 0', fontSize: '0.85rem' }}>
+                            Nenhum exercício encontrado.
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Batch add floating button at bottom */}
+                {selectedExerciseIds.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '16px',
+                    left: '20px',
+                    right: '20px',
+                    zIndex: 1010,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    pointerEvents: 'auto'
+                  }}>
+                    <button
+                      onClick={handleConfirmAddExercises}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '14px 20px',
+                        fontSize: '0.95rem',
+                        fontWeight: 700,
+                        borderRadius: '99px',
+                        boxShadow: '0 8px 24px rgba(255, 94, 58, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        border: 'none',
+                        color: '#fff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Adicionar {selectedExerciseIds.length} {selectedExerciseIds.length === 1 ? 'exercício' : 'exercícios'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}                    {filteredApiExercises.length === 0 && !apiLoading && (
                           <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0', fontSize: '0.85rem' }}>Nenhum exercício encontrado.</div>
                         )}
                       </div>
