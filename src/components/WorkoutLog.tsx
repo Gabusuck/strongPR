@@ -75,20 +75,21 @@ const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group,
   const outlineColor = active ? 'var(--accent-color)' : '#94a3b8';
 
   const isBack = group === 'back';
+  const groupStr = group as string;
 
   if (isBack) {
     return (
       <svg width="22" height="30" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="14" cy="5" r="3.5" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
         <path d="M13 9h2v2h-2z" fill={baseColor} />
-        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={group === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M8 13h12l-2 8h-8z" fill={group === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M10 21h8l-1 5h-6z" fill={group === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 26h10l1 3-2 2h-8l-2-2z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 31h4.5v6H9z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M14.5 31h4.5v6h-4.5z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={groupStr === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M8 13h12l-2 8h-8z" fill={groupStr === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M10 21h8l-1 5h-6z" fill={groupStr === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 26h10l1 3-2 2h-8l-2-2z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 31h4.5v6H9z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M14.5 31h4.5v6h-4.5z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
       </svg>
     );
   } else {
@@ -917,8 +918,22 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           {/* Add Set */}
           <button onClick={() => handleAddSet(workoutExercise.id)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700, padding: '10px', borderRadius: '10px', cursor: 'pointer', marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <Plus size={14} /> Adicionar Série
-          </but      {/* ─── Add Exercise Modal ──────────────────────────────────────────────── */}
-      {showAddExerciseModal && (
+          </button>
+        </div>
+      );
+    })}
+
+    {/* Add Exercise Button */}
+    <button
+      className="btn btn-secondary"
+      onClick={() => setShowAddExerciseModal(true)}
+      style={{ padding: '15px', fontSize: '0.95rem' }}
+    >
+      <Plus size={18} /> Adicionar Exercício
+    </button>
+
+    {/* ─── Add Exercise Modal ──────────────────────────────────────────────── */}
+    {showAddExerciseModal && (
         <div
           onClick={() => { setShowAddExerciseModal(false); setSelectedApiExercise(null); setSelectedExerciseIds([]); setSearchQuery(''); setMuscleFilter('all'); }}
           style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
@@ -1210,7 +1225,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                               </div>
 
                               {/* Placeholder illustration */}
-                              <div style={{ height: '110px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyCenter: 'center', position: 'relative', justifyContent: 'center' }}>
+                              <div style={{ height: '110px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                 <Dumbbell size={28} style={{ color: 'var(--text-muted)' }} />
                               </div>
 
@@ -1392,17 +1407,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     </button>
                   </div>
                 )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}                    {filteredApiExercises.length === 0 && !apiLoading && (
-                          <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '20px 0', fontSize: '0.85rem' }}>Nenhum exercício encontrado.</div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
             )}
           </div>
