@@ -120,7 +120,7 @@ const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: Reac
       />
       <canvas
         ref={canvasRef}
-        style={{ ...style, maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }}
+        style={{ ...style, width: '100%', height: '100%', objectFit: 'contain' }}
       />
     </div>
   );
@@ -1115,9 +1115,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                   {/* Muscle Filters Carousel */}
                   <div style={{
                     display: 'flex',
-                    gap: '16px',
+                    gap: '12px',
                     overflowX: 'auto',
-                    paddingBottom: '12px',
+                    padding: '4px 4px 16px',
                     scrollbarWidth: 'none',
                     msOverflowStyle: 'none',
                     alignItems: 'center'
@@ -1127,29 +1127,30 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                       onClick={() => setMuscleFilter(muscleFilter === 'bookmarked' ? 'all' : 'bookmarked')}
                       style={{
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        background: 'none',
-                        border: 'none',
+                        width: '46px',
+                        height: '46px',
+                        borderRadius: '12px',
+                        backgroundColor: '#ffffff',
+                        border: muscleFilter === 'bookmarked' ? '2.5px solid #ff3b30' : '1.5px solid var(--border-color)',
                         cursor: 'pointer',
-                        flexShrink: 0
+                        flexShrink: 0,
+                        transition: 'all var(--transition-fast)',
+                        transform: muscleFilter === 'bookmarked' ? 'scale(1.1)' : 'scale(1.0)',
+                        boxShadow: muscleFilter === 'bookmarked' ? '0 4px 12px rgba(255, 59, 48, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
+                        outline: 'none'
                       }}
                       aria-label="Exercícios Salvos"
                     >
-                      <div style={{
-                        width: '44px',
-                        height: '54px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transition: 'all var(--transition-fast)',
-                        color: muscleFilter === 'bookmarked' ? '#ff3b30' : 'var(--text-muted)',
-                        transform: muscleFilter === 'bookmarked' ? 'scale(1.15)' : 'scale(1.0)',
-                        filter: muscleFilter === 'bookmarked' ? 'drop-shadow(0 0 6px rgba(255, 59, 48, 0.4))' : 'none'
-                      }}>
-                        <Bookmark size={24} fill={muscleFilter === 'bookmarked' ? '#ff3b30' : 'none'} />
-                      </div>
+                      <Bookmark 
+                        size={22} 
+                        fill={muscleFilter === 'bookmarked' ? '#ff3b30' : 'none'} 
+                        style={{
+                          color: muscleFilter === 'bookmarked' ? '#ff3b30' : '#94a3b8',
+                          transition: 'all var(--transition-fast)'
+                        }}
+                      />
                     </button>
 
                     {/* Muscle Silhouettes */}
@@ -1161,38 +1162,34 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                           onClick={() => setMuscleFilter(active ? 'all' : muscle)}
                           style={{
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: 'none',
-                            border: 'none',
+                            width: '46px',
+                            height: '46px',
+                            borderRadius: '12px',
+                            backgroundColor: '#ffffff',
+                            border: active ? '2.5px solid #ff3b30' : '1.5px solid var(--border-color)',
                             cursor: 'pointer',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            padding: '4px',
+                            transition: 'all var(--transition-fast)',
+                            transform: active ? 'scale(1.1)' : 'scale(1.0)',
+                            boxShadow: active ? '0 4px 12px rgba(255, 59, 48, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
+                            outline: 'none'
                           }}
                           aria-label={MUSCLE_LABELS[muscle]}
                         >
-                          <div style={{
-                            width: '44px',
-                            height: '54px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'all var(--transition-fast)',
-                            transform: active ? 'scale(1.15)' : 'scale(1.0)',
-                            filter: active ? 'drop-shadow(0 0 6px rgba(255, 59, 48, 0.4))' : 'none'
-                          }}>
-                            <img 
-                              src={WGER_MUSCLE_MAPPING[muscle]} 
-                              alt={MUSCLE_LABELS[muscle]} 
-                              style={{ 
-                                width: '100%', 
-                                height: '100%', 
-                                objectFit: 'contain',
-                                filter: active ? 'none' : 'grayscale(100%) opacity(60%)',
-                                transition: 'all var(--transition-fast)'
-                              }} 
-                            />
-                          </div>
+                          <img 
+                            src={WGER_MUSCLE_MAPPING[muscle]} 
+                            alt={MUSCLE_LABELS[muscle]} 
+                            style={{ 
+                              width: '28px', 
+                              height: '38px', 
+                              objectFit: 'contain',
+                              filter: active ? 'none' : 'grayscale(100%) opacity(60%)',
+                              transition: 'all var(--transition-fast)'
+                            }} 
+                          />
                         </button>
                       );
                     })}
@@ -1237,7 +1234,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                     flexDirection: 'column',
                                     borderRadius: '16px',
                                     border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
-                                    backgroundColor: 'var(--bg-card)',
+                                    backgroundColor: '#ffffff',
                                     overflow: 'hidden',
                                     cursor: isAdded ? 'not-allowed' : 'pointer',
                                     position: 'relative',
@@ -1284,7 +1281,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   )}
 
                                   {/* Card image container */}
-                                  <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                                  <div style={{ height: '140px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                                     <StaticExerciseImage mediaId={ex.media_id} alt={ex.name} />
                                   </div>
 
@@ -1349,7 +1346,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   flexDirection: 'column',
                                   borderRadius: '16px',
                                   border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
-                                  backgroundColor: 'var(--bg-card)',
+                                  backgroundColor: '#ffffff',
                                   overflow: 'hidden',
                                   cursor: isAdded ? 'not-allowed' : 'pointer',
                                   position: 'relative',
@@ -1396,7 +1393,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                               )}
 
                               {/* Placeholder illustration */}
-                              <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                              <div style={{ height: '140px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                 <Dumbbell size={28} style={{ color: '#94a3b8' }} />
                               </div>
 
@@ -1431,7 +1428,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 flexDirection: 'column',
                                 borderRadius: '16px',
                                 border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
-                                backgroundColor: 'var(--bg-card)',
+                                backgroundColor: '#ffffff',
                                 overflow: 'hidden',
                                 cursor: isAdded ? 'not-allowed' : 'pointer',
                                 position: 'relative',
@@ -1478,7 +1475,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                               )}
 
                               {/* Card image container */}
-                              <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                              <div style={{ height: '140px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                                 <StaticExerciseImage mediaId={ex.media_id} alt={ex.name} />
                               </div>
 
