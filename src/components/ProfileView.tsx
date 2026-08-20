@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Workout, PersonalRecord, Exercise, UserProfile } from '../types';
 import { PRTracker } from './PRTracker';
 import { ExercisesList } from './ExercisesList';
@@ -590,7 +591,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* EDIT PROFILE MODAL */}
-      {showEditProfileModal && (
+      {showEditProfileModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowEditProfileModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
@@ -725,10 +726,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </form>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Consistency Year Modal */}
-      {showYearGridModal && (() => {
+      {showYearGridModal && createPortal((() => {
         // Calculate month labels and their column positions
         const monthLabels: { label: string; colIdx: number }[] = [];
         let prevMonth = -1;
@@ -833,7 +834,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
 
     </div>
   );
