@@ -125,7 +125,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Download shareable Instagram image using canvas
   const downloadShareImage = () => {
     const canvas = document.createElement('canvas');
-    const W = 1080, H = 1350; // 4:5 — formato ideal Instagram
+    const W = 1080, H = 1920; // 9:16 — Story format
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext('2d')!;
@@ -138,144 +138,185 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle radial glow top-right
-    const glow = ctx.createRadialGradient(W * 0.85, H * 0.08, 0, W * 0.85, H * 0.08, 480);
-    glow.addColorStop(0, 'rgba(255,94,58,0.12)');
+    // Radial glow top-right
+    const glow = ctx.createRadialGradient(W * 0.85, H * 0.06, 0, W * 0.85, H * 0.06, 550);
+    glow.addColorStop(0, 'rgba(255,94,58,0.13)');
     glow.addColorStop(1, 'rgba(255,94,58,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
 
-    // === TOP ACCENT BAR ===
-    const bar = ctx.createLinearGradient(0, 0, W * 0.6, 0);
+    // Radial glow bottom-left
+    const glow2 = ctx.createRadialGradient(W * 0.1, H * 0.92, 0, W * 0.1, H * 0.92, 400);
+    glow2.addColorStop(0, 'rgba(255,94,58,0.07)');
+    glow2.addColorStop(1, 'rgba(255,94,58,0)');
+    ctx.fillStyle = glow2;
+    ctx.fillRect(0, 0, W, H);
+
+    // Helper: rounded rect fill
+    const rr = (x: number, y: number, w: number, h: number, r: number, color: string) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fill();
+    };
+
+    // === HEADER ===
+    const bar = ctx.createLinearGradient(80, 0, 600, 0);
     bar.addColorStop(0, '#ff5e3a');
     bar.addColorStop(1, 'rgba(255,94,58,0)');
     ctx.fillStyle = bar;
-    ctx.fillRect(80, 90, 480, 4);
+    ctx.fillRect(80, 110, 520, 4);
 
-    // === LABEL ===
-    ctx.fillStyle = 'rgba(255,94,58,0.9)';
-    ctx.font = '600 28px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = 'rgba(255,94,58,0.85)';
+    ctx.font = '600 30px system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('CONSISTÊNCIA ANUAL', 80, 80);
+    ctx.fillText('CONSISTÊNCIA ANUAL', 80, 100);
 
-    // === NAME ===
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 88px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'left';
-    const name = profile.name || 'Os meus Gains';
-    ctx.fillText(name, 80, 210);
+    ctx.font = 'bold 96px system-ui, sans-serif';
+    ctx.fillText(profile.name || 'Strong', 80, 240);
 
-    // === STATS ===
-    const yearWorkouts = workouts.filter(w => new Date(w.date) >= new Date(Date.now() - 365*24*60*60*1000));
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.font = '500 30px system-ui, sans-serif';
+    ctx.fillText(`${new Date().getFullYear()}`, 80, 290);
+
+    // === COMPUTE STATS ===
+    const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+    const yearWorkouts = workouts.filter(w => new Date(w.date) >= yearAgo);
     const totalVolume = yearWorkouts.reduce((s, w) => s + getWorkoutVolume(w), 0);
     const totalKg = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}t` : `${Math.round(totalVolume)}kg`;
+    const totalHours = yearWorkouts.reduce((s, w) => s + (w.duration || 0), 0);
+    const hoursStr = totalHours >= 3600 ? `${Math.floor(totalHours / 3600)}h` : `${Math.round(totalHours / 60)}min`;
+    const avgPerWeek = (yearWorkouts.length / 52).toFixed(1);
+
+    // Current streak
+    let streak = 0;
+    const today = new Date(); today.setHours(0,0,0,0);
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today); d.setDate(today.getDate() - i);
+      const ds = d.toISOString().split('T')[0];
+      if (workouts.some(w => new Date(w.date).toISOString().split('T')[0] === ds)) streak++;
+      else if (i > 0) break;
+    }
+
+    // Best streak
+    let bestStreak = 0, cur = 0;
+    for (let i = 0; i < fullYearDays.length; i++) {
+      if (fullYearDays[i].count > 0) { cur++; bestStreak = Math.max(bestStreak, cur); }
+      else cur = 0;
+    }
+
+    // Most trained muscle
+    const muscleCounts: Record<string, number> = {};
+    yearWorkouts.forEach(w => w.exercises.forEach(ex => {
+      const cat = ex.category || 'Outro';
+      muscleCounts[cat] = (muscleCounts[cat] || 0) + ex.sets.filter(s => s.isCompleted).length;
+    }));
+    // (topMuscle available for future use)
+    const topMuscle = Object.entries(muscleCounts).sort((a,b) => b[1]-a[1])[0]?.[0] ?? '—';
+
+    // === STAT CARDS — 2 columns × 4 rows ===
     const stats = [
-      { label: 'Treinos', value: yearWorkouts.length.toString() },
-      { label: 'Volume', value: totalKg },
-      { label: 'PRs', value: prs.length.toString() },
+      { label: 'Treinos', value: yearWorkouts.length.toString(), accent: true },
+      { label: 'Volume Total', value: totalKg, accent: true },
+      { label: 'PRs Batidos', value: prs.length.toString(), accent: false },
+      { label: 'Horas Treinadas', value: hoursStr, accent: false },
+      { label: 'Treinos / Semana', value: avgPerWeek, accent: false },
+      { label: 'Streak Atual', value: `${streak}d`, accent: false },
+      { label: 'Melhor Streak', value: `${bestStreak}d`, accent: false },
+      { label: 'Músculo Principal', value: topMuscle.length > 8 ? topMuscle.slice(0, 8) + '.' : topMuscle, accent: false },
     ];
 
-    const statY = 270;
-    const statW = 290, statH = 130, statGap = 20;
+    const gridTop = 330;
+    const cardW = 460, cardH = 120, cardGap = 20;
     stats.forEach((stat, i) => {
-      const sx = 80 + i * (statW + statGap);
-      // Card background
-      ctx.fillStyle = 'rgba(255,255,255,0.04)';
-      ctx.beginPath();
-      ctx.roundRect(sx, statY, statW, statH, 20);
-      ctx.fill();
-      // Top accent line on card
-      const cardBar = ctx.createLinearGradient(sx, statY, sx + statW, statY);
-      cardBar.addColorStop(0, 'rgba(255,94,58,0.8)');
-      cardBar.addColorStop(1, 'rgba(255,94,58,0)');
-      ctx.fillStyle = cardBar;
-      ctx.fillRect(sx + 20, statY, statW - 20, 2);
-      // Value
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 58px system-ui, -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(stat.value, sx + statW / 2, statY + 76);
-      // Label
-      ctx.fillStyle = 'rgba(255,255,255,0.38)';
-      ctx.font = '500 24px system-ui, -apple-system, sans-serif';
-      ctx.fillText(stat.label, sx + statW / 2, statY + 110);
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const sx = 80 + col * (cardW + cardGap);
+      const sy = gridTop + row * (cardH + cardGap);
+
+      rr(sx, sy, cardW, cardH, 20, 'rgba(255,255,255,0.04)');
+      const cbar = ctx.createLinearGradient(sx, sy, sx + cardW * 0.6, sy);
+      cbar.addColorStop(0, stat.accent ? 'rgba(255,94,58,0.9)' : 'rgba(255,255,255,0.15)');
+      cbar.addColorStop(1, 'transparent');
+      ctx.fillStyle = cbar;
+      ctx.fillRect(sx + 18, sy, cardW - 36, 2);
+
+      ctx.fillStyle = stat.accent ? '#ff5e3a' : '#ffffff';
+      ctx.font = 'bold 52px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(stat.value, sx + 22, sy + 68);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '500 22px system-ui, sans-serif';
+      ctx.fillText(stat.label, sx + 22, sy + 100);
     });
 
-    // === GRID ===
-    const CELL = 16, GAP = 4;
-    const COLS = 53, ROWS = 7;
-    const gridW = COLS * (CELL + GAP) - GAP;
-    const startX = (W - gridW) / 2;
-    const startY = 460;
+    // === DIVIDER ===
+    const divY = gridTop + 4 * (cardH + cardGap) + 10;
+    const div = ctx.createLinearGradient(80, 0, W - 80, 0);
+    div.addColorStop(0, 'transparent');
+    div.addColorStop(0.2, 'rgba(255,255,255,0.12)');
+    div.addColorStop(0.8, 'rgba(255,255,255,0.12)');
+    div.addColorStop(1, 'transparent');
+    ctx.fillStyle = div;
+    ctx.fillRect(80, divY, W - 160, 1);
 
-    // Grid background pill
-    const gridH = ROWS * (CELL + GAP) - GAP;
-    ctx.fillStyle = 'rgba(255,255,255,0.025)';
-    ctx.beginPath();
-    ctx.roundRect(startX - 24, startY - 20, gridW + 48, gridH + 48, 24);
-    ctx.fill();
+    // === GRID SECTION LABEL ===
+    const gridLabelY = divY + 50;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '600 26px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('GRELHA DE ATIVIDADE', 80, gridLabelY);
+
+    // === CONSISTENCY GRID ===
+    const CELL = 14, GAP = 3;
+    const COLS = 53, ROWS = 7;
+    const gW = COLS * (CELL + GAP) - GAP;
+    const gH = ROWS * (CELL + GAP) - GAP;
+    const gX = (W - gW) / 2;
+    const gY = gridLabelY + 30;
+
+    rr(gX - 22, gY - 18, gW + 44, gH + 44, 20, 'rgba(255,255,255,0.025)');
 
     fullYearDays.forEach((day, idx) => {
       const col = Math.floor(idx / 7);
       const row = idx % 7;
-      const x = startX + col * (CELL + GAP);
-      const y = startY + row * (CELL + GAP);
-      let fillColor: string;
-      if (day.volume === 0) {
-        fillColor = 'rgba(255,255,255,0.06)';
-      } else if (day.volume <= p33) {
-        fillColor = 'rgba(255,140,110,0.55)';
-      } else if (day.volume <= p66) {
-        fillColor = 'rgba(255,94,58,0.75)';
-      } else if (day.volume <= p90) {
-        fillColor = 'rgba(255,94,58,0.92)';
-      } else {
-        fillColor = '#ff5e3a';
-        // Glow on hottest days
-        ctx.shadowColor = 'rgba(255,94,58,0.7)';
-        ctx.shadowBlur = 8;
+      const x = gX + col * (CELL + GAP);
+      const y = gY + row * (CELL + GAP);
+      let fc: string;
+      if (day.volume === 0) fc = 'rgba(255,255,255,0.06)';
+      else if (day.volume <= p33) fc = 'rgba(255,140,110,0.55)';
+      else if (day.volume <= p66) fc = 'rgba(255,94,58,0.75)';
+      else if (day.volume <= p90) fc = 'rgba(255,94,58,0.92)';
+      else {
+        fc = '#ff5e3a';
+        ctx.shadowColor = 'rgba(255,94,58,0.6)';
+        ctx.shadowBlur = 7;
       }
-      ctx.fillStyle = fillColor;
-      ctx.beginPath();
-      ctx.roundRect(x, y, CELL, CELL, 4);
-      ctx.fill();
+      rr(x, y, CELL, CELL, 3, fc);
       ctx.shadowBlur = 0;
     });
 
     // === LEGEND ===
-    const legY = startY + gridH + 44;
+    const legY = gY + gH + 38;
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '500 22px system-ui, -apple-system, sans-serif';
+    ctx.font = '500 22px system-ui, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('menos', startX, legY + 15);
-    const swatches = ['rgba(255,255,255,0.06)', 'rgba(255,140,110,0.55)', 'rgba(255,94,58,0.75)', 'rgba(255,94,58,0.92)', '#ff5e3a'];
-    swatches.forEach((c, i) => {
-      ctx.fillStyle = c;
-      ctx.beginPath();
-      ctx.roundRect(startX + 100 + i * 28, legY, 20, 20, 5);
-      ctx.fill();
+    ctx.fillText('menos', gX, legY + 14);
+    ['rgba(255,255,255,0.06)','rgba(255,140,110,0.55)','rgba(255,94,58,0.75)','rgba(255,94,58,0.92)','#ff5e3a'].forEach((c, i) => {
+      rr(gX + 98 + i * 26, legY, 18, 18, 4, c);
     });
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.fillText('mais', startX + 100 + 5 * 28 + 8, legY + 15);
-
-    // === DIVIDER ===
-    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-    ctx.fillRect(80, legY + 50, W - 160, 1);
+    ctx.fillText('mais', gX + 98 + 5 * 26 + 8, legY + 14);
 
     // === WATERMARK ===
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.font = '500 24px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText('strong app', W - 80, legY + 90);
-    // Dot accent
-    ctx.fillStyle = 'rgba(255,94,58,0.7)';
-    ctx.beginPath();
-    ctx.arc(W - 80 - ctx.measureText('strong app').width - 14, legY + 83, 5, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.font = '500 26px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('● strong app', W / 2, H - 60);
 
-    // === DOWNLOAD ===
     const link = document.createElement('a');
-    link.download = `gains_${new Date().getFullYear()}.png`;
+    link.download = `gains_story_${new Date().getFullYear()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   };
