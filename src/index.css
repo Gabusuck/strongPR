@@ -168,22 +168,22 @@ body {
 
 /* Barra de Navegação Estilo Sólido no Fundo */
 .bottom-nav {
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: 62px;
   position: absolute; /* Fixada de forma segura e absoluta no fundo da app-container trancada */
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  background: var(--bg-card); /* Fundo sólido de cartão que muda com o tema */
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border-color);
-  border-radius: 0; /* Sem arredondamento lateral */
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: 230px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 31px; /* Totalmente redonda e flutuante */
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 10; /* Menor que os modais (que têm z-index 1000) */
-  box-shadow: 0 -4px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
 }
 
 .nav-item {
