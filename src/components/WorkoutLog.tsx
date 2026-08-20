@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
 
 // ─── Free Exercise DB types ───────────────────────────────────────────────────
@@ -69,10 +69,10 @@ const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
 };
 
 // Muscle body silhouette icon component
-const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group, active }) => {
-  const activeColor = '#ff5e3a'; // Neon accent orange color
-  const baseColor = active ? 'rgba(255, 94, 58, 0.4)' : 'rgba(15, 23, 42, 0.15)'; 
-  const outlineColor = active ? 'var(--accent-color)' : '#94a3b8';
+const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group }) => {
+  const activeColor = '#ff3b30'; // Solid GymVisual red
+  const baseColor = '#e2e8f0'; // Solid light grey body
+  const outlineColor = '#94a3b8'; // Slate border outline
 
   const isBack = group === 'back';
   const groupStr = group as string;
@@ -97,14 +97,14 @@ const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group,
       <svg width="22" height="30" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="14" cy="5" r="3.5" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
         <path d="M13 9h2v2h-2z" fill={baseColor} />
-        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={group === 'shoulders' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M8 13h12l-1 4h-10z" fill={group === 'chest' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 17h10l-1 5h-8z" fill={group === 'abdominals' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={groupStr === 'shoulders' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M8 13h12l-1 4h-10z" fill={groupStr === 'chest' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 17h10l-1 5h-8z" fill={groupStr === 'abdominals' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
         <path d="M9 23h10v3H9z" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={group === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 26h4.5v11H9z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M14.5 26h4.5v11h-4.5z" fill={group === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M9 26h4.5v11H9z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
+        <path d="M14.5 26h4.5v11h-4.5z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
       </svg>
     );
   }
@@ -146,6 +146,7 @@ interface WorkoutLogProps {
   exercises: Exercise[];
   settings: AppSettings;
   templates: WorkoutTemplate[];
+  workouts: Workout[];
   onUpdateWorkout: (workout: Workout) => void;
   onSaveWorkout: () => void;
   onCancelWorkout: () => void;
@@ -160,6 +161,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   exercises,
   settings,
   templates,
+  workouts,
   onUpdateWorkout,
   onCancelWorkout,
   onStartWorkout,
@@ -171,6 +173,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 }) => {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const [muscleFilter, setMuscleFilter] = useState<string>('all');
   const [selectedApiExercise, setSelectedApiExercise] = useState<ApiExercise | null>(null);
   const [apiExercises, setApiExercises] = useState<ApiExercise[]>([]);
@@ -201,6 +204,41 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [newTemplateName, setNewTemplateName] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
   const [templateSearchQuery, setTemplateSearchQuery] = useState('');
+
+  // Helper to fetch recently performed or popular exercises
+  const getRecentExercises = () => {
+    const recents: ApiExercise[] = [];
+    const seenIds = new Set<string>();
+
+    if (workouts && workouts.length > 0) {
+      const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      for (const w of sortedWorkouts) {
+        for (const ex of w.exercises) {
+          if (!seenIds.has(ex.id)) {
+            seenIds.add(ex.id);
+            const apiEx = apiExercises.find(e => e.id === ex.id);
+            if (apiEx) recents.push(apiEx);
+          }
+        }
+      }
+    }
+
+    // Default popular exercises list to pre-populate (Bench Press, Bicep Curl, Shoulder Press, Pullup, Deadlift, Squat)
+    if (recents.length < 4) {
+      const popularIds = ['0025', '0313', '0086', '0652', '0032', '0043'];
+      for (const id of popularIds) {
+        if (!seenIds.has(id)) {
+          const apiEx = apiExercises.find(e => e.id === id);
+          if (apiEx) {
+            recents.push(apiEx);
+            seenIds.add(id);
+          }
+        }
+      }
+    }
+
+    return recents.slice(0, 6);
+  };
 
   // Rest timer
   const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
@@ -1034,34 +1072,53 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                 {/* Header */}
                 <div style={{ padding: '16px 20px 8px', flexShrink: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 900, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Adicionar exercícios</h3>
-                    <button onClick={() => { setShowAddExerciseModal(false); setSelectedExerciseIds([]); setSearchQuery(''); setMuscleFilter('all'); }} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <X size={22} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button 
+                        onClick={() => { setShowAddExerciseModal(false); setSelectedExerciseIds([]); setSearchQuery(''); setMuscleFilter('all'); setShowSearchInput(false); }} 
+                        style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                      >
+                        <X size={24} />
+                      </button>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 850, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Adicionar exercícios</h3>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: 'var(--text-primary)' }}>
+                      <button 
+                        onClick={() => setShowSearchInput(!showSearchInput)} 
+                        style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                        aria-label="Pesquisar"
+                      >
+                        <Search size={22} />
+                      </button>
+                      <SlidersHorizontal size={22} style={{ cursor: 'pointer' }} />
+                      <Plus size={22} style={{ cursor: 'pointer' }} />
+                    </div>
                   </div>
 
-                  {/* Search */}
-                  <div style={{ position: 'relative', marginBottom: '16px' }}>
-                    <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Pesquisar por nome ou músculo..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      style={{ paddingLeft: '38px', borderRadius: '14px' }}
-                      autoFocus
-                    />
-                  </div>
+                  {/* Search Input (Toggled) */}
+                  {showSearchInput && (
+                    <div style={{ position: 'relative', marginBottom: '16px' }}>
+                      <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Pesquisar por nome ou músculo..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ paddingLeft: '38px', borderRadius: '14px' }}
+                        autoFocus
+                      />
+                    </div>
+                  )}
 
-                  {/* Muscle Filters with custom body silhouettes */}
+                  {/* Muscle Filters Carousel */}
                   <div style={{
                     display: 'flex',
-                    gap: '12px',
+                    gap: '16px',
                     overflowX: 'auto',
-                    paddingBottom: '8px',
+                    paddingBottom: '12px',
                     scrollbarWidth: 'none',
-                    msOverflowStyle: 'none'
+                    msOverflowStyle: 'none',
+                    alignItems: 'center'
                   }}>
                     {/* Bookmark Filter */}
                     <button
@@ -1070,29 +1127,27 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '6px',
+                        justifyContent: 'center',
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
                         flexShrink: 0
                       }}
+                      aria-label="Exercícios Salvos"
                     >
                       <div style={{
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '50%',
-                        backgroundColor: muscleFilter === 'bookmarked' ? 'rgba(255, 94, 58, 0.1)' : 'var(--bg-secondary)',
-                        border: '1px solid',
-                        borderColor: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--border-color)',
+                        width: '44px',
+                        height: '54px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--text-secondary)',
-                        transition: 'all var(--transition-fast)'
+                        transition: 'all var(--transition-fast)',
+                        color: muscleFilter === 'bookmarked' ? '#ff3b30' : 'var(--text-muted)',
+                        transform: muscleFilter === 'bookmarked' ? 'scale(1.15)' : 'scale(1.0)',
+                        filter: muscleFilter === 'bookmarked' ? 'drop-shadow(0 0 6px rgba(255, 59, 48, 0.4))' : 'none'
                       }}>
-                        <Bookmark size={18} fill={muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'none'} />
+                        <Bookmark size={24} fill={muscleFilter === 'bookmarked' ? '#ff3b30' : 'none'} />
                       </div>
-                      <span style={{ fontSize: '0.68rem', fontWeight: 700, color: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--text-secondary)' }}>Salvos</span>
                     </button>
 
                     {/* Muscle Silhouettes */}
@@ -1106,30 +1161,26 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: '6px',
+                            justifyContent: 'center',
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
                             flexShrink: 0
                           }}
+                          aria-label={MUSCLE_LABELS[muscle]}
                         >
                           <div style={{
-                            width: '50px',
-                            height: '50px',
-                            borderRadius: '50%',
-                            backgroundColor: active ? 'rgba(255, 94, 58, 0.1)' : 'var(--bg-secondary)',
-                            border: '1px solid',
-                            borderColor: active ? 'var(--accent-color)' : 'var(--border-color)',
+                            width: '44px',
+                            height: '54px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            transition: 'all var(--transition-fast)'
+                            transition: 'all var(--transition-fast)',
+                            transform: active ? 'scale(1.15)' : 'scale(1.0)',
+                            filter: active ? 'drop-shadow(0 0 6px rgba(255, 59, 48, 0.4))' : 'none'
                           }}>
                             <MuscleSilhouette group={muscle} active={active} />
                           </div>
-                          <span style={{ fontSize: '0.68rem', fontWeight: 700, color: active ? 'var(--accent-color)' : 'var(--text-secondary)' }}>
-                            {MUSCLE_LABELS[muscle]}
-                          </span>
                         </button>
                       );
                     })}
@@ -1149,9 +1200,133 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     </div>
                   ) : (
                     <>
-                      {/* Subtitle */}
-                      <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                        {muscleFilter === 'bookmarked' ? 'Exercícios Salvos' : 'Todos os Exercícios'} ({filteredLocalExercises.length + filteredApiExercises.length})
+                      {/* 1. Realizados recentemente Section (Show only if search is empty and filter is 'all') */}
+                      {searchQuery === '' && muscleFilter === 'all' && (
+                        <div style={{ marginBottom: '24px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <List size={14} style={{ color: 'var(--accent-color)' }} />
+                              Realizados recentemente
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                            {getRecentExercises().map(ex => {
+                              const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
+                              const isSelected = selectedExerciseIds.includes(ex.id);
+                              const checked = isAdded || isSelected;
+
+                              return (
+                                <div
+                                  key={`recent-${ex.id}`}
+                                  onClick={() => { if (!isAdded) toggleExerciseSelection(ex.id); }}
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    borderRadius: '16px',
+                                    border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
+                                    backgroundColor: 'var(--bg-card)',
+                                    overflow: 'hidden',
+                                    cursor: isAdded ? 'not-allowed' : 'pointer',
+                                    position: 'relative',
+                                    transition: 'all var(--transition-fast)',
+                                    opacity: isAdded ? 0.75 : 1
+                                  }}
+                                >
+                                  {/* Bookmark button */}
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); toggleBookmark(ex.id); }}
+                                    style={{
+                                      position: 'absolute',
+                                      top: '12px',
+                                      left: '12px',
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      zIndex: 5,
+                                      color: bookmarkedIds.includes(ex.id) ? '#000000' : '#94a3b8',
+                                      padding: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}
+                                  >
+                                    <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? '#000000' : 'none'} strokeWidth={1.75} />
+                                  </button>
+
+                                  {/* Checked indicator */}
+                                  {checked && (
+                                    <div style={{
+                                      position: 'absolute',
+                                      top: '12px',
+                                      right: '12px',
+                                      color: '#000000',
+                                      fontWeight: 'bold',
+                                      zIndex: 5,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}>
+                                      <Check size={20} strokeWidth={3.5} />
+                                    </div>
+                                  )}
+
+                                  {/* Card image container */}
+                                  <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                                    <img
+                                      src={`https://static.exercisedb.dev/media/${ex.media_id}.gif`}
+                                      alt={ex.name}
+                                      style={{ height: '95%', width: '95%', objectFit: 'contain' }}
+                                      loading="lazy"
+                                      onError={(e) => {
+                                        const el = e.currentTarget;
+                                        el.style.display = 'none';
+                                        el.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg></div>';
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* Card Text footer */}
+                                  <div style={{ padding: '12px', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+                                    <div style={{ paddingRight: '14px' }}>
+                                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#000000', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                        {translateExerciseName(ex.name)}
+                                      </div>
+                                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                                        {mapCategory(ex.muscle_group)}
+                                      </div>
+                                    </div>
+
+                                    {/* Info circle button */}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setSelectedApiExercise(ex); }}
+                                      style={{
+                                        position: 'absolute',
+                                        bottom: '8px',
+                                        right: '8px',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#94a3b8',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}
+                                    >
+                                      <Info size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 2. All Exercises Section */}
+                      <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+                        {searchQuery !== '' || muscleFilter !== 'all' ? 'Resultados da pesquisa' : 'Todos os Exercícios'} ({filteredLocalExercises.length + filteredApiExercises.length})
                       </div>
 
                       {/* 2-Column Grid */}
@@ -1168,17 +1343,16 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                               key={ex.id}
                               onClick={() => { if (!isAdded) toggleExerciseSelection(ex.id); }}
                               style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                borderRadius: '16px',
-                                border: '1px solid',
-                                borderColor: checked ? 'var(--accent-color)' : 'var(--border-color)',
-                                backgroundColor: 'var(--bg-card)',
-                                overflow: 'hidden',
-                                cursor: isAdded ? 'not-allowed' : 'pointer',
-                                position: 'relative',
-                                transition: 'all var(--transition-fast)',
-                                opacity: isAdded ? 0.7 : 1
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  borderRadius: '16px',
+                                  border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
+                                  backgroundColor: 'var(--bg-card)',
+                                  overflow: 'hidden',
+                                  cursor: isAdded ? 'not-allowed' : 'pointer',
+                                  position: 'relative',
+                                  transition: 'all var(--transition-fast)',
+                                  opacity: isAdded ? 0.75 : 1
                               }}
                             >
                               {/* Bookmark button */}
@@ -1186,56 +1360,51 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 onClick={(e) => { e.stopPropagation(); toggleBookmark(ex.id); }}
                                 style={{
                                   position: 'absolute',
-                                  top: '8px',
-                                  left: '8px',
-                                  background: 'rgba(255, 255, 255, 0.85)',
+                                  top: '12px',
+                                  left: '12px',
+                                  background: 'none',
                                   border: 'none',
-                                  borderRadius: '50%',
-                                  width: '24px',
-                                  height: '24px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
                                   cursor: 'pointer',
                                   zIndex: 5,
-                                  color: bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'var(--text-muted)'
+                                  color: bookmarkedIds.includes(ex.id) ? '#000000' : '#94a3b8',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
                                 }}
                               >
-                                <Bookmark size={12} fill={bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'none'} />
+                                <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? '#000000' : 'none'} strokeWidth={1.75} />
                               </button>
 
-                              {/* Checked circle indicator */}
-                              <div style={{
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                backgroundColor: checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.85)',
-                                border: '1.5px solid',
-                                borderColor: checked ? 'var(--accent-color)' : '#94a3b8',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                zIndex: 5
-                              }}>
-                                {checked && <Check size={11} strokeWidth={3} />}
-                              </div>
+                              {/* Checked indicator */}
+                              {checked && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '12px',
+                                  right: '12px',
+                                  color: '#000000',
+                                  fontWeight: 'bold',
+                                  zIndex: 5,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  <Check size={20} strokeWidth={3.5} />
+                                </div>
+                              )}
 
                               {/* Placeholder illustration */}
-                              <div style={{ height: '110px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                                <Dumbbell size={28} style={{ color: 'var(--text-muted)' }} />
+                              <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                                <Dumbbell size={28} style={{ color: '#94a3b8' }} />
                               </div>
 
-                              {/* Text info footer */}
-                              <div style={{ padding: '8px 10px', backgroundColor: 'rgba(0,0,0,0.01)', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                              {/* Card footer */}
+                              <div style={{ padding: '12px', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                                 <div>
-                                  <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#000000', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {ex.name}
                                   </div>
-                                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
                                     {ex.category}
                                   </div>
                                 </div>
@@ -1259,8 +1428,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 display: 'flex',
                                 flexDirection: 'column',
                                 borderRadius: '16px',
-                                border: '1px solid',
-                                borderColor: checked ? 'var(--accent-color)' : 'var(--border-color)',
+                                border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
                                 backgroundColor: 'var(--bg-card)',
                                 overflow: 'hidden',
                                 cursor: isAdded ? 'not-allowed' : 'pointer',
@@ -1274,50 +1442,45 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 onClick={(e) => { e.stopPropagation(); toggleBookmark(ex.id); }}
                                 style={{
                                   position: 'absolute',
-                                  top: '8px',
-                                  left: '8px',
-                                  background: 'rgba(255, 255, 255, 0.85)',
+                                  top: '12px',
+                                  left: '12px',
+                                  background: 'none',
                                   border: 'none',
-                                  borderRadius: '50%',
-                                  width: '24px',
-                                  height: '24px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
                                   cursor: 'pointer',
                                   zIndex: 5,
-                                  color: bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'var(--text-muted)'
+                                  color: bookmarkedIds.includes(ex.id) ? '#000000' : '#94a3b8',
+                                  padding: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
                                 }}
                               >
-                                <Bookmark size={12} fill={bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'none'} />
+                                <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? '#000000' : 'none'} strokeWidth={1.75} />
                               </button>
 
-                              {/* Checked circle indicator */}
-                              <div style={{
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                width: '20px',
-                                height: '20px',
-                                borderRadius: '50%',
-                                backgroundColor: checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.85)',
-                                border: '1.5px solid',
-                                borderColor: checked ? 'var(--accent-color)' : '#94a3b8',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: '#ffffff',
-                                zIndex: 5
-                              }}>
-                                {checked && <Check size={11} strokeWidth={3} />}
-                              </div>
+                              {/* Checked indicator */}
+                              {checked && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '12px',
+                                  right: '12px',
+                                  color: '#000000',
+                                  fontWeight: 'bold',
+                                  zIndex: 5,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  <Check size={20} strokeWidth={3.5} />
+                                </div>
+                              )}
 
-                              {/* Animation Thumbnail */}
-                              <div style={{ height: '110px', backgroundColor: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                              {/* Card image container */}
+                              <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                                 <img
                                   src={`https://static.exercisedb.dev/media/${ex.media_id}.gif`}
                                   alt={ex.name}
-                                  style={{ height: '90%', width: '90%', objectFit: 'contain' }}
+                                  style={{ height: '95%', width: '95%', objectFit: 'contain' }}
                                   loading="lazy"
                                   onError={(e) => {
                                     const el = e.currentTarget;
@@ -1327,13 +1490,13 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 />
                               </div>
 
-                              {/* Text info footer */}
-                              <div style={{ padding: '8px 10px', backgroundColor: 'rgba(0,0,0,0.01)', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+                              {/* Card footer */}
+                              <div style={{ padding: '12px', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
                                 <div style={{ paddingRight: '14px' }}>
-                                  <div style={{ fontWeight: 700, fontSize: '0.78rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#000000', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {translateExerciseName(ex.name)}
                                   </div>
-                                  <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
                                     {mapCategory(ex.muscle_group)}
                                   </div>
                                 </div>
@@ -1343,11 +1506,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   onClick={(e) => { e.stopPropagation(); setSelectedApiExercise(ex); }}
                                   style={{
                                     position: 'absolute',
-                                    bottom: '6px',
-                                    right: '6px',
+                                    bottom: '8px',
+                                    right: '8px',
                                     background: 'none',
                                     border: 'none',
-                                    color: 'var(--text-muted)',
+                                    color: '#94a3b8',
                                     cursor: 'pointer',
                                     padding: '4px',
                                     display: 'flex',
@@ -1386,14 +1549,14 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                   }}>
                     <button
                       onClick={handleConfirmAddExercises}
-                      className="btn btn-primary"
                       style={{
                         width: '100%',
-                        padding: '14px 20px',
-                        fontSize: '0.95rem',
+                        padding: '16px 20px',
+                        fontSize: '1rem',
                         fontWeight: 700,
                         borderRadius: '99px',
-                        boxShadow: '0 8px 24px rgba(255, 94, 58, 0.3)',
+                        backgroundColor: '#007aff',
+                        boxShadow: '0 8px 24px rgba(0, 122, 255, 0.35)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

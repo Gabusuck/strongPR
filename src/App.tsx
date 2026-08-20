@@ -383,6 +383,7 @@ export default function App() {
             exercises={appData.exercises}
             settings={appData.settings}
             templates={appData.templates}
+            workouts={appData.workouts}
             onUpdateWorkout={handleUpdateActiveWorkout}
             onSaveWorkout={handleSaveWorkout}
             onCancelWorkout={handleCancelWorkout}
@@ -412,6 +413,7 @@ export default function App() {
             exercises={appData.exercises}
             settings={appData.settings}
             templates={appData.templates}
+            workouts={appData.workouts}
             onUpdateWorkout={handleUpdateActiveWorkout}
             onSaveWorkout={handleSaveWorkout}
             onCancelWorkout={handleCancelWorkout}
