@@ -117,6 +117,16 @@ export default function App() {
 
   // Load app data on mount
   useEffect(() => {
+    // One-time cleanup to wipe old logs/history for the user to start fresh
+    const didWipe = localStorage.getItem('strongpr_wiped_old_logs');
+    if (!didWipe) {
+      localStorage.removeItem('strongpr_app_data');
+      localStorage.removeItem('strongpr_active_workout');
+      localStorage.setItem('strongpr_wiped_old_logs', 'true');
+      window.location.reload();
+      return;
+    }
+
     const data = loadAppData();
     setAppData(data);
     
