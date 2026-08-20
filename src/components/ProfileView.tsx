@@ -69,21 +69,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const recentWorkouts = getRecentWorkoutsCount();
 
   // Generate 50 days grid (7 weeks) for the gym activity visual tracker
+  // Helper: compute total kg lifted in a workout
+  const getWorkoutVolume = (w: Workout) =>
+    w.exercises.reduce((total, ex) =>
+      total + ex.sets.filter(s => s.isCompleted).reduce((s, set) => s + set.weight * set.reps, 0), 0);
+
+  // Generate 50 days grid (7 weeks) for the gym activity visual tracker
   const getActivityGridDays = () => {
     const days = [];
     const today = new Date();
-    
     for (let i = 49; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      
-      const count = workouts.filter((w) => {
-        const wDateStr = new Date(w.date).toISOString().split('T')[0];
-        return wDateStr === dateStr;
-      }).length;
-      
-      days.push({ date: dateStr, count });
+      const dayWorkouts = workouts.filter(w => new Date(w.date).toISOString().split('T')[0] === dateStr);
+      const count = dayWorkouts.length;
+      const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
+      days.push({ date: dateStr, count, volume });
     }
     return days;
   };
@@ -91,24 +93,136 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const getFullYearGridDays = () => {
     const days = [];
     const today = new Date();
-    // 53 columns * 7 rows = 371 days
     for (let i = 370; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      
-      const count = workouts.filter((w) => {
-        const wDateStr = new Date(w.date).toISOString().split('T')[0];
-        return wDateStr === dateStr;
-      }).length;
-      
-      days.push({ date: d, count });
+      const dayWorkouts = workouts.filter(w => new Date(w.date).toISOString().split('T')[0] === dateStr);
+      const count = dayWorkouts.length;
+      const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
+      days.push({ date: d, count, volume });
     }
     return days;
   };
 
   const activityDays = getActivityGridDays();
   const fullYearDays = getFullYearGridDays();
+
+  // Volume percentile tiers for color intensity
+  const allVolumes = fullYearDays.filter(d => d.volume > 0).map(d => d.volume).sort((a, b) => a - b);
+  const p33 = allVolumes[Math.floor(allVolumes.length * 0.33)] || 1;
+  const p66 = allVolumes[Math.floor(allVolumes.length * 0.66)] || 2;
+  const p90 = allVolumes[Math.floor(allVolumes.length * 0.90)] || 3;
+
+  const getVolumeClass = (volume: number) => {
+    if (volume === 0) return '';
+    if (volume <= p33) return 'active-1';
+    if (volume <= p66) return 'active-2';
+    if (volume <= p90) return 'active-3';
+    return 'active-4';
+  };
+
+  // Download shareable Instagram image using canvas
+  const downloadShareImage = () => {
+    const canvas = document.createElement('canvas');
+    const W = 1080, H = 1080;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d')!;
+
+    // Background gradient
+    const bg = ctx.createLinearGradient(0, 0, W, H);
+    bg.addColorStop(0, '#0f172a');
+    bg.addColorStop(1, '#1e293b');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 52px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(profile.name || 'Os meus Gains', W / 2, 100);
+
+    ctx.fillStyle = '#ff5e3a';
+    ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
+    ctx.fillText('Consistência Anual', W / 2, 152);
+
+    // Stats row
+    const yearWorkouts = workouts.filter(w => new Date(w.date) >= new Date(Date.now() - 365*24*60*60*1000));
+    const totalVolume = yearWorkouts.reduce((s, w) => s + getWorkoutVolume(w), 0);
+    const stats = [
+      { label: 'Treinos', value: yearWorkouts.length.toString() },
+      { label: 'Volume Total', value: `${Math.round(totalVolume / 1000)}t` },
+      { label: 'PRs', value: prs.length.toString() },
+    ];
+    stats.forEach((stat, i) => {
+      const x = 200 + i * 340;
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.beginPath();
+      ctx.roundRect(x - 120, 180, 240, 110, 16);
+      ctx.fill();
+      ctx.fillStyle = '#ff5e3a';
+      ctx.font = 'bold 46px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(stat.value, x, 248);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.font = '24px system-ui, -apple-system, sans-serif';
+      ctx.fillText(stat.label, x, 278);
+    });
+
+    // Grid
+    const CELL = 14, GAP = 3;
+    const COLS = 53, ROWS = 7;
+    const gridW = COLS * (CELL + GAP);
+    const gridH = ROWS * (CELL + GAP);
+    const startX = (W - gridW) / 2;
+    const startY = 330;
+
+    fullYearDays.forEach((day, idx) => {
+      const col = Math.floor(idx / 7);
+      const row = idx % 7;
+      const x = startX + col * (CELL + GAP);
+      const y = startY + row * (CELL + GAP);
+      let color = 'rgba(255,255,255,0.07)';
+      if (day.volume > 0) {
+        const alpha = day.volume <= p33 ? 0.35 : day.volume <= p66 ? 0.6 : day.volume <= p90 ? 0.8 : 1.0;
+        color = `rgba(255,94,58,${alpha})`;
+      }
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x, y, CELL, CELL, 3);
+      ctx.fill();
+    });
+
+    // Legend
+    const legendY = startY + gridH + 28;
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = '22px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('Menos', startX, legendY + 14);
+    [0.07, 0.35, 0.6, 0.8, 1.0].forEach((alpha, i) => {
+      ctx.fillStyle = alpha === 0.07 ? 'rgba(255,255,255,0.07)' : `rgba(255,94,58,${alpha})`;
+      ctx.beginPath();
+      ctx.roundRect(startX + 90 + i * 22, legendY, 16, 16, 3);
+      ctx.fill();
+    });
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.textAlign = 'left';
+    ctx.fillText('Mais', startX + 90 + 5 * 22 + 8, legendY + 14);
+
+    // Watermark
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.font = '22px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('strong-pr.vercel.app', W / 2, H - 40);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `gains_${new Date().getFullYear()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
 
   // Calculate workouts count per week for the last 6 weeks (Monday to Sunday)
   const getWeeklyWorkoutStats = () => {
@@ -803,12 +917,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 12px)', gridAutoFlow: 'column', gap: '3px' }}>
                         {fullYearDays.map((day, idx) => {
                           const formattedDate = day.date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
+                          const volLabel = day.volume > 0 ? ` · ${Math.round(day.volume)}kg` : '';
                           return (
                             <div 
                               key={idx}
-                              className={`activity-day ${day.count > 1 ? 'active-2' : day.count === 1 ? 'active-1' : ''}`}
+                              className={`activity-day ${getVolumeClass(day.volume)}`}
                               style={{ width: '12px', height: '12px', borderRadius: '2px', cursor: 'pointer' }}
-                              title={`${day.count} treinos em ${formattedDate}`}
+                              title={`${day.count} treino${day.count !== 1 ? 's' : ''} em ${formattedDate}${volLabel}`}
                             />
                           );
                         })}
@@ -818,18 +933,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
 
-              {/* Legend and total count */}
+              {/* Legend, total count and download button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 650, padding: '0 4px' }}>
-                <div>
-                  Total: <span style={{ color: 'var(--accent-color)', fontWeight: 800 }}>{workouts.filter(w => new Date(w.date) >= new Date(Date.now() - 365*24*60*60*1000)).length} treinos</span>
-                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <span>Menos</span>
                   <div className="activity-day" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
                   <div className="activity-day active-1" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
                   <div className="activity-day active-2" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
+                  <div className="activity-day active-3" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
+                  <div className="activity-day active-4" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
                   <span>Mais</span>
                 </div>
+                <button
+                  onClick={downloadShareImage}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '5px',
+                    background: 'var(--accent-gradient)', color: '#fff',
+                    border: 'none', borderRadius: '20px', padding: '6px 14px',
+                    fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(255,94,58,0.35)'
+                  }}
+                >
+                  📸 Partilhar
+                </button>
               </div>
             </div>
           </div>

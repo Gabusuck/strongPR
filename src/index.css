@@ -380,12 +380,21 @@ body {
 }
 
 .activity-day.active-1 {
-  background: #ffaa95;
+  background: #ffd4c8;
 }
 
 .activity-day.active-2 {
+  background: #ff9070;
+}
+
+.activity-day.active-3 {
   background: var(--accent-color);
-  box-shadow: 0 2px 6px rgba(255, 94, 58, 0.25);
+  box-shadow: 0 2px 6px rgba(255, 94, 58, 0.3);
+}
+
+.activity-day.active-4 {
+  background: #e63000;
+  box-shadow: 0 2px 8px rgba(230, 48, 0, 0.5);
 }
 
 /* Modais slide-up */
