@@ -125,98 +125,155 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Download shareable Instagram image using canvas
   const downloadShareImage = () => {
     const canvas = document.createElement('canvas');
-    const W = 1080, H = 1080;
+    const W = 1080, H = 1350; // 4:5 — formato ideal Instagram
     canvas.width = W;
     canvas.height = H;
     const ctx = canvas.getContext('2d')!;
 
-    // Background gradient
-    const bg = ctx.createLinearGradient(0, 0, W, H);
-    bg.addColorStop(0, '#0f172a');
-    bg.addColorStop(1, '#1e293b');
+    // === BACKGROUND ===
+    const bg = ctx.createLinearGradient(0, H, W, 0);
+    bg.addColorStop(0, '#080c14');
+    bg.addColorStop(0.5, '#0d1520');
+    bg.addColorStop(1, '#111927');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, W, H);
 
-    // Title
+    // Subtle radial glow top-right
+    const glow = ctx.createRadialGradient(W * 0.85, H * 0.08, 0, W * 0.85, H * 0.08, 480);
+    glow.addColorStop(0, 'rgba(255,94,58,0.12)');
+    glow.addColorStop(1, 'rgba(255,94,58,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    // === TOP ACCENT BAR ===
+    const bar = ctx.createLinearGradient(0, 0, W * 0.6, 0);
+    bar.addColorStop(0, '#ff5e3a');
+    bar.addColorStop(1, 'rgba(255,94,58,0)');
+    ctx.fillStyle = bar;
+    ctx.fillRect(80, 90, 480, 4);
+
+    // === LABEL ===
+    ctx.fillStyle = 'rgba(255,94,58,0.9)';
+    ctx.font = '600 28px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('CONSISTÊNCIA ANUAL', 80, 80);
+
+    // === NAME ===
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 52px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(profile.name || 'Os meus Gains', W / 2, 100);
+    ctx.font = 'bold 88px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'left';
+    const name = profile.name || 'Os meus Gains';
+    ctx.fillText(name, 80, 210);
 
-    ctx.fillStyle = '#ff5e3a';
-    ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
-    ctx.fillText('Consistência Anual', W / 2, 152);
-
-    // Stats row
+    // === STATS ===
     const yearWorkouts = workouts.filter(w => new Date(w.date) >= new Date(Date.now() - 365*24*60*60*1000));
     const totalVolume = yearWorkouts.reduce((s, w) => s + getWorkoutVolume(w), 0);
+    const totalKg = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}t` : `${Math.round(totalVolume)}kg`;
     const stats = [
       { label: 'Treinos', value: yearWorkouts.length.toString() },
-      { label: 'Volume Total', value: `${Math.round(totalVolume / 1000)}t` },
+      { label: 'Volume', value: totalKg },
       { label: 'PRs', value: prs.length.toString() },
     ];
+
+    const statY = 270;
+    const statW = 290, statH = 130, statGap = 20;
     stats.forEach((stat, i) => {
-      const x = 200 + i * 340;
-      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      const sx = 80 + i * (statW + statGap);
+      // Card background
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
       ctx.beginPath();
-      ctx.roundRect(x - 120, 180, 240, 110, 16);
+      ctx.roundRect(sx, statY, statW, statH, 20);
       ctx.fill();
-      ctx.fillStyle = '#ff5e3a';
-      ctx.font = 'bold 46px system-ui, -apple-system, sans-serif';
+      // Top accent line on card
+      const cardBar = ctx.createLinearGradient(sx, statY, sx + statW, statY);
+      cardBar.addColorStop(0, 'rgba(255,94,58,0.8)');
+      cardBar.addColorStop(1, 'rgba(255,94,58,0)');
+      ctx.fillStyle = cardBar;
+      ctx.fillRect(sx + 20, statY, statW - 20, 2);
+      // Value
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 58px system-ui, -apple-system, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(stat.value, x, 248);
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = '24px system-ui, -apple-system, sans-serif';
-      ctx.fillText(stat.label, x, 278);
+      ctx.fillText(stat.value, sx + statW / 2, statY + 76);
+      // Label
+      ctx.fillStyle = 'rgba(255,255,255,0.38)';
+      ctx.font = '500 24px system-ui, -apple-system, sans-serif';
+      ctx.fillText(stat.label, sx + statW / 2, statY + 110);
     });
 
-    // Grid
-    const CELL = 14, GAP = 3;
+    // === GRID ===
+    const CELL = 16, GAP = 4;
     const COLS = 53, ROWS = 7;
-    const gridW = COLS * (CELL + GAP);
-    const gridH = ROWS * (CELL + GAP);
+    const gridW = COLS * (CELL + GAP) - GAP;
     const startX = (W - gridW) / 2;
-    const startY = 330;
+    const startY = 460;
+
+    // Grid background pill
+    const gridH = ROWS * (CELL + GAP) - GAP;
+    ctx.fillStyle = 'rgba(255,255,255,0.025)';
+    ctx.beginPath();
+    ctx.roundRect(startX - 24, startY - 20, gridW + 48, gridH + 48, 24);
+    ctx.fill();
 
     fullYearDays.forEach((day, idx) => {
       const col = Math.floor(idx / 7);
       const row = idx % 7;
       const x = startX + col * (CELL + GAP);
       const y = startY + row * (CELL + GAP);
-      let color = 'rgba(255,255,255,0.07)';
-      if (day.volume > 0) {
-        const alpha = day.volume <= p33 ? 0.35 : day.volume <= p66 ? 0.6 : day.volume <= p90 ? 0.8 : 1.0;
-        color = `rgba(255,94,58,${alpha})`;
+      let fillColor: string;
+      if (day.volume === 0) {
+        fillColor = 'rgba(255,255,255,0.06)';
+      } else if (day.volume <= p33) {
+        fillColor = 'rgba(255,140,110,0.55)';
+      } else if (day.volume <= p66) {
+        fillColor = 'rgba(255,94,58,0.75)';
+      } else if (day.volume <= p90) {
+        fillColor = 'rgba(255,94,58,0.92)';
+      } else {
+        fillColor = '#ff5e3a';
+        // Glow on hottest days
+        ctx.shadowColor = 'rgba(255,94,58,0.7)';
+        ctx.shadowBlur = 8;
       }
-      ctx.fillStyle = color;
+      ctx.fillStyle = fillColor;
       ctx.beginPath();
-      ctx.roundRect(x, y, CELL, CELL, 3);
+      ctx.roundRect(x, y, CELL, CELL, 4);
       ctx.fill();
+      ctx.shadowBlur = 0;
     });
 
-    // Legend
-    const legendY = startY + gridH + 28;
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '22px system-ui, -apple-system, sans-serif';
+    // === LEGEND ===
+    const legY = startY + gridH + 44;
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.font = '500 22px system-ui, -apple-system, sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText('Menos', startX, legendY + 14);
-    [0.07, 0.35, 0.6, 0.8, 1.0].forEach((alpha, i) => {
-      ctx.fillStyle = alpha === 0.07 ? 'rgba(255,255,255,0.07)' : `rgba(255,94,58,${alpha})`;
+    ctx.fillText('menos', startX, legY + 15);
+    const swatches = ['rgba(255,255,255,0.06)', 'rgba(255,140,110,0.55)', 'rgba(255,94,58,0.75)', 'rgba(255,94,58,0.92)', '#ff5e3a'];
+    swatches.forEach((c, i) => {
+      ctx.fillStyle = c;
       ctx.beginPath();
-      ctx.roundRect(startX + 90 + i * 22, legendY, 16, 16, 3);
+      ctx.roundRect(startX + 100 + i * 28, legY, 20, 20, 5);
       ctx.fill();
     });
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.textAlign = 'left';
-    ctx.fillText('Mais', startX + 90 + 5 * 22 + 8, legendY + 14);
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillText('mais', startX + 100 + 5 * 28 + 8, legY + 15);
 
-    // Watermark
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.font = '22px system-ui, -apple-system, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('strong-pr.vercel.app', W / 2, H - 40);
+    // === DIVIDER ===
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(80, legY + 50, W - 160, 1);
 
-    // Download
+    // === WATERMARK ===
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = '500 24px system-ui, -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('strong app', W - 80, legY + 90);
+    // Dot accent
+    ctx.fillStyle = 'rgba(255,94,58,0.7)';
+    ctx.beginPath();
+    ctx.arc(W - 80 - ctx.measureText('strong app').width - 14, legY + 83, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // === DOWNLOAD ===
     const link = document.createElement('a');
     link.download = `gains_${new Date().getFullYear()}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -946,15 +1003,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
                 <button
                   onClick={downloadShareImage}
+                  title="Descarregar imagem para partilhar"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: '5px',
-                    background: 'var(--accent-gradient)', color: '#fff',
-                    border: 'none', borderRadius: '20px', padding: '6px 14px',
-                    fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(255,94,58,0.35)'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '32px', height: '32px',
+                    background: 'none',
+                    border: '1.5px solid var(--border-color)',
+                    borderRadius: '50%',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    flexShrink: 0
                   }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-color)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-color)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-color)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
                 >
-                  📸 Partilhar
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
                 </button>
               </div>
             </div>
