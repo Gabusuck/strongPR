@@ -450,8 +450,8 @@ export default function App() {
       
       {/* App Header */}
       <header className="app-header">
-        <h1 className="app-title" onClick={() => setActiveTab('workout')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <img src="/logo.png" alt="StrongPR Logo" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
+        <h1 className="app-title" onClick={() => setActiveTab('workout')} style={{ cursor: 'pointer' }}>
+          <img src="/logo.png" alt="StrongPR" style={{ width: '22px', height: '22px', objectFit: 'contain', borderRadius: '6px' }} />
           StrongPR
         </h1>
         
@@ -479,25 +479,25 @@ export default function App() {
             </button>
           )}
           {activeWorkout && activeTab !== 'workout' && (
-            <button
+            <div
               onClick={() => setActiveTab('workout')}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: 'rgba(255, 94, 58, 0.08)',
-                border: '1px solid var(--accent-color)',
-                color: 'var(--accent-color)',
-                padding: '6px 12px',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                padding: '5px 10px 5px 8px',
                 borderRadius: '20px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
+                background: 'rgba(16,185,129,0.08)',
+                border: '1px solid rgba(16,185,129,0.2)',
                 cursor: 'pointer',
-                animation: 'pulse 2s infinite'
               }}
             >
-              ⚡ Ativo
-            </button>
+              <span style={{
+                width: '7px', height: '7px', borderRadius: '50%',
+                backgroundColor: '#10b981',
+                animation: 'pulse 2s infinite',
+                flexShrink: 0
+              }} />
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#059669', letterSpacing: '0.01em' }}>Em treino</span>
+            </div>
           )}
 
           {/* 3-dots Settings Icon */}
