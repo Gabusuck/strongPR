@@ -68,14 +68,7 @@ const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
   return group.includes((muscleGroup || '').toLowerCase());
 };
 
-const WGER_MUSCLE_MAPPING: Record<string, string> = {
-  chest: 'https://wger.de/static/images/muscles/main/muscle-4.svg',
-  arms: 'https://wger.de/static/images/muscles/main/muscle-1.svg',
-  shoulders: 'https://wger.de/static/images/muscles/main/muscle-2.svg',
-  back: 'https://wger.de/static/images/muscles/main/muscle-12.svg',
-  abdominals: 'https://wger.de/static/images/muscles/main/muscle-6.svg',
-  legs: 'https://wger.de/static/images/muscles/main/muscle-11.svg',
-};
+
 
 // Component to render first frame of GIF as static image
 const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: React.CSSProperties }> = ({ mediaId, alt, style }) => {
@@ -1179,17 +1172,38 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                           }}
                           aria-label={MUSCLE_LABELS[muscle]}
                         >
-                          <img 
-                            src={WGER_MUSCLE_MAPPING[muscle]} 
-                            alt={MUSCLE_LABELS[muscle]} 
-                            style={{ 
-                              width: '28px', 
-                              height: '38px', 
-                              objectFit: 'contain',
-                              filter: active ? 'none' : 'grayscale(100%) opacity(60%)',
-                              transition: 'all var(--transition-fast)'
-                            }} 
-                          />
+                          <div style={{ position: 'relative', width: '28px', height: '38px', overflow: 'hidden' }}>
+                            {/* 1. Background Muscular System Body */}
+                            <img 
+                              src={muscle === 'back' ? '/muscular_system_back.svg' : '/muscular_system_front.svg'} 
+                              alt="muscular system"
+                              style={{ 
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'contain',
+                                opacity: 0.35,
+                                filter: 'grayscale(100%)'
+                              }} 
+                            />
+                            {/* 2. Highlight Overlay */}
+                            <img 
+                              src={`/muscle_${muscle}.svg`} 
+                              alt={MUSCLE_LABELS[muscle]} 
+                              style={{ 
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'contain',
+                                filter: active ? 'none' : 'grayscale(100%) opacity(50%)',
+                                transition: 'all var(--transition-fast)'
+                              }} 
+                            />
+                          </div>
                         </button>
                       );
                     })}
