@@ -109,19 +109,34 @@ const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group,
   }
 };
 
-const DEFAULT_EXERCISE_IMAGE_MAPPING: Record<string, string> = {
-  '1': 'Barbell_Full_Squat',                    // Agachamento (Squat)
-  '2': 'Barbell_Bench_Press_-_Medium_Grip',     // Supino Plano (Bench Press)
-  '3': 'Barbell_Deadlift',                      // Peso Morto (Deadlift)
-  '4': 'Standing_Military_Press',               // Press Militar (Overhead Press)
-  '5': 'Pullups',                               // Elevações (Pull-ups)
-  '6': 'Bent_Over_Barbell_Row',                 // Remada com Barra (Barbell Row)
-  '7': 'Dumbbell_Bicep_Curl',                   // Bicep Curl com Halteres
-  '8': 'Triceps_Pushdown',                      // Tricep Pushdown
-  '9': 'Leg_Press',                             // Prensa de Pernas (Leg Press)
-  '10': 'Crunch_-_Hands_Overhead',              // Abdominais (Crunches)
-  '11': 'Side_Lateral_Raise',                   // Elevações Laterais (Lateral Raises)
-  '12': 'Barbell_Incline_Bench_Press_-_Medium_Grip', // Supino Inclinado (Incline Press)
+const OLD_EXERCISE_ID_MAPPING: Record<string, string> = {
+  '1': 'qXTaZnJ',  // Agachamento (Squat) -> barbell full squat
+  '2': 'EIeI8Vf',  // Supino Plano (Bench Press) -> barbell bench press
+  '3': 'ila4NZS',  // Peso Morto (Deadlift) -> barbell deadlift
+  '4': 'wdRZISl',  // Press Militar (Overhead Press) -> barbell standing military press
+  '5': 'lBDjFxJ',  // Elevações (Pull-ups) -> pull-up
+  '6': 'eZyBC3j',  // Remada com Barra (Barbell Row) -> barbell bent over row
+  '7': '25GPyDY',  // Bicep Curl com Halteres -> barbell curl (or dumbbell bicep curl)
+  '8': '3ZflifB',  // Tricep Pushdown -> cable pushdown
+  '9': '10Z2DXU',  // Prensa de Pernas (Leg Press) -> sled 45° leg press
+  '10': 'TFqbd8t', // Abdominais (Crunches) -> crunch floor
+  '11': 'DsgkuIt', // Elevações Laterais (Lateral Raises) -> dumbbell lateral raise
+  '12': '3TZduzM', // Supino Inclinado (Incline Press) -> barbell incline bench press
+};
+
+const OLD_EXERCISE_NAME_MAPPING: Record<string, string> = {
+  'agachamento (squat)': 'qXTaZnJ',
+  'supino plano (bench press)': 'EIeI8Vf',
+  'peso morto (deadlift)': 'ila4NZS',
+  'press militar (overhead press)': 'wdRZISl',
+  'elevações (pull-ups)': 'lBDjFxJ',
+  'remada com barra (barbell row)': 'eZyBC3j',
+  'bicep curl com halteres': '25GPyDY',
+  'tricep pushdown': '3ZflifB',
+  'prensa de pernas (leg press)': '10Z2DXU',
+  'abdominais (crunches)': 'TFqbd8t',
+  'elevações laterais (lateral raises)': 'DsgkuIt',
+  'supino inclinado (incline press)': '3TZduzM',
 };
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -794,8 +809,16 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           e.id === workoutExercise.id || 
           e.name.toLowerCase() === workoutExercise.name.toLowerCase()
         );
-        const imageUrl = apiEx && apiEx.media_id
-          ? `https://static.exercisedb.dev/media/${apiEx.media_id}.gif`
+        
+        let mediaId = apiEx?.media_id || null;
+        if (!mediaId) {
+          mediaId = OLD_EXERCISE_ID_MAPPING[workoutExercise.id] || 
+                    OLD_EXERCISE_NAME_MAPPING[workoutExercise.name.toLowerCase()] || 
+                    null;
+        }
+        
+        const imageUrl = mediaId
+          ? `https://static.exercisedb.dev/media/${mediaId}.gif`
           : null;
 
         return (
