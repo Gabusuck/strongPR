@@ -67,10 +67,14 @@ const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
   if (!group) return false;
   return group.includes((muscleGroup || '').toLowerCase());
 };
-
-
-
-// Component to render first frame of GIF as static image
+const MUSCLE_ZOOM_MAPPING: Record<string, { scale: number; origin: string }> = {
+  chest: { scale: 2.2, origin: 'center 35%' },
+  arms: { scale: 2.2, origin: 'center 40%' },
+  shoulders: { scale: 2.5, origin: 'center 30%' },
+  abdominals: { scale: 2.2, origin: 'center 42%' },
+  back: { scale: 2.2, origin: 'center 38%' },
+  legs: { scale: 1.8, origin: 'center 75%' },
+};// Component to render first frame of GIF as static image
 const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: React.CSSProperties }> = ({ mediaId, alt, style }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -1185,7 +1189,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 height: '100%', 
                                 objectFit: 'contain',
                                 opacity: 0.35,
-                                filter: 'grayscale(100%)'
+                                filter: 'grayscale(100%)',
+                                transform: `scale(${MUSCLE_ZOOM_MAPPING[muscle].scale})`,
+                                transformOrigin: MUSCLE_ZOOM_MAPPING[muscle].origin,
+                                transition: 'all var(--transition-fast)'
                               }} 
                             />
                             {/* 2. Highlight Overlay */}
@@ -1199,7 +1206,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 width: '100%', 
                                 height: '100%', 
                                 objectFit: 'contain',
-                                filter: active ? 'none' : 'grayscale(100%) opacity(50%)',
+                                transform: `scale(${MUSCLE_ZOOM_MAPPING[muscle].scale})`,
+                                transformOrigin: MUSCLE_ZOOM_MAPPING[muscle].origin,
+                                opacity: active ? 1.0 : 0.5,
                                 transition: 'all var(--transition-fast)'
                               }} 
                             />
