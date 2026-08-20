@@ -68,46 +68,62 @@ const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
   return group.includes((muscleGroup || '').toLowerCase());
 };
 
-// Muscle body silhouette icon component
-const MuscleSilhouette: React.FC<{ group: string; active: boolean }> = ({ group }) => {
-  const activeColor = '#ff3b30'; // Solid GymVisual red
-  const baseColor = '#e2e8f0'; // Solid light grey body
-  const outlineColor = '#94a3b8'; // Slate border outline
+const WGER_MUSCLE_MAPPING: Record<string, string> = {
+  chest: 'https://wger.de/static/images/muscles/main/muscle-4.svg',
+  arms: 'https://wger.de/static/images/muscles/main/muscle-1.svg',
+  shoulders: 'https://wger.de/static/images/muscles/main/muscle-2.svg',
+  back: 'https://wger.de/static/images/muscles/main/muscle-12.svg',
+  abdominals: 'https://wger.de/static/images/muscles/main/muscle-6.svg',
+  legs: 'https://wger.de/static/images/muscles/main/muscle-11.svg',
+};
 
-  const isBack = group === 'back';
-  const groupStr = group as string;
+// Component to render first frame of GIF as static image
+const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: React.CSSProperties }> = ({ mediaId, alt, style }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [error, setError] = useState(false);
 
-  if (isBack) {
-    return (
-      <svg width="22" height="30" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="14" cy="5" r="3.5" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M13 9h2v2h-2z" fill={baseColor} />
-        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={groupStr === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M8 13h12l-2 8h-8z" fill={groupStr === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M10 21h8l-1 5h-6z" fill={groupStr === 'back' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 26h10l1 3-2 2h-8l-2-2z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 31h4.5v6H9z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M14.5 31h4.5v6h-4.5z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-      </svg>
-    );
-  } else {
-    return (
-      <svg width="22" height="30" viewBox="0 0 28 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="14" cy="5" r="3.5" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M13 9h2v2h-2z" fill={baseColor} />
-        <path d="M7 11h14l1 3-3 1-1-2h-8l-1 2-3-1z" fill={groupStr === 'shoulders' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M8 13h12l-1 4h-10z" fill={groupStr === 'chest' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 17h10l-1 5h-8z" fill={groupStr === 'abdominals' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 23h10v3H9z" fill={baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M4 12l1.5 8-1 6-1.5-0.5 1-6.5-1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M24 12l-1.5 8 1 6 1.5-0.5-1-6.5 1-7z" fill={groupStr === 'arms' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M9 26h4.5v11H9z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-        <path d="M14.5 26h4.5v11h-4.5z" fill={groupStr === 'legs' ? activeColor : baseColor} stroke={outlineColor} strokeWidth="1.5" />
-      </svg>
-    );
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img || error) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const handleLoad = () => {
+      canvas.width = img.naturalWidth || 360;
+      canvas.height = img.naturalHeight || 360;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+
+    if (img.complete) {
+      handleLoad();
+    } else {
+      img.addEventListener('load', handleLoad);
+      return () => img.removeEventListener('load', handleLoad);
+    }
+  }, [mediaId, error]);
+
+  if (error) {
+    return <Dumbbell size={24} style={{ color: 'var(--text-muted)' }} />;
   }
+
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <img
+        ref={imgRef}
+        src={`https://static.exercisedb.dev/media/${mediaId}.gif`}
+        alt={alt}
+        style={{ display: 'none' }}
+        onError={() => setError(true)}
+      />
+      <canvas
+        ref={canvasRef}
+        style={{ ...style, maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }}
+      />
+    </div>
+  );
 };
 
 const OLD_EXERCISE_ID_MAPPING: Record<string, string> = {
@@ -856,29 +872,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     null;
         }
         
-        const imageUrl = mediaId
-          ? `https://static.exercisedb.dev/media/${mediaId}.gif`
-          : null;
+
 
         return (
           <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {imageUrl ? (
-                    <img 
-                      src={imageUrl} 
-                      alt={workoutExercise.name} 
-                      style={{ width: '90%', height: '90%', objectFit: 'contain' }}
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        const parent = (e.target as HTMLImageElement).parentElement;
-                        if (parent) {
-                          parent.innerHTML = '<span style="font-size: 1.25rem;">💪</span>';
-                        }
-                      }}
-                    />
+                  {mediaId ? (
+                    <StaticExerciseImage mediaId={mediaId} alt={workoutExercise.name} style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
                   ) : (
                     <span style={{ fontSize: '1.25rem' }}>💪</span>
                   )}
@@ -1179,7 +1181,17 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                             transform: active ? 'scale(1.15)' : 'scale(1.0)',
                             filter: active ? 'drop-shadow(0 0 6px rgba(255, 59, 48, 0.4))' : 'none'
                           }}>
-                            <MuscleSilhouette group={muscle} active={active} />
+                            <img 
+                              src={WGER_MUSCLE_MAPPING[muscle]} 
+                              alt={MUSCLE_LABELS[muscle]} 
+                              style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                objectFit: 'contain',
+                                filter: active ? 'none' : 'grayscale(100%) opacity(60%)',
+                                transition: 'all var(--transition-fast)'
+                              }} 
+                            />
                           </div>
                         </button>
                       );
@@ -1273,17 +1285,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
                                   {/* Card image container */}
                                   <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                                    <img
-                                      src={`https://static.exercisedb.dev/media/${ex.media_id}.gif`}
-                                      alt={ex.name}
-                                      style={{ height: '95%', width: '95%', objectFit: 'contain' }}
-                                      loading="lazy"
-                                      onError={(e) => {
-                                        const el = e.currentTarget;
-                                        el.style.display = 'none';
-                                        el.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg></div>';
-                                      }}
-                                    />
+                                    <StaticExerciseImage mediaId={ex.media_id} alt={ex.name} />
                                   </div>
 
                                   {/* Card Text footer */}
@@ -1477,17 +1479,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
                               {/* Card image container */}
                               <div style={{ height: '140px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                                <img
-                                  src={`https://static.exercisedb.dev/media/${ex.media_id}.gif`}
-                                  alt={ex.name}
-                                  style={{ height: '95%', width: '95%', objectFit: 'contain' }}
-                                  loading="lazy"
-                                  onError={(e) => {
-                                    const el = e.currentTarget;
-                                    el.style.display = 'none';
-                                    el.parentElement!.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M6.5 6.5h11M6.5 17.5h11M12 2v20"/></svg></div>';
-                                  }}
-                                />
+                                <StaticExerciseImage mediaId={ex.media_id} alt={ex.name} />
                               </div>
 
                               {/* Card footer */}
