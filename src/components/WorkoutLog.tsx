@@ -68,12 +68,12 @@ const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
   return group.includes((muscleGroup || '').toLowerCase());
 };
 const MUSCLE_ZOOM_MAPPING: Record<string, { scale: number; origin: string }> = {
-  chest: { scale: 2.2, origin: 'center 35%' },
-  arms: { scale: 2.2, origin: 'center 40%' },
-  shoulders: { scale: 2.5, origin: 'center 30%' },
-  abdominals: { scale: 2.2, origin: 'center 42%' },
-  back: { scale: 2.2, origin: 'center 38%' },
-  legs: { scale: 1.8, origin: 'center 75%' },
+  chest: { scale: 1.6, origin: 'center 28%' },
+  arms: { scale: 1.5, origin: 'center 34%' },
+  shoulders: { scale: 1.7, origin: 'center 22%' },
+  abdominals: { scale: 1.6, origin: 'center 38%' },
+  back: { scale: 1.6, origin: 'center 28%' },
+  legs: { scale: 1.4, origin: 'center 68%' },
 };// Component to render first frame of GIF as static image
 const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: React.CSSProperties }> = ({ mediaId, alt, style }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1176,7 +1176,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                           }}
                           aria-label={MUSCLE_LABELS[muscle]}
                         >
-                          <div style={{ position: 'relative', width: '28px', height: '38px', overflow: 'hidden' }}>
+                          <div style={{ position: 'relative', width: '34px', height: '42px', overflow: 'hidden', borderRadius: '6px' }}>
                             {/* 1. Background Muscular System Body */}
                             <img 
                               src={muscle === 'back' ? '/muscular_system_back.svg' : '/muscular_system_front.svg'} 
