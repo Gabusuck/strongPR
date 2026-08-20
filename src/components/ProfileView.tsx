@@ -124,202 +124,193 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // Download shareable Instagram image using canvas
   const downloadShareImage = () => {
+    const W = 1080, H = 1920;
     const canvas = document.createElement('canvas');
-    const W = 1080, H = 1920; // 9:16 — Story format
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d')!;
 
-    // === BACKGROUND ===
-    const bg = ctx.createLinearGradient(0, H, W, 0);
-    bg.addColorStop(0, '#080c14');
-    bg.addColorStop(0.5, '#0d1520');
-    bg.addColorStop(1, '#111927');
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, W, H);
-
-    // Radial glow top-right
-    const glow = ctx.createRadialGradient(W * 0.85, H * 0.06, 0, W * 0.85, H * 0.06, 550);
-    glow.addColorStop(0, 'rgba(255,94,58,0.13)');
-    glow.addColorStop(1, 'rgba(255,94,58,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, W, H);
-
-    // Radial glow bottom-left
-    const glow2 = ctx.createRadialGradient(W * 0.1, H * 0.92, 0, W * 0.1, H * 0.92, 400);
-    glow2.addColorStop(0, 'rgba(255,94,58,0.07)');
-    glow2.addColorStop(1, 'rgba(255,94,58,0)');
-    ctx.fillStyle = glow2;
-    ctx.fillRect(0, 0, W, H);
-
-    // Helper: rounded rect fill
+    // ── Helpers ──────────────────────────────────────────
     const rr = (x: number, y: number, w: number, h: number, r: number, color: string) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, r);
-      ctx.fill();
+      ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+    };
+    const txt = (text: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') => {
+      ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.fillText(text, x, y);
     };
 
-    // === HEADER ===
-    const bar = ctx.createLinearGradient(80, 0, 600, 0);
-    bar.addColorStop(0, '#ff5e3a');
-    bar.addColorStop(1, 'rgba(255,94,58,0)');
-    ctx.fillStyle = bar;
-    ctx.fillRect(80, 110, 520, 4);
+    // ── Palette ──────────────────────────────────────────
+    const CORAL   = '#FF5E3A';
+    const CORAL2  = '#FF8060';
+    const BLACK   = '#1A1A2E';
+    const GREY    = '#64748B';
+    const LGREY   = '#94A3B8';
+    const WHITE   = '#FFFFFF';
+    const CREAM   = '#FFF7F4';
+    const CARD_BG = '#F8FAFC';
+    const BORDER  = '#E8EDF2';
 
-    ctx.fillStyle = 'rgba(255,94,58,0.85)';
-    ctx.font = '600 30px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('CONSISTÊNCIA ANUAL', 80, 100);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 96px system-ui, sans-serif';
-    ctx.fillText(profile.name || 'Strong', 80, 240);
-
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.font = '500 30px system-ui, sans-serif';
-    ctx.fillText(`${new Date().getFullYear()}`, 80, 290);
-
-    // === COMPUTE STATS ===
+    // ── COMPUTE STATS ────────────────────────────────────
     const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    const yearWorkouts = workouts.filter(w => new Date(w.date) >= yearAgo);
-    const totalVolume = yearWorkouts.reduce((s, w) => s + getWorkoutVolume(w), 0);
-    const totalKg = totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}t` : `${Math.round(totalVolume)}kg`;
-    const totalHours = yearWorkouts.reduce((s, w) => s + (w.duration || 0), 0);
-    const hoursStr = totalHours >= 3600 ? `${Math.floor(totalHours / 3600)}h` : `${Math.round(totalHours / 60)}min`;
-    const avgPerWeek = (yearWorkouts.length / 52).toFixed(1);
+    const yw = workouts.filter(w => new Date(w.date) >= yearAgo);
+    const vol = yw.reduce((s, w) => s + getWorkoutVolume(w), 0);
+    const volStr = vol >= 1000 ? `${(vol/1000).toFixed(1)}t` : `${Math.round(vol)}kg`;
+    const secs = yw.reduce((s, w) => s + (w.duration || 0), 0);
+    const hrsStr = secs >= 3600 ? `${Math.floor(secs/3600)}h` : secs > 0 ? `${Math.round(secs/60)}min` : '—';
+    const avgPW = yw.length > 0 ? (yw.length / 52).toFixed(1) : '0';
 
-    // Current streak
     let streak = 0;
-    const today = new Date(); today.setHours(0,0,0,0);
+    const tod = new Date(); tod.setHours(0,0,0,0);
     for (let i = 0; i < 365; i++) {
-      const d = new Date(today); d.setDate(today.getDate() - i);
+      const d = new Date(tod); d.setDate(tod.getDate() - i);
       const ds = d.toISOString().split('T')[0];
       if (workouts.some(w => new Date(w.date).toISOString().split('T')[0] === ds)) streak++;
       else if (i > 0) break;
     }
+    let best = 0, run = 0;
+    for (const day of fullYearDays) { if (day.count > 0) { run++; best = Math.max(best, run); } else run = 0; }
 
-    // Best streak
-    let bestStreak = 0, cur = 0;
-    for (let i = 0; i < fullYearDays.length; i++) {
-      if (fullYearDays[i].count > 0) { cur++; bestStreak = Math.max(bestStreak, cur); }
-      else cur = 0;
-    }
+    const mc: Record<string,number> = {};
+    yw.forEach(w => w.exercises.forEach(ex => { mc[ex.category||'Outro'] = (mc[ex.category||'Outro']||0) + ex.sets.filter(s=>s.isCompleted).length; }));
+    const topM = Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? '—';
+    const topMLabel = topM.length > 9 ? topM.slice(0,9)+'.' : topM;
 
-    // Most trained muscle
-    const muscleCounts: Record<string, number> = {};
-    yearWorkouts.forEach(w => w.exercises.forEach(ex => {
-      const cat = ex.category || 'Outro';
-      muscleCounts[cat] = (muscleCounts[cat] || 0) + ex.sets.filter(s => s.isCompleted).length;
-    }));
-    // (topMuscle available for future use)
-    const topMuscle = Object.entries(muscleCounts).sort((a,b) => b[1]-a[1])[0]?.[0] ?? '—';
-
-    // === STAT CARDS — 2 columns × 4 rows ===
     const stats = [
-      { label: 'Treinos', value: yearWorkouts.length.toString(), accent: true },
-      { label: 'Volume Total', value: totalKg, accent: true },
-      { label: 'PRs Batidos', value: prs.length.toString(), accent: false },
-      { label: 'Horas Treinadas', value: hoursStr, accent: false },
-      { label: 'Treinos / Semana', value: avgPerWeek, accent: false },
-      { label: 'Streak Atual', value: `${streak}d`, accent: false },
-      { label: 'Melhor Streak', value: `${bestStreak}d`, accent: false },
-      { label: 'Músculo Principal', value: topMuscle.length > 8 ? topMuscle.slice(0, 8) + '.' : topMuscle, accent: false },
+      { v: yw.length.toString(),  l: 'Treinos',        hi: true  },
+      { v: volStr,                 l: 'Volume Total',   hi: true  },
+      { v: prs.length.toString(), l: 'PRs Batidos',    hi: false },
+      { v: hrsStr,                 l: 'Horas de Gym',   hi: false },
+      { v: avgPW,                  l: 'Treinos/Semana', hi: false },
+      { v: `${streak}d`,          l: 'Streak Atual',   hi: false },
+      { v: `${best}d`,            l: 'Melhor Streak',  hi: false },
+      { v: topMLabel,              l: 'Músculo Fav.',   hi: false },
     ];
 
-    const gridTop = 330;
-    const cardW = 460, cardH = 120, cardGap = 20;
-    stats.forEach((stat, i) => {
-      const col = i % 2;
-      const row = Math.floor(i / 2);
-      const sx = 80 + col * (cardW + cardGap);
-      const sy = gridTop + row * (cardH + cardGap);
+    // ══════════════════════════════════════════════════════
+    // SECTION 1 — CORAL TOP  (0 → 680px)
+    // ══════════════════════════════════════════════════════
+    const topH = 680;
+    const topGrad = ctx.createLinearGradient(0, 0, W, topH);
+    topGrad.addColorStop(0, '#FF6B44');
+    topGrad.addColorStop(1, '#FF3D1A');
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(0, 0, W, topH);
 
-      rr(sx, sy, cardW, cardH, 20, 'rgba(255,255,255,0.04)');
-      const cbar = ctx.createLinearGradient(sx, sy, sx + cardW * 0.6, sy);
-      cbar.addColorStop(0, stat.accent ? 'rgba(255,94,58,0.9)' : 'rgba(255,255,255,0.15)');
-      cbar.addColorStop(1, 'transparent');
-      ctx.fillStyle = cbar;
-      ctx.fillRect(sx + 18, sy, cardW - 36, 2);
+    // decorative big circle top-right
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath(); ctx.arc(W + 80, -80, 420, 0, Math.PI * 2); ctx.fill();
 
-      ctx.fillStyle = stat.accent ? '#ff5e3a' : '#ffffff';
-      ctx.font = 'bold 52px system-ui, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(stat.value, sx + 22, sy + 68);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.beginPath(); ctx.arc(W - 80, 300, 250, 0, Math.PI * 2); ctx.fill();
 
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.font = '500 22px system-ui, sans-serif';
-      ctx.fillText(stat.label, sx + 22, sy + 100);
+    // App label
+    txt('STRONG APP', 80, 130, '600 28px system-ui,sans-serif', 'rgba(255,255,255,0.6)');
+    // Year badge
+    rr(W - 200, 95, 120, 50, 25, 'rgba(255,255,255,0.18)');
+    txt(new Date().getFullYear().toString(), W - 140, 130, 'bold 26px system-ui,sans-serif', WHITE, 'center');
+
+    // Name
+    txt(profile.name || 'Os meus Gains', 80, 270, 'bold 100px system-ui,sans-serif', WHITE);
+    // Subtitle line
+    const subLine = ctx.createLinearGradient(80, 0, 600, 0);
+    subLine.addColorStop(0,'rgba(255,255,255,0.7)'); subLine.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = subLine; ctx.fillRect(80, 290, 450, 3);
+
+    txt('Consistência Anual · ' + new Date().getFullYear(), 80, 340, '500 30px system-ui,sans-serif', 'rgba(255,255,255,0.75)');
+
+    // ─ 2 hero stats ─
+    const heroStats = [
+      { v: yw.length.toString(), l: 'Treinos este ano' },
+      { v: volStr,                l: 'Volume levantado' },
+    ];
+    heroStats.forEach((s, i) => {
+      const hx = 80 + i * 470;
+      rr(hx, 400, 420, 220, 28, 'rgba(255,255,255,0.13)');
+      // left accent bar
+      rr(hx, 400, 5, 220, 3, 'rgba(255,255,255,0.5)');
+      txt(s.v, hx + 30, 510, 'bold 86px system-ui,sans-serif', WHITE);
+      txt(s.l, hx + 30, 560, '500 26px system-ui,sans-serif', 'rgba(255,255,255,0.65)');
     });
 
-    // === DIVIDER ===
-    const divY = gridTop + 4 * (cardH + cardGap) + 10;
-    const div = ctx.createLinearGradient(80, 0, W - 80, 0);
-    div.addColorStop(0, 'transparent');
-    div.addColorStop(0.2, 'rgba(255,255,255,0.12)');
-    div.addColorStop(0.8, 'rgba(255,255,255,0.12)');
-    div.addColorStop(1, 'transparent');
-    ctx.fillStyle = div;
-    ctx.fillRect(80, divY, W - 160, 1);
+    // wave / divider between sections
+    ctx.fillStyle = WHITE;
+    ctx.beginPath();
+    ctx.moveTo(0, topH - 60);
+    ctx.quadraticCurveTo(W * 0.25, topH + 20, W * 0.5, topH - 30);
+    ctx.quadraticCurveTo(W * 0.75, topH - 80, W, topH - 20);
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
 
-    // === GRID SECTION LABEL ===
-    const gridLabelY = divY + 50;
-    ctx.fillStyle = 'rgba(255,255,255,0.4)';
-    ctx.font = '600 26px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('GRELHA DE ATIVIDADE', 80, gridLabelY);
+    // ══════════════════════════════════════════════════════
+    // SECTION 2 — WHITE BODY  (680px → bottom)
+    // ══════════════════════════════════════════════════════
+    ctx.fillStyle = WHITE;
+    ctx.fillRect(0, topH, W, H - topH);
 
-    // === CONSISTENCY GRID ===
+    // ─ STAT CARDS 2×3 ─
+    const CARD_W = 480, CARD_H = 130, CARD_GAP = 24;
+    const cardsTop = topH + 40;
+    stats.slice(2).forEach((s, i) => { // first 2 are hero stats above
+      const col = i % 2, row = Math.floor(i / 2);
+      const cx = 60 + col * (CARD_W + CARD_GAP);
+      const cy = cardsTop + row * (CARD_H + CARD_GAP);
+      // card
+      rr(cx, cy, CARD_W, CARD_H, 22, CARD_BG);
+      ctx.strokeStyle = BORDER; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(cx, cy, CARD_W, CARD_H, 22); ctx.stroke();
+      // left accent dot
+      rr(cx + 24, cy + CARD_H/2 - 18, 6, 36, 3, CORAL);
+      // value
+      txt(s.v, cx + 48, cy + 72, 'bold 52px system-ui,sans-serif', BLACK);
+      txt(s.l, cx + 48, cy + 108, '500 24px system-ui,sans-serif', LGREY);
+    });
+
+    // ─ GRID LABEL ─
+    const afterCards = cardsTop + 3 * (CARD_H + CARD_GAP) + 30;
+    // label row
+    rr(60, afterCards, 8, 36, 4, CORAL);
+    txt('Atividade Anual', 84, afterCards + 28, '700 30px system-ui,sans-serif', BLACK);
+    txt(`por volume · ${yw.filter(w=>new Date(w.date)>=yearAgo).length} treinos`, W - 60, afterCards + 28, '500 24px system-ui,sans-serif', LGREY, 'right');
+
+    // ─ ACTIVITY GRID ─
     const CELL = 14, GAP = 3;
     const COLS = 53, ROWS = 7;
-    const gW = COLS * (CELL + GAP) - GAP;
-    const gH = ROWS * (CELL + GAP) - GAP;
-    const gX = (W - gW) / 2;
-    const gY = gridLabelY + 30;
+    const gW2 = COLS * (CELL + GAP) - GAP;
+    const gH2 = ROWS * (CELL + GAP) - GAP;
+    const gX2 = (W - gW2) / 2;
+    const gY2 = afterCards + 52;
 
-    rr(gX - 22, gY - 18, gW + 44, gH + 44, 20, 'rgba(255,255,255,0.025)');
+    rr(gX2 - 20, gY2 - 16, gW2 + 40, gH2 + 40, 18, CREAM);
 
     fullYearDays.forEach((day, idx) => {
-      const col = Math.floor(idx / 7);
-      const row = idx % 7;
-      const x = gX + col * (CELL + GAP);
-      const y = gY + row * (CELL + GAP);
+      const col = Math.floor(idx / 7), row = idx % 7;
+      const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
       let fc: string;
-      if (day.volume === 0) fc = 'rgba(255,255,255,0.06)';
-      else if (day.volume <= p33) fc = 'rgba(255,140,110,0.55)';
-      else if (day.volume <= p66) fc = 'rgba(255,94,58,0.75)';
-      else if (day.volume <= p90) fc = 'rgba(255,94,58,0.92)';
-      else {
-        fc = '#ff5e3a';
-        ctx.shadowColor = 'rgba(255,94,58,0.6)';
-        ctx.shadowBlur = 7;
-      }
+      if (day.volume === 0)        fc = '#E2E8F0';
+      else if (day.volume <= p33)  fc = '#FFD4C2';
+      else if (day.volume <= p66)  fc = '#FF9070';
+      else if (day.volume <= p90)  fc = CORAL2;
+      else { fc = CORAL; ctx.shadowColor = 'rgba(255,94,58,0.35)'; ctx.shadowBlur = 6; }
       rr(x, y, CELL, CELL, 3, fc);
       ctx.shadowBlur = 0;
     });
 
-    // === LEGEND ===
-    const legY = gY + gH + 38;
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '500 22px system-ui, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('menos', gX, legY + 14);
-    ['rgba(255,255,255,0.06)','rgba(255,140,110,0.55)','rgba(255,94,58,0.75)','rgba(255,94,58,0.92)','#ff5e3a'].forEach((c, i) => {
-      rr(gX + 98 + i * 26, legY, 18, 18, 4, c);
-    });
-    ctx.fillText('mais', gX + 98 + 5 * 26 + 8, legY + 14);
+    // ─ LEGEND ─
+    const legY2 = gY2 + gH2 + 28;
+    txt('menos', gX2, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
+    ['#E2E8F0','#FFD4C2','#FF9070',CORAL2,CORAL].forEach((c, i) => rr(gX2 + 96 + i*26, legY2, 18, 18, 5, c));
+    txt('mais', gX2 + 96 + 5*26 + 10, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
 
-    // === WATERMARK ===
-    ctx.fillStyle = 'rgba(255,255,255,0.12)';
-    ctx.font = '500 26px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('● strong app', W / 2, H - 60);
+    // ─ BOTTOM STRIP ─
+    const stripY = H - 90;
+    rr(0, stripY, W, 90, 0, CREAM);
+    ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(60, stripY + 45, 7, 0, Math.PI*2); ctx.fill();
+    txt('strong app', 82, stripY + 52, '700 28px system-ui,sans-serif', GREY);
+    txt('strong-pr.vercel.app', W - 60, stripY + 52, '500 24px system-ui,sans-serif', LGREY, 'right');
 
     const link = document.createElement('a');
     link.download = `gains_story_${new Date().getFullYear()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   };
+
 
 
   // Calculate workouts count per week for the last 6 weeks (Monday to Sunday)
