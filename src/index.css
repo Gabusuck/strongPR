@@ -139,7 +139,7 @@ html, body, #root {
   flex: 1;
   overflow-y: auto; /* Scroll apenas vertical dentro do conteúdo */
   -webkit-overflow-scrolling: touch;
-  padding: 24px 20px 130px 20px;
+  padding: 20px 20px calc(110px + env(safe-area-inset-bottom, 0px)) 20px;
   background-color: var(--bg-primary);
 }
 
@@ -166,22 +166,22 @@ html, body, #root {
 
 /* Barra de Navegação Estilo Sólido no Fundo */
 .bottom-nav {
-  height: 62px;
-  position: fixed; /* Fixada de forma totalmente ancorada ao ecrã */
-  bottom: max(6px, env(safe-area-inset-bottom, 0px));
+  height: 58px;
+  position: absolute; /* Fixada de forma ancorada ao ecrã principal */
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
-  width: 230px;
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
+  width: 220px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 31px; /* Totalmente redonda e flutuante */
+  border-radius: 29px; /* Totalmente redonda e flutuante */
   display: flex;
   justify-content: space-around;
   align-items: center;
-  z-index: 100; /* Garantir topo de camada relativo ao conteúdo */
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  z-index: 90;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 .nav-item {
@@ -439,18 +439,18 @@ html, body, #root {
 
 /* Temporizador Circular (Tema Claro Smartwatch) */
 .circular-timer-container {
-  position: fixed;
-  bottom: calc(62px + 16px + max(10px, env(safe-area-inset-bottom, 10px))); /* Flutua acima da navbar */
-  right: 20px;
-  width: 84px;
-  height: 84px;
+  position: absolute;
+  bottom: calc(58px + 18px + env(safe-area-inset-bottom, 0px)); /* Flutua acima da navbar */
+  right: 16px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   background: #ffffff;
   border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
   z-index: 90;
   cursor: pointer;
   animation: slideInRight var(--transition-bounce);
@@ -582,14 +582,6 @@ html, body, #root {
   to { transform: translateX(0) scale(1); opacity: 1; }
 }
 
-/* Hide floating bottom nav when typing on mobile keyboard */
-.app-container:focus-within .bottom-nav {
-  display: none !important;
-}
-
-.app-container:focus-within .circular-timer-container {
-  bottom: 24px !important;
-}
 
 @media (max-height: 520px) {
   .bottom-nav {

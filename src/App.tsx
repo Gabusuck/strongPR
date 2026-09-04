@@ -524,6 +524,11 @@ export default function App() {
         </div>
       </header>
 
+      {/* Main Content Area */}
+      <main className="app-content">
+        {renderContent()}
+      </main>
+
       {/* Bottom Floating Capsule Navigation */}
       <nav className="bottom-nav">
         <button 
@@ -565,11 +570,6 @@ export default function App() {
           <User size={22} />
         </button>
       </nav>
-
-      {/* Main Content Area */}
-      <main className="app-content">
-        {renderContent()}
-      </main>
 
       {/* PR Celebration Modal */}
       {newPRsModal.isOpen && (
