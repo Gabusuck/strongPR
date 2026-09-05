@@ -141,6 +141,15 @@ export default function App() {
         console.error('Error loading active workout', e);
       }
     }
+
+    // Lock screen orientation to portrait if supported
+    try {
+      if (window.screen && (window.screen as any).orientation && (window.screen.orientation as any).lock) {
+        (window.screen.orientation as any).lock('portrait').catch(() => {});
+      }
+    } catch {
+      // Ignore if unsupported
+    }
   }, []);
 
   // Save active workout to localStorage

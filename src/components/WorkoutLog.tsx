@@ -422,6 +422,180 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     !templateSearchQuery || ex.name.toLowerCase().includes(templateSearchQuery.toLowerCase()) || ex.category.toLowerCase().includes(templateSearchQuery.toLowerCase())
   );
 
+  const formatElapsed = (totalSecs: number) => {
+    const hrs = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    const secs = totalSecs % 60;
+    return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Combine local custom exercises + filter API exercises
+  const localExercises = useMemo(() => exercises.filter(ex => ex.isCustom), [exercises]);
+
+  const filteredApiExercises = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return apiExercises.filter(ex => {
+      const matchesMuscle = muscleFilter === 'bookmarked' 
+        ? bookmarkedIds.includes(ex.id)
+        : muscleMatchesFilter(ex.muscle_group, muscleFilter);
+      if (!matchesMuscle) return false;
+      if (!q) return true;
+      return ex.name.toLowerCase().includes(q) ||
+        ex.muscle_group.toLowerCase().includes(q) ||
+        (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
+    });
+  }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
+
+  const filteredLocalExercises = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return localExercises;
+    return localExercises.filter((ex: Exercise) =>
+      ex.name.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q)
+    );
+  }, [localExercises, searchQuery]);
+
+  // Add multiple selected exercises to active workout
+  const handleConfirmAddExercises = () => {
+    if (selectedExerciseIds.length === 0) return;
+
+    const exercisesToAdd = apiExercises.filter(ex => selectedExerciseIds.includes(ex.id));
+    const newWorkoutExercises: WorkoutExercise[] = exercisesToAdd.map(exercise => {
+      const category = mapCategory(exercise.muscle_group);
+      return {
+        id: exercise.id,
+        name: exercise.name,
+        category,
+        sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
+      };
+    });
+
+    const localToAdd = localExercises.filter((ex: Exercise) => selectedExerciseIds.includes(ex.id));
+    const newLocalWorkoutExercises: WorkoutExercise[] = localToAdd.map((exercise: Exercise) => ({
+      id: exercise.id,
+      name: exercise.name,
+      category: exercise.category,
+      sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
+    }));
+
+    if (!activeWorkout) return;
+    onUpdateWorkout({
+      ...activeWorkout,
+      exercises: [
+        ...(activeWorkout.exercises || []),
+        ...newWorkoutExercises,
+        ...newLocalWorkoutExercises,
+      ],
+    });
+
+    setShowAddExerciseModal(false);
+    setSelectedExerciseIds([]);
+    setSearchQuery('');
+    setMuscleFilter('all');
+  };
+
+  // Add single exercise directly (fallback)
+  const handleAddExercise = (exercise: Exercise | ApiExercise) => {
+    if (!activeWorkout) return;
+    const id = exercise.id;
+    if ((activeWorkout.exercises || []).some((e) => e.id === id)) {
+      setShowAddExerciseModal(false);
+      return;
+    }
+
+    let category = '';
+    if ('muscle_group' in exercise) {
+      category = mapCategory((exercise as ApiExercise).muscle_group);
+    } else {
+      category = (exercise as Exercise).category;
+    }
+
+    const newWorkoutExercise: WorkoutExercise = {
+      id,
+      name: exercise.name,
+      category,
+      sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
+    };
+    onUpdateWorkout({ ...activeWorkout, exercises: [...(activeWorkout.exercises || []), newWorkoutExercise] });
+    setShowAddExerciseModal(false);
+    setSelectedApiExercise(null);
+    setSelectedExerciseIds([]);
+    setSearchQuery('');
+    setMuscleFilter('all');
+  };
+
+  const toggleExerciseSelection = (id: string) => {
+    setSelectedExerciseIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleRemoveExercise = (exerciseId: string) => {
+    window.customConfirm(
+      'Remover Exercício',
+      'Tem a certeza que deseja remover este exercício do treino atual?',
+      () => {
+        if (!activeWorkout) return;
+        onUpdateWorkout({
+          ...activeWorkout,
+          exercises: (activeWorkout.exercises || []).filter((e) => e.id !== exerciseId),
+        });
+      }
+    );
+  };
+
+  const handleAddSet = (exerciseId: string) => {
+    if (!activeWorkout) return;
+    onUpdateWorkout({
+      ...activeWorkout,
+      exercises: (activeWorkout.exercises || []).map((ex) => {
+        if (ex.id !== exerciseId) return ex;
+        const lastSet = ex.sets && ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : undefined;
+        return {
+          ...ex,
+          sets: [...(ex.sets || []), { id: Math.random().toString(36).substring(2, 9), weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, isCompleted: false }],
+        };
+      }),
+    });
+  };
+
+  const handleRemoveSet = (exerciseId: string, setId: string) => {
+    if (!activeWorkout) return;
+    onUpdateWorkout({
+      ...activeWorkout,
+      exercises: (activeWorkout.exercises || []).map((ex) => {
+        if (ex.id !== exerciseId) return ex;
+        const updatedSets = (ex.sets || []).filter((s) => s.id !== setId);
+        return { ...ex, sets: updatedSets.length > 0 ? updatedSets : [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }] };
+      }),
+    });
+  };
+
+  const handleUpdateSet = (exerciseId: string, setId: string, updates: Partial<Set>) => {
+    if (!activeWorkout) return;
+    onUpdateWorkout({
+      ...activeWorkout,
+      exercises: (activeWorkout.exercises || []).map((ex) => {
+        if (ex.id !== exerciseId) return ex;
+        return {
+          ...ex,
+          sets: (ex.sets || []).map((s) => {
+            if (s.id !== setId) return s;
+            if (updates.isCompleted === true && !s.isCompleted) {
+              setRestTimeLeft(settings.defaultRestDuration);
+              setRestDuration(settings.defaultRestDuration);
+
+              // Pedir permissão de notificações no telemóvel quando inicia o primeiro temporizador
+              if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+              }
+            }
+            return { ...s, ...updates };
+          }),
+        };
+      }),
+    });
+  };
+
   if (!activeWorkout) {
     const DEFAULT_STARTER_ROUTINES: WorkoutTemplate[] = [
       {
@@ -670,180 +844,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       </div>
     );
   }
-
-  const formatElapsed = (totalSecs: number) => {
-    const hrs = Math.floor(totalSecs / 3600);
-    const mins = Math.floor((totalSecs % 3600) / 60);
-    const secs = totalSecs % 60;
-    return `${hrs > 0 ? hrs + ':' : ''}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Add multiple selected exercises to active workout
-  const handleConfirmAddExercises = () => {
-    if (selectedExerciseIds.length === 0) return;
-
-    const exercisesToAdd = apiExercises.filter(ex => selectedExerciseIds.includes(ex.id));
-    const newWorkoutExercises: WorkoutExercise[] = exercisesToAdd.map(exercise => {
-      const category = mapCategory(exercise.muscle_group);
-      return {
-        id: exercise.id,
-        name: exercise.name,
-        category,
-        sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
-      };
-    });
-
-    const localToAdd = localExercises.filter((ex: Exercise) => selectedExerciseIds.includes(ex.id));
-    const newLocalWorkoutExercises: WorkoutExercise[] = localToAdd.map((exercise: Exercise) => ({
-      id: exercise.id,
-      name: exercise.name,
-      category: exercise.category,
-      sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
-    }));
-
-    if (!activeWorkout) return;
-    onUpdateWorkout({
-      ...activeWorkout,
-      exercises: [
-        ...(activeWorkout.exercises || []),
-        ...newWorkoutExercises,
-        ...newLocalWorkoutExercises,
-      ],
-    });
-
-    setShowAddExerciseModal(false);
-    setSelectedExerciseIds([]);
-    setSearchQuery('');
-    setMuscleFilter('all');
-  };
-
-  // Add single exercise directly (fallback)
-  const handleAddExercise = (exercise: Exercise | ApiExercise) => {
-    if (!activeWorkout) return;
-    const id = exercise.id;
-    if ((activeWorkout.exercises || []).some((e) => e.id === id)) {
-      setShowAddExerciseModal(false);
-      return;
-    }
-
-    let category = '';
-    if ('muscle_group' in exercise) {
-      category = mapCategory((exercise as ApiExercise).muscle_group);
-    } else {
-      category = (exercise as Exercise).category;
-    }
-
-    const newWorkoutExercise: WorkoutExercise = {
-      id,
-      name: exercise.name,
-      category,
-      sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
-    };
-    onUpdateWorkout({ ...activeWorkout, exercises: [...(activeWorkout.exercises || []), newWorkoutExercise] });
-    setShowAddExerciseModal(false);
-    setSelectedApiExercise(null);
-    setSelectedExerciseIds([]);
-    setSearchQuery('');
-    setMuscleFilter('all');
-  };
-
-  const toggleExerciseSelection = (id: string) => {
-    setSelectedExerciseIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const handleRemoveExercise = (exerciseId: string) => {
-    window.customConfirm(
-      'Remover Exercício',
-      'Tem a certeza que deseja remover este exercício do treino atual?',
-      () => {
-        if (!activeWorkout) return;
-        onUpdateWorkout({
-          ...activeWorkout,
-          exercises: (activeWorkout.exercises || []).filter((e) => e.id !== exerciseId),
-        });
-      }
-    );
-  };
-
-  const handleAddSet = (exerciseId: string) => {
-    if (!activeWorkout) return;
-    onUpdateWorkout({
-      ...activeWorkout,
-      exercises: (activeWorkout.exercises || []).map((ex) => {
-        if (ex.id !== exerciseId) return ex;
-        const lastSet = ex.sets && ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : undefined;
-        return {
-          ...ex,
-          sets: [...(ex.sets || []), { id: Math.random().toString(36).substring(2, 9), weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, isCompleted: false }],
-        };
-      }),
-    });
-  };
-
-  const handleRemoveSet = (exerciseId: string, setId: string) => {
-    if (!activeWorkout) return;
-    onUpdateWorkout({
-      ...activeWorkout,
-      exercises: (activeWorkout.exercises || []).map((ex) => {
-        if (ex.id !== exerciseId) return ex;
-        const updatedSets = (ex.sets || []).filter((s) => s.id !== setId);
-        return { ...ex, sets: updatedSets.length > 0 ? updatedSets : [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }] };
-      }),
-    });
-  };
-
-  const handleUpdateSet = (exerciseId: string, setId: string, updates: Partial<Set>) => {
-    if (!activeWorkout) return;
-    onUpdateWorkout({
-      ...activeWorkout,
-      exercises: (activeWorkout.exercises || []).map((ex) => {
-        if (ex.id !== exerciseId) return ex;
-        return {
-          ...ex,
-          sets: (ex.sets || []).map((s) => {
-            if (s.id !== setId) return s;
-            if (updates.isCompleted === true && !s.isCompleted) {
-              setRestTimeLeft(settings.defaultRestDuration);
-              setRestDuration(settings.defaultRestDuration);
-
-              // Pedir permissão de notificações no telemóvel quando inicia o primeiro temporizador
-              if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
-              }
-            }
-            return { ...s, ...updates };
-          }),
-        };
-      }),
-    });
-  };
-
-  // Combine local custom exercises + filter API exercises
-  const localExercises = useMemo(() => exercises.filter(ex => ex.isCustom), [exercises]);
-
-  const filteredApiExercises = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return apiExercises.filter(ex => {
-      const matchesMuscle = muscleFilter === 'bookmarked' 
-        ? bookmarkedIds.includes(ex.id)
-        : muscleMatchesFilter(ex.muscle_group, muscleFilter);
-      if (!matchesMuscle) return false;
-      if (!q) return true;
-      return ex.name.toLowerCase().includes(q) ||
-        ex.muscle_group.toLowerCase().includes(q) ||
-        (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
-    });
-  }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
-
-  const filteredLocalExercises = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return localExercises;
-    return localExercises.filter((ex: Exercise) =>
-      ex.name.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q)
-    );
-  }, [localExercises, searchQuery]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
