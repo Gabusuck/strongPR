@@ -128,7 +128,7 @@ html, body, #root {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px)) 16px;
+  padding: 16px 16px 80px 16px;
   background-color: var(--bg-primary);
 }
 
@@ -147,10 +147,10 @@ html, body, #root {
 /* Navbar Pilula Branca — Estilo Money Manager */
 .bottom-nav {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 28px);
+  width: calc(100% - 24px);
   max-width: 420px;
   height: 60px;
   background: #FFFFFF;
