@@ -4,6 +4,7 @@ import type { Workout, PersonalRecord, Exercise, UserProfile } from '../types';
 import { PRTracker } from './PRTracker';
 import { ExercisesList } from './ExercisesList';
 import { Trophy, Flame, Dumbbell, Calendar, Upload, ArrowLeft, TrendingUp, X } from 'lucide-react';
+import { getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 
 interface ProfileViewProps {
   workouts: Workout[];
@@ -74,7 +75,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     if (!w || !w.exercises) return 0;
     return (w.exercises || []).reduce((total, ex) => {
       if (!ex || !ex.sets) return total;
-      return total + (ex.sets || []).filter(s => s && s.isCompleted).reduce((s, set) => s + (Number(set.weight) || 0) * (Number(set.reps) || 0), 0);
+      const mult = getExerciseWeightMultiplier(ex);
+      return total + (ex.sets || []).filter(s => s && s.isCompleted).reduce((s, set) => s + ((Number(set.weight) || 0) * mult) * (Number(set.reps) || 0), 0);
     }, 0);
   };
 

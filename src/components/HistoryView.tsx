@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Workout } from '../types';
 import { Trash2, Calendar, Clock, ChevronDown, ChevronUp, Dumbbell, Award } from 'lucide-react';
+import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 
 interface HistoryViewProps {
   workouts: Workout[];
@@ -41,8 +42,9 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
     if (!workout || !workout.exercises) return 0;
     return (workout.exercises || []).reduce((accEx, ex) => {
       if (!ex || !ex.sets) return accEx;
+      const mult = getExerciseWeightMultiplier(ex);
       return accEx + (ex.sets || []).reduce((accSet, set) => {
-        return (set && set.isCompleted) ? accSet + (Number(set.weight) || 0) * (Number(set.reps) || 0) : accSet;
+        return (set && set.isCompleted) ? accSet + ((Number(set.weight) || 0) * mult) * (Number(set.reps) || 0) : accSet;
       }, 0);
     }, 0);
   };
@@ -236,7 +238,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                                     gap: '3px'
                                   }}
                                 >
-                                  <span style={{ fontWeight: 800 }}>#{sIdx + 1}</span> {set?.weight ?? 0}kg × {set?.reps ?? 0}
+                                  <span style={{ fontWeight: 800 }}>#{sIdx + 1}</span> {isDoubleDumbbellExercise(workoutExercise) ? `2×${set?.weight ?? 0}kg` : `${set?.weight ?? 0}kg`} × {set?.reps ?? 0}
                                 </span>
                               ))}
                             </div>

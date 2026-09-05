@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
+import { isDoubleDumbbellExercise } from '../utils/exerciseUtils';
 
 // ─── Free Exercise DB types ───────────────────────────────────────────────────
 interface ApiExercise {
@@ -1046,12 +1047,19 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                   )}
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                     {translateExerciseName(workoutExercise.name)}
                   </h4>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                    {workoutExercise.category}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
+                      {workoutExercise.category}
+                    </span>
+                    {isDoubleDumbbellExercise(workoutExercise) && (
+                      <span style={{ fontSize: '0.65rem', color: '#D97706', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '1px 6px', borderRadius: '6px', fontWeight: 800 }}>
+                        2× Halteres
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <button onClick={() => handleRemoveExercise(workoutExercise.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6, marginTop: '4px' }}>
@@ -1062,7 +1070,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           {/* Set headers */}
           <div style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             <span style={{ textAlign: 'center' }}>Série</span>
-            <span style={{ textAlign: 'center' }}>Peso (kg)</span>
+            <span style={{ textAlign: 'center' }}>{isDoubleDumbbellExercise(workoutExercise) ? 'Peso (2×kg)' : 'Peso (kg)'}</span>
             <span style={{ textAlign: 'center' }}>Reps</span>
             <span style={{ textAlign: 'center' }}>OK</span>
           </div>
