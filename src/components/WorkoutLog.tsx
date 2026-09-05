@@ -414,66 +414,117 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   );
 
   if (!activeWorkout) {
+    const DEFAULT_STARTER_ROUTINES: WorkoutTemplate[] = [
+      {
+        id: 'starter-push',
+        name: 'Treino A — Empurrar (Push)',
+        exercises: [
+          { id: 'EIeI8Vf', name: 'barbell bench press', category: 'Peito', sets: [{ id: 's1', weight: 60, reps: 10, isCompleted: false }, { id: 's2', weight: 60, reps: 10, isCompleted: false }, { id: 's3', weight: 60, reps: 8, isCompleted: false }] },
+          { id: '3TZduzM', name: 'barbell incline bench press', category: 'Peito', sets: [{ id: 's4', weight: 50, reps: 10, isCompleted: false }, { id: 's5', weight: 50, reps: 10, isCompleted: false }] },
+          { id: 'wdRZISl', name: 'barbell standing military press', category: 'Ombros', sets: [{ id: 's6', weight: 40, reps: 10, isCompleted: false }, { id: 's7', weight: 40, reps: 8, isCompleted: false }] },
+          { id: '3ZflifB', name: 'cable pushdown', category: 'Braços', sets: [{ id: 's8', weight: 25, reps: 12, isCompleted: false }, { id: 's9', weight: 25, reps: 12, isCompleted: false }] }
+        ]
+      },
+      {
+        id: 'starter-pull',
+        name: 'Treino B — Puxar (Pull)',
+        exercises: [
+          { id: 'lBDjFxJ', name: 'pull-up', category: 'Costas', sets: [{ id: 's10', weight: 0, reps: 8, isCompleted: false }, { id: 's11', weight: 0, reps: 8, isCompleted: false }] },
+          { id: 'eZyBC3j', name: 'barbell bent over row', category: 'Costas', sets: [{ id: 's12', weight: 50, reps: 10, isCompleted: false }, { id: 's13', weight: 50, reps: 10, isCompleted: false }] },
+          { id: 'ila4NZS', name: 'barbell deadlift', category: 'Costas', sets: [{ id: 's14', weight: 80, reps: 6, isCompleted: false }, { id: 's15', weight: 80, reps: 6, isCompleted: false }] },
+          { id: '25GPyDY', name: 'barbell curl', category: 'Braços', sets: [{ id: 's16', weight: 25, reps: 12, isCompleted: false }, { id: 's17', weight: 25, reps: 10, isCompleted: false }] }
+        ]
+      },
+      {
+        id: 'starter-legs',
+        name: 'Treino C — Pernas (Legs)',
+        exercises: [
+          { id: 'qXTaZnJ', name: 'barbell full squat', category: 'Pernas', sets: [{ id: 's18', weight: 70, reps: 10, isCompleted: false }, { id: 's19', weight: 70, reps: 10, isCompleted: false }, { id: 's20', weight: 70, reps: 8, isCompleted: false }] },
+          { id: '10Z2DXU', name: 'sled 45° leg press', category: 'Pernas', sets: [{ id: 's21', weight: 120, reps: 12, isCompleted: false }, { id: 's22', weight: 120, reps: 10, isCompleted: false }] },
+          { id: 'DsgkuIt', name: 'dumbbell lateral raise', category: 'Ombros', sets: [{ id: 's23', weight: 10, reps: 15, isCompleted: false }, { id: 's24', weight: 10, reps: 15, isCompleted: false }] }
+        ]
+      }
+    ];
+
+    const displayedTemplates = templates.length > 0 ? templates : DEFAULT_STARTER_ROUTINES;
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
         
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Iniciar Treino</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Iniciar Treino</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.82rem', marginTop: '2px' }}>
               Escolhe uma rotina ou começa do zero.
             </p>
           </div>
           <button 
             className="btn btn-secondary btn-small"
             onClick={() => setShowCreateTemplateModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.78rem' }}
           >
-            <Plus size={16} /> Nova Rotina
+            <Plus size={16} /> Criar Rotina
           </button>
         </div>
 
-        {/* Quick Start Blank Workout */}
+        {/* Quick Start Blank Workout Banner */}
         <div 
-          className="glass-card interactive" 
+          className="interactive" 
           onClick={onStartWorkout}
-          style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '20px', cursor: 'pointer', border: '1px dashed var(--accent-color)' }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between',
+            gap: '16px', 
+            padding: '22px 20px', 
+            cursor: 'pointer', 
+            background: 'linear-gradient(135deg, rgba(255, 94, 58, 0.16) 0%, rgba(255, 122, 0, 0.1) 100%)',
+            border: '1px solid rgba(255, 94, 58, 0.3)',
+            borderRadius: '24px',
+            boxShadow: '0 8px 30px rgba(255, 94, 58, 0.15)',
+            transition: 'all var(--transition-fast)'
+          }}
         >
-          <div style={{ display: 'flex', padding: '12px', borderRadius: '50%', backgroundColor: 'rgba(255, 94, 58, 0.08)', color: 'var(--accent-color)' }}>
-            <Plus size={24} />
-          </div>
-          <div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Iniciar Treino Vazio</h4>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Regista um treino livre adicionando os exercícios no momento</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ display: 'flex', padding: '14px', borderRadius: '50%', backgroundColor: 'var(--accent-color)', color: '#ffffff', boxShadow: '0 4px 14px rgba(255, 94, 58, 0.4)' }}>
+              <Plus size={24} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Iniciar Treino Vazio</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '3px' }}>Regista um treino livre adicionando os exercícios</p>
+            </div>
           </div>
         </div>
 
         {/* Templates Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rotinas Guardadas</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {templates.length > 0 ? 'As Tuas Rotinas' : 'Rotinas Recomendadas'}
+            </h3>
+            {templates.length === 0 && (
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-color)', fontWeight: 700 }}>3 Sugestões</span>
+            )}
+          </div>
           
-          {templates.length === 0 ? (
-            <div style={{ padding: '38px 20px', textAlign: 'center', color: 'var(--text-secondary)', border: '1px dashed var(--border-color)', borderRadius: '20px', fontSize: '0.82rem', backgroundColor: 'rgba(255,255,255,0.01)' }}>
-              Não tens nenhum treino pré-definido. Cria rotinas para poupar tempo no início de cada sessão!
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {templates.map((template) => (
-                <div 
-                  key={template.id} 
-                  className="glass-card" 
-                  style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0 }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
-                        {template.name}
-                      </h4>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: '1.4' }}>
-                        {template.exercises.map((ex: any) => translateExerciseName(ex.name)).join(', ')}
-                      </p>
-                    </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {displayedTemplates.map((template) => (
+              <div 
+                key={template.id} 
+                className="glass-card" 
+                style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                      {template.name}
+                    </h4>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: '1.4' }}>
+                      {template.exercises.map((ex: any) => translateExerciseName(ex.name)).join(' • ')}
+                    </p>
+                  </div>
+                  {templates.length > 0 && (
                     <button 
                       onClick={() => {
                         window.customConfirm(
@@ -486,19 +537,19 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     >
                       <Trash2 size={16} />
                     </button>
-                  </div>
-
-                  <button 
-                    className="btn btn-primary"
-                    onClick={() => onStartWorkoutFromTemplate(template)}
-                    style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.85rem' }}
-                  >
-                    <Dumbbell size={16} /> Iniciar Treino
-                  </button>
+                  )}
                 </div>
-              ))}
-            </div>
-          )}
+
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => onStartWorkoutFromTemplate(template)}
+                  style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.88rem', width: '100%' }}
+                >
+                  <Dumbbell size={18} /> Iniciar Treino
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Modal: Create Template */}

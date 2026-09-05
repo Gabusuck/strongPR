@@ -170,10 +170,7 @@ html, body, #root {
 
 /* Barra de Navegação no Fundo (Ancorada à Base do Telemóvel) */
 .bottom-nav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   width: 100%;
   height: calc(64px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -182,18 +179,8 @@ html, body, #root {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  z-index: 1000;
+  z-index: 100;
   box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.5);
-}
-
-@media (max-width: 575.98px) {
-  .bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
-  }
 }
 
 .nav-item {
