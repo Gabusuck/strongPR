@@ -551,37 +551,37 @@ export default function App() {
         {renderContent()}
       </main>
 
-      {/* Bottom Translucent Glass Navigation Bar */}
+      {/* Bottom Floating Pill Navigation Bar */}
       <nav className="bottom-nav">
         <button 
           className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
+          aria-label="Início"
         >
-          <BarChart3 size={20} />
-          <span>Início</span>
+          <BarChart3 size={22} strokeWidth={activeTab === 'dashboard' ? 2.5 : 1.8} />
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
+          aria-label="Histórico"
         >
-          <History size={20} />
-          <span>Histórico</span>
+          <History size={22} strokeWidth={activeTab === 'history' ? 2.5 : 1.8} />
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'workout' ? 'active' : ''}`}
           onClick={() => setActiveTab('workout')}
           style={{ position: 'relative' }}
+          aria-label="Treinar"
         >
-          <Dumbbell size={20} />
-          <span>Treinar</span>
+          <Dumbbell size={22} strokeWidth={activeTab === 'workout' ? 2.5 : 1.8} />
           {activeWorkout && (
             <span 
               style={{
                 position: 'absolute',
-                top: '6px',
-                right: '14px',
+                top: '4px',
+                right: '4px',
                 width: '6px',
                 height: '6px',
                 backgroundColor: 'var(--success)',
@@ -594,17 +594,17 @@ export default function App() {
         <button 
           className={`nav-item ${activeTab === 'prs' ? 'active' : ''}`}
           onClick={() => setActiveTab('prs')}
+          aria-label="Records"
         >
-          <Medal size={20} />
-          <span>Records</span>
+          <Medal size={22} strokeWidth={activeTab === 'prs' ? 2.5 : 1.8} />
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
           onClick={() => setActiveTab('profile')}
+          aria-label="Perfil"
         >
-          <User size={20} />
-          <span>Perfil</span>
+          <User size={22} strokeWidth={activeTab === 'profile' ? 2.5 : 1.8} />
         </button>
       </nav>
 

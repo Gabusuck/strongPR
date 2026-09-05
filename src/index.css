@@ -128,7 +128,7 @@ html, body, #root {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 16px 80px 16px;
+  padding: 16px 16px 65px 16px;
   background-color: var(--bg-primary);
 }
 
@@ -147,15 +147,15 @@ html, body, #root {
 /* Navbar Pilula Branca — Estilo Money Manager */
 .bottom-nav {
   position: fixed;
-  bottom: 10px;
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 24px);
-  max-width: 420px;
-  height: 60px;
+  width: calc(100% - 36px);
+  max-width: 360px;
+  height: 52px;
   background: #FFFFFF;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 30px;
+  border-radius: 26px;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -168,28 +168,24 @@ html, body, #root {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
   color: var(--text-secondary);
   text-decoration: none;
   transition: all var(--transition-fast);
   border: none;
   background: none;
   cursor: pointer;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 20px;
   position: relative;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
 }
 .nav-item:hover { color: var(--text-primary); }
 .nav-item.active { color: var(--accent-color); }
 .nav-item.active svg { color: var(--accent-color); }
-.nav-item:active { transform: scale(0.9); }
+.nav-item:active { transform: scale(0.88); }
 .nav-item.active::after {
   content: "";
   position: absolute;
-  bottom: 2px;
+  bottom: 1px;
   left: 50%;
   transform: translateX(-50%);
   width: 4px;
