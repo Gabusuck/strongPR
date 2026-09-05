@@ -4,8 +4,8 @@
   "description": "Uma aplicação minimalista e offline para registar treinos e acompanhar recordes pessoais (PRs).",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F2F2F7",
   "orientation": "portrait",
   "categories": ["sports", "health"],
   "icons": [
