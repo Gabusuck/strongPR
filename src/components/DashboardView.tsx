@@ -74,7 +74,9 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
     const weekDaysTrained = Array(7).fill(false);
     let count = 0;
 
-    workouts.forEach(w => {
+    const validWorkouts = (workouts || []).filter(w => w && w.date);
+
+    validWorkouts.forEach(w => {
       const d = new Date(w.date);
       if (d >= weekStart) {
         const idx = d.getDay() === 0 ? 6 : d.getDay() - 1;
@@ -85,7 +87,7 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
 
     // Compute streak
     let streak = 0;
-    const sorted = [...workouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const sorted = [...validWorkouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     const check = new Date();
     check.setHours(0, 0, 0, 0);
     for (const w of sorted) {
@@ -108,9 +110,9 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
 
   // Next suggested routine to perform (smart rotation)
   const nextRoutine = useMemo(() => {
-    if (activeRoutines.length === 0) return null;
+    if (!activeRoutines || activeRoutines.length === 0) return null;
     if (!lastWorkout || !lastWorkout.templateId) return activeRoutines[0];
-    const lastIdx = activeRoutines.findIndex(r => r.id === lastWorkout.templateId);
+    const lastIdx = activeRoutines.findIndex(r => r && r.id === lastWorkout.templateId);
     if (lastIdx === -1 || lastIdx === activeRoutines.length - 1) return activeRoutines[0];
     return activeRoutines[lastIdx + 1];
   }, [activeRoutines, lastWorkout]);
@@ -424,10 +426,10 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <p style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--text-primary)" }}>
-                {lastWorkout.name}
+                {lastWorkout?.name || "Treino"}
               </p>
               <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                {lastWorkout.exercises.length} exercícios concluídos
+                {(lastWorkout?.exercises || []).length} exercícios concluídos
               </p>
             </div>
 
@@ -436,9 +438,9 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
                 onStartWorkoutFromTemplate({
                   id: lastWorkout.id,
                   name: lastWorkout.name,
-                  exercises: lastWorkout.exercises.map(e => ({
+                  exercises: (lastWorkout.exercises || []).map(e => ({
                     ...e,
-                    sets: e.sets.map(s => ({ ...s, isCompleted: false }))
+                    sets: (e.sets || []).map(s => ({ ...s, isCompleted: false }))
                   }))
                 });
               }}

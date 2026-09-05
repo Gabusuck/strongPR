@@ -70,9 +70,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   // Generate 50 days grid (7 weeks) for the gym activity visual tracker
   // Helper: compute total kg lifted in a workout
-  const getWorkoutVolume = (w: Workout) =>
-    w.exercises.reduce((total, ex) =>
-      total + ex.sets.filter(s => s.isCompleted).reduce((s, set) => s + set.weight * set.reps, 0), 0);
+  const getWorkoutVolume = (w: Workout) => {
+    if (!w || !w.exercises) return 0;
+    return (w.exercises || []).reduce((total, ex) => {
+      if (!ex || !ex.sets) return total;
+      return total + (ex.sets || []).filter(s => s && s.isCompleted).reduce((s, set) => s + (Number(set.weight) || 0) * (Number(set.reps) || 0), 0);
+    }, 0);
+  };
+
+  const safeWorkouts = (workouts || []).filter(w => w && w.date);
 
   // Generate 50 days grid (7 weeks) for the gym activity visual tracker
   const getActivityGridDays = () => {
@@ -82,7 +88,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const d = new Date();
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      const dayWorkouts = workouts.filter(w => new Date(w.date).toISOString().split('T')[0] === dateStr);
+      const dayWorkouts = safeWorkouts.filter(w => {
+        try {
+          return new Date(w.date).toISOString().split('T')[0] === dateStr;
+        } catch {
+          return false;
+        }
+      });
       const count = dayWorkouts.length;
       const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
       days.push({ date: dateStr, count, volume });
@@ -97,7 +109,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const d = new Date();
       d.setDate(today.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
-      const dayWorkouts = workouts.filter(w => new Date(w.date).toISOString().split('T')[0] === dateStr);
+      const dayWorkouts = safeWorkouts.filter(w => {
+        try {
+          return new Date(w.date).toISOString().split('T')[0] === dateStr;
+        } catch {
+          return false;
+        }
+      });
       const count = dayWorkouts.length;
       const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
       days.push({ date: d, count, volume });
@@ -150,7 +168,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
     // ── COMPUTE STATS ────────────────────────────────────
     const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    const yw = workouts.filter(w => new Date(w.date) >= yearAgo);
+    const yw = safeWorkouts.filter(w => {
+      try {
+        return new Date(w.date) >= yearAgo;
+      } catch {
+        return false;
+      }
+    });
     const vol = yw.reduce((s, w) => s + getWorkoutVolume(w), 0);
     const volStr = vol >= 1000 ? `${(vol/1000).toFixed(1)}t` : `${Math.round(vol)}kg`;
     const secs = yw.reduce((s, w) => s + (w.duration || 0), 0);
@@ -162,14 +186,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     for (let i = 0; i < 365; i++) {
       const d = new Date(tod); d.setDate(tod.getDate() - i);
       const ds = d.toISOString().split('T')[0];
-      if (workouts.some(w => new Date(w.date).toISOString().split('T')[0] === ds)) streak++;
+      if (safeWorkouts.some(w => {
+        try {
+          return new Date(w.date).toISOString().split('T')[0] === ds;
+        } catch {
+          return false;
+        }
+      })) streak++;
       else if (i > 0) break;
     }
     let best = 0, run = 0;
     for (const day of fullYearDays) { if (day.count > 0) { run++; best = Math.max(best, run); } else run = 0; }
 
     const mc: Record<string,number> = {};
-    yw.forEach(w => w.exercises.forEach(ex => { mc[ex.category||'Outro'] = (mc[ex.category||'Outro']||0) + ex.sets.filter(s=>s.isCompleted).length; }));
+    yw.forEach(w => (w?.exercises || []).forEach(ex => {
+      const cat = ex?.category || 'Outro';
+      const completedCount = (ex?.sets || []).filter(s => s && s.isCompleted).length;
+      mc[cat] = (mc[cat] || 0) + completedCount;
+    }));
     const topM = Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? '—';
     const topMLabel = topM.length > 9 ? topM.slice(0,9)+'.' : topM;
 

@@ -38,25 +38,27 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
   };
 
   const getWorkoutVolume = (workout: Workout) => {
-    return workout.exercises.reduce((accEx, ex) => {
-      return accEx + ex.sets.reduce((accSet, set) => {
-        return set.isCompleted ? accSet + set.weight * set.reps : accSet;
+    if (!workout || !workout.exercises) return 0;
+    return (workout.exercises || []).reduce((accEx, ex) => {
+      if (!ex || !ex.sets) return accEx;
+      return accEx + (ex.sets || []).reduce((accSet, set) => {
+        return (set && set.isCompleted) ? accSet + (Number(set.weight) || 0) * (Number(set.reps) || 0) : accSet;
       }, 0);
     }, 0);
   };
 
   const getWorkoutMuscles = (workout: Workout) => {
     const muscles = new Set<string>();
-    workout.exercises.forEach(ex => { if (ex.category) muscles.add(ex.category); });
+    (workout?.exercises || []).forEach(ex => { if (ex?.category) muscles.add(ex.category); });
     return Array.from(muscles);
   };
 
-  const sortedWorkouts = [...workouts].sort(
+  const sortedWorkouts = [...(workouts || [])].filter(w => w && w.date).sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
-  const totalWorkouts = workouts.length;
-  const totalVolumeAllTime = workouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
+  const totalWorkouts = sortedWorkouts.length;
+  const totalVolumeAllTime = sortedWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
   const avgVolumePerWorkout = totalWorkouts > 0 ? Math.round(totalVolumeAllTime / totalWorkouts) : 0;
 
   return (
@@ -206,27 +208,27 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                       )}
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {workout.exercises.map((workoutExercise, idx) => (
-                          <div key={idx} style={{ paddingBottom: '8px', borderBottom: idx < workout.exercises.length - 1 ? '1px dashed rgba(15,23,42,0.06)' : 'none' }}>
+                        {(workout.exercises || []).map((workoutExercise, idx) => (
+                          <div key={workoutExercise?.id || idx} style={{ paddingBottom: '8px', borderBottom: idx < (workout.exercises || []).length - 1 ? '1px dashed rgba(15,23,42,0.06)' : 'none' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                               <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                {workoutExercise.name}
+                                {workoutExercise?.name || 'Exercício'}
                               </h4>
-                              {workoutExercise.category && (
+                              {workoutExercise?.category && (
                                 <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#f1f5f9', color: 'var(--text-muted)' }}>
                                   {workoutExercise.category}
                                 </span>
                               )}
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                              {workoutExercise.sets.map((set, sIdx) => (
+                              {(workoutExercise?.sets || []).map((set, sIdx) => (
                                 <span
-                                  key={set.id}
+                                  key={set?.id || sIdx}
                                   style={{
                                     fontSize: '0.72rem',
-                                    backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.08)' : '#f8fafc',
-                                    color: set.isCompleted ? 'var(--success)' : 'var(--text-muted)',
-                                    border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.15)' : '1px solid var(--border-color)',
+                                    backgroundColor: set?.isCompleted ? 'rgba(16, 185, 129, 0.08)' : '#f8fafc',
+                                    color: set?.isCompleted ? 'var(--success)' : 'var(--text-muted)',
+                                    border: set?.isCompleted ? '1px solid rgba(16, 185, 129, 0.15)' : '1px solid var(--border-color)',
                                     padding: '3px 7px',
                                     borderRadius: '6px',
                                     display: 'inline-flex',
@@ -234,7 +236,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                                     gap: '3px'
                                   }}
                                 >
-                                  <span style={{ fontWeight: 800 }}>#{sIdx + 1}</span> {set.weight}kg × {set.reps}
+                                  <span style={{ fontWeight: 800 }}>#{sIdx + 1}</span> {set?.weight ?? 0}kg × {set?.reps ?? 0}
                                 </span>
                               ))}
                             </div>

@@ -295,7 +295,7 @@ export default function App() {
 
   // Delete a workout from history
   const handleDeleteWorkout = (workoutId: string) => {
-    const updatedWorkouts = appData.workouts.filter(w => w.id !== workoutId);
+    const updatedWorkouts = (appData.workouts || []).filter(w => w && w.id !== workoutId);
     updateAppDataState({
       ...appData,
       workouts: updatedWorkouts
