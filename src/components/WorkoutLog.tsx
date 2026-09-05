@@ -1129,22 +1129,22 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         width: '46px',
                         height: '46px',
                         borderRadius: '12px',
-                        backgroundColor: '#ffffff',
-                        border: muscleFilter === 'bookmarked' ? '2.5px solid #ff3b30' : '1.5px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        border: muscleFilter === 'bookmarked' ? '2.5px solid #ff5e3a' : '1.5px solid var(--border-color)',
                         cursor: 'pointer',
                         flexShrink: 0,
                         transition: 'all var(--transition-fast)',
                         transform: muscleFilter === 'bookmarked' ? 'scale(1.1)' : 'scale(1.0)',
-                        boxShadow: muscleFilter === 'bookmarked' ? '0 4px 12px rgba(255, 59, 48, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
+                        boxShadow: muscleFilter === 'bookmarked' ? '0 4px 12px rgba(255, 94, 58, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
                         outline: 'none'
                       }}
                       aria-label="Exercícios Salvos"
                     >
                       <Bookmark 
                         size={22} 
-                        fill={muscleFilter === 'bookmarked' ? '#ff3b30' : 'none'} 
+                        fill={muscleFilter === 'bookmarked' ? '#ff5e3a' : 'none'} 
                         style={{
-                          color: muscleFilter === 'bookmarked' ? '#ff3b30' : '#94a3b8',
+                          color: muscleFilter === 'bookmarked' ? '#ff5e3a' : 'var(--text-muted)',
                           transition: 'all var(--transition-fast)'
                         }}
                       />
@@ -1164,14 +1164,14 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                             width: '46px',
                             height: '46px',
                             borderRadius: '12px',
-                            backgroundColor: '#ffffff',
-                            border: active ? '2.5px solid #ff3b30' : '1.5px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            border: active ? '2.5px solid #ff5e3a' : '1.5px solid var(--border-color)',
                             cursor: 'pointer',
                             flexShrink: 0,
                             padding: '4px',
                             transition: 'all var(--transition-fast)',
                             transform: active ? 'scale(1.1)' : 'scale(1.0)',
-                            boxShadow: active ? '0 4px 12px rgba(255, 59, 48, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
+                            boxShadow: active ? '0 4px 12px rgba(255, 94, 58, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
                             outline: 'none'
                           }}
                           aria-label={MUSCLE_LABELS[muscle]}
@@ -1256,8 +1256,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                     display: 'flex',
                                     flexDirection: 'column',
                                     borderRadius: '16px',
-                                    border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
-                                    backgroundColor: '#ffffff',
+                                    border: checked ? '1.5px solid var(--text-primary)' : '1px solid var(--border-color)',
+                                    backgroundColor: 'var(--bg-card)',
                                     overflow: 'hidden',
                                     cursor: isAdded ? 'not-allowed' : 'pointer',
                                     position: 'relative',
@@ -1276,14 +1276,14 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                       border: 'none',
                                       cursor: 'pointer',
                                       zIndex: 5,
-                                      color: bookmarkedIds.includes(ex.id) ? '#000000' : '#94a3b8',
+                                      color: bookmarkedIds.includes(ex.id) ? 'var(--text-primary)' : 'var(--text-muted)',
                                       padding: '4px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center'
                                     }}
                                   >
-                                    <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? '#000000' : 'none'} strokeWidth={1.75} />
+                                    <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? 'var(--text-primary)' : 'none'} strokeWidth={1.75} />
                                   </button>
 
                                   {/* Checked indicator */}
@@ -1292,7 +1292,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                       position: 'absolute',
                                       top: '12px',
                                       right: '12px',
-                                      color: '#000000',
+                                      color: 'var(--text-primary)',
                                       fontWeight: 'bold',
                                       zIndex: 5,
                                       display: 'flex',
@@ -1304,17 +1304,17 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   )}
 
                                   {/* Card image container */}
-                                  <div style={{ height: '140px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                                  <div style={{ height: '140px', backgroundColor: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                                     <StaticExerciseImage mediaId={ex.media_id} alt={ex.name} />
                                   </div>
 
                                   {/* Card Text footer */}
-                                  <div style={{ padding: '12px', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+                                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-card)', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
                                     <div style={{ paddingRight: '14px' }}>
-                                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#000000', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                         {translateExerciseName(ex.name)}
                                       </div>
-                                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                         {mapCategory(ex.muscle_group)}
                                       </div>
                                     </div>
