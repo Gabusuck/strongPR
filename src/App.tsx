@@ -4,7 +4,10 @@ import { loadAppData, saveAppData, checkAndUpdatePRs, INITIAL_DATA, exportBackup
 import { WorkoutLog } from './components/WorkoutLog';
 import { HistoryView } from './components/HistoryView';
 import { ProfileView } from './components/ProfileView';
-import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X } from 'lucide-react';
+import { DashboardView } from './components/DashboardView';
+import { PRView } from './components/PRView';
+import { RoutinesView } from './components/RoutinesView';
+import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X, BarChart3, Medal } from 'lucide-react';
 
 interface CustomDialogConfig {
   isOpen: boolean;
@@ -24,7 +27,7 @@ declare global {
 
 export default function App() {
   const [appData, setAppData] = useState<AppData>(INITIAL_DATA);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('workout'); // Default to workout tab as it's the middle/heart of the app
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   
   // Custom dialog alert/confirm state
@@ -275,7 +278,7 @@ export default function App() {
     if (newPRsCount > 0) {
       setNewPRsModal({ isOpen: true, count: newPRsCount });
     } else {
-      setActiveTab('profile'); // Redirect to profile to see updated stats/grid
+      setActiveTab('dashboard'); // Redirect to dashboard to see updated stats
     }
   };
 
@@ -369,6 +372,16 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return (
+          <DashboardView
+            workouts={appData.workouts}
+            prs={appData.prs}
+            profile={appData.profile}
+            onStartWorkout={handleStartWorkout}
+            onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
+          />
+        );
       case 'history':
         return (
           <HistoryView 
@@ -393,6 +406,22 @@ export default function App() {
             onStartWorkoutFromTemplate={handleStartWorkoutFromTemplate}
           />
         );
+      case 'prs':
+        return (
+          <PRView
+            prs={appData.prs}
+          />
+        );
+      case 'routines':
+        return (
+          <RoutinesView
+            templates={appData.templates}
+            exercises={appData.exercises}
+            onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
+            onAddTemplate={handleAddTemplate}
+            onDeleteTemplate={handleDeleteTemplate}
+          />
+        );
       case 'profile':
         return (
           <ProfileView 
@@ -408,19 +437,12 @@ export default function App() {
         );
       default:
         return (
-          <WorkoutLog 
-            activeWorkout={activeWorkout}
-            exercises={appData.exercises}
-            settings={appData.settings}
-            templates={appData.templates}
+          <DashboardView
             workouts={appData.workouts}
-            onUpdateWorkout={handleUpdateActiveWorkout}
-            onSaveWorkout={handleSaveWorkout}
-            onCancelWorkout={handleCancelWorkout}
+            prs={appData.prs}
+            profile={appData.profile}
             onStartWorkout={handleStartWorkout}
-            onAddTemplate={handleAddTemplate}
-            onDeleteTemplate={handleDeleteTemplate}
-            onStartWorkoutFromTemplate={handleStartWorkoutFromTemplate}
+            onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
           />
         );
     }
@@ -532,6 +554,14 @@ export default function App() {
       {/* Bottom Translucent Glass Navigation Bar */}
       <nav className="bottom-nav">
         <button 
+          className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          <BarChart3 size={20} />
+          <span>Início</span>
+        </button>
+
+        <button 
           className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
         >
@@ -551,15 +581,22 @@ export default function App() {
               style={{
                 position: 'absolute',
                 top: '6px',
-                right: '22px',
+                right: '14px',
                 width: '6px',
                 height: '6px',
-                backgroundColor: 'var(--accent-color)',
+                backgroundColor: 'var(--success)',
                 borderRadius: '50%',
-                boxShadow: '0 0 6px var(--accent-color)'
               }}
             />
           )}
+        </button>
+
+        <button 
+          className={`nav-item ${activeTab === 'prs' ? 'active' : ''}`}
+          onClick={() => setActiveTab('prs')}
+        >
+          <Medal size={20} />
+          <span>Records</span>
         </button>
 
         <button 

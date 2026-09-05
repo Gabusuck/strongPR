@@ -50,7 +50,7 @@ export interface UserProfile {
   onboarded: boolean;
 }
 
-export type ActiveTab = 'history' | 'workout' | 'profile';
+export type ActiveTab = 'dashboard' | 'workout' | 'history' | 'prs' | 'routines' | 'profile';
 
 export interface AppSettings {
   defaultRestDuration: number; // in seconds
