@@ -244,10 +244,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     const seenIds = new Set<string>();
 
     if (workouts && workouts.length > 0) {
-      const sortedWorkouts = [...workouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sortedWorkouts = [...workouts].filter(w => w && w.date).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       for (const w of sortedWorkouts) {
-        for (const ex of w.exercises) {
-          if (!seenIds.has(ex.id)) {
+        for (const ex of (w?.exercises || [])) {
+          if (ex && !seenIds.has(ex.id)) {
             seenIds.add(ex.id);
             const apiEx = apiExercises.find(e => e.id === ex.id);
             if (apiEx) recents.push(apiEx);
@@ -283,7 +283,10 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Active workout duration tick
   useEffect(() => {
-    if (!activeWorkout) return;
+    if (!activeWorkout) {
+      setElapsedSeconds(0);
+      return;
+    }
     const startTime = activeWorkout.date ? new Date(activeWorkout.date).getTime() : Date.now();
     const interval = window.setInterval(() => {
       const seconds = Math.floor((Date.now() - startTime) / 1000);
@@ -294,7 +297,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Save elapsed duration on each tick
   useEffect(() => {
-    if (activeWorkout) {
+    if (activeWorkout && elapsedSeconds > 0) {
       onUpdateWorkout({ ...activeWorkout, duration: elapsedSeconds });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -698,10 +701,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
     }));
 
+    if (!activeWorkout) return;
     onUpdateWorkout({
       ...activeWorkout,
       exercises: [
-        ...activeWorkout.exercises,
+        ...(activeWorkout.exercises || []),
         ...newWorkoutExercises,
         ...newLocalWorkoutExercises,
       ],
@@ -715,8 +719,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Add single exercise directly (fallback)
   const handleAddExercise = (exercise: Exercise | ApiExercise) => {
+    if (!activeWorkout) return;
     const id = exercise.id;
-    if (activeWorkout.exercises.some((e) => e.id === id)) {
+    if ((activeWorkout.exercises || []).some((e) => e.id === id)) {
       setShowAddExerciseModal(false);
       return;
     }
@@ -734,7 +739,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       category,
       sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
     };
-    onUpdateWorkout({ ...activeWorkout, exercises: [...activeWorkout.exercises, newWorkoutExercise] });
+    onUpdateWorkout({ ...activeWorkout, exercises: [...(activeWorkout.exercises || []), newWorkoutExercise] });
     setShowAddExerciseModal(false);
     setSelectedApiExercise(null);
     setSelectedExerciseIds([]);
@@ -753,47 +758,51 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       'Remover Exercício',
       'Tem a certeza que deseja remover este exercício do treino atual?',
       () => {
+        if (!activeWorkout) return;
         onUpdateWorkout({
           ...activeWorkout,
-          exercises: activeWorkout.exercises.filter((e) => e.id !== exerciseId),
+          exercises: (activeWorkout.exercises || []).filter((e) => e.id !== exerciseId),
         });
       }
     );
   };
 
   const handleAddSet = (exerciseId: string) => {
+    if (!activeWorkout) return;
     onUpdateWorkout({
       ...activeWorkout,
-      exercises: activeWorkout.exercises.map((ex) => {
+      exercises: (activeWorkout.exercises || []).map((ex) => {
         if (ex.id !== exerciseId) return ex;
-        const lastSet = ex.sets[ex.sets.length - 1];
+        const lastSet = ex.sets && ex.sets.length > 0 ? ex.sets[ex.sets.length - 1] : undefined;
         return {
           ...ex,
-          sets: [...ex.sets, { id: Math.random().toString(36).substring(2, 9), weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, isCompleted: false }],
+          sets: [...(ex.sets || []), { id: Math.random().toString(36).substring(2, 9), weight: lastSet?.weight || 0, reps: lastSet?.reps || 0, isCompleted: false }],
         };
       }),
     });
   };
 
   const handleRemoveSet = (exerciseId: string, setId: string) => {
+    if (!activeWorkout) return;
     onUpdateWorkout({
       ...activeWorkout,
-      exercises: activeWorkout.exercises.map((ex) => {
+      exercises: (activeWorkout.exercises || []).map((ex) => {
         if (ex.id !== exerciseId) return ex;
-        const updatedSets = ex.sets.filter((s) => s.id !== setId);
+        const updatedSets = (ex.sets || []).filter((s) => s.id !== setId);
         return { ...ex, sets: updatedSets.length > 0 ? updatedSets : [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }] };
       }),
     });
   };
 
   const handleUpdateSet = (exerciseId: string, setId: string, updates: Partial<Set>) => {
+    if (!activeWorkout) return;
     onUpdateWorkout({
       ...activeWorkout,
-      exercises: activeWorkout.exercises.map((ex) => {
+      exercises: (activeWorkout.exercises || []).map((ex) => {
         if (ex.id !== exerciseId) return ex;
         return {
           ...ex,
-          sets: ex.sets.map((s) => {
+          sets: (ex.sets || []).map((s) => {
             if (s.id !== setId) return s;
             if (updates.isCompleted === true && !s.isCompleted) {
               setRestTimeLeft(settings.defaultRestDuration);
@@ -845,8 +854,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           <input
             type="text"
             className="form-input"
-            value={activeWorkout.name}
-            onChange={(e) => onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
+            value={activeWorkout?.name || ''}
+            onChange={(e) => activeWorkout && onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
             style={{ fontSize: '1.4rem', fontWeight: 850, fontFamily: 'var(--font-display)', background: 'transparent', border: 'none', padding: '4px 0', width: '200px', borderBottom: '1px solid transparent', borderRadius: 0 }}
             placeholder="Nome do Treino"
             onFocus={(e) => e.target.style.borderBottom = '1px solid var(--accent-color)'}
@@ -919,7 +928,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       )}
 
       {/* Exercises */}
-      {activeWorkout.exercises.map((workoutExercise) => {
+      {(activeWorkout?.exercises || []).map((workoutExercise) => {
         const apiEx = apiExercises.find(e => 
           e.id === workoutExercise.id || 
           e.name.toLowerCase() === workoutExercise.name.toLowerCase()
@@ -1307,7 +1316,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                             {getRecentExercises().map(ex => {
-                              const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
+                              const isAdded = (activeWorkout?.exercises || []).some(a => a && a.id === ex.id);
                               const isSelected = selectedExerciseIds.includes(ex.id);
                               const checked = isAdded || isSelected;
 
@@ -1419,7 +1428,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         
                         {/* Custom local exercises first */}
                         {filteredLocalExercises.map((ex: Exercise) => {
-                          const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
+                          const isAdded = (activeWorkout?.exercises || []).some(a => a && a.id === ex.id);
                           const isSelected = selectedExerciseIds.includes(ex.id);
                           const checked = isAdded || isSelected;
 
@@ -1501,7 +1510,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
                         {/* GymVisual illustrated database exercises */}
                         {filteredApiExercises.slice(0, visibleLimit).map((ex: ApiExercise) => {
-                          const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
+                          const isAdded = (activeWorkout?.exercises || []).some(a => a && a.id === ex.id);
                           const isSelected = selectedExerciseIds.includes(ex.id);
                           const checked = isAdded || isSelected;
 

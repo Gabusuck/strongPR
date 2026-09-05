@@ -289,6 +289,12 @@ export default function App() {
       'Tens a certeza que queres apagar o treino atual? Todas as séries não gravadas serão perdidas.',
       () => {
         setActiveWorkout(null);
+        try {
+          localStorage.removeItem('strongpr_active_workout');
+        } catch (e) {
+          console.error(e);
+        }
+        setActiveTab('dashboard');
       }
     );
   };
@@ -300,6 +306,15 @@ export default function App() {
       ...appData,
       workouts: updatedWorkouts
     });
+    if (activeWorkout && activeWorkout.id === workoutId) {
+      setActiveWorkout(null);
+      try {
+        localStorage.removeItem('strongpr_active_workout');
+      } catch (e) {
+        console.error(e);
+      }
+      setActiveTab('dashboard');
+    }
   };
 
   // Add custom exercise
