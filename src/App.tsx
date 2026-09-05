@@ -378,7 +378,9 @@ export default function App() {
             workouts={appData.workouts}
             prs={appData.prs}
             profile={appData.profile}
+            templates={appData.templates}
             onStartWorkout={handleStartWorkout}
+            onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
             onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
           />
         );
@@ -441,7 +443,9 @@ export default function App() {
             workouts={appData.workouts}
             prs={appData.prs}
             profile={appData.profile}
+            templates={appData.templates}
             onStartWorkout={handleStartWorkout}
+            onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
             onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
           />
         );
