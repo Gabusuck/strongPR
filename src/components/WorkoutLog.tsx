@@ -74,50 +74,42 @@ const MUSCLE_ZOOM_MAPPING: Record<string, { scale: number; origin: string }> = {
   abdominals: { scale: 1.6, origin: 'center 38%' },
   back: { scale: 1.6, origin: 'center 28%' },
   legs: { scale: 1.4, origin: 'center 68%' },
-};// Component to render first frame of GIF as static image
+};// Component to render static exercise thumbnail with ultra-fast lazy loading
 const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: React.CSSProperties }> = ({ mediaId, alt, style }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const img = imgRef.current;
-    if (!canvas || !img || error) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const handleLoad = () => {
-      canvas.width = img.naturalWidth || 360;
-      canvas.height = img.naturalHeight || 360;
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-
-    if (img.complete) {
-      handleLoad();
-    } else {
-      img.addEventListener('load', handleLoad);
-      return () => img.removeEventListener('load', handleLoad);
-    }
-  }, [mediaId, error]);
-
-  if (error) {
-    return <Dumbbell size={24} style={{ color: 'var(--text-muted)' }} />;
+  if (!mediaId || error) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: '#F8F9FD' }}>
+        <Dumbbell size={26} opacity={0.35} />
+      </div>
+    );
   }
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', background: '#F8F9FD', overflow: 'hidden' }}>
+      {!loaded && (
+        <div style={{ position: 'absolute', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+          <Dumbbell size={24} color="var(--accent-color)" opacity={0.25} />
+        </div>
+      )}
       <img
-        ref={imgRef}
         src={`https://static.exercisedb.dev/media/${mediaId}.gif`}
         alt={alt}
-        style={{ display: 'none' }}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
         onError={() => setError(true)}
-      />
-      <canvas
-        ref={canvasRef}
-        style={{ ...style, width: '100%', height: '100%', objectFit: 'contain' }}
+        style={{
+          ...style,
+          width: '100%',
+          height: '100%',
+          objectFit: 'contain',
+          opacity: loaded ? 1 : 0,
+          transition: 'opacity 0.2s ease',
+          pointerEvents: 'none'
+        }}
       />
     </div>
   );
@@ -188,6 +180,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [muscleFilter, setMuscleFilter] = useState<string>('all');
+  const [visibleLimit, setVisibleLimit] = useState(30);
   const [selectedApiExercise, setSelectedApiExercise] = useState<ApiExercise | null>(null);
   const [apiExercises, setApiExercises] = useState<ApiExercise[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
@@ -1488,7 +1481,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         })}
 
                         {/* GymVisual illustrated database exercises */}
-                        {filteredApiExercises.map(ex => {
+                        {filteredApiExercises.slice(0, visibleLimit).map(ex => {
                           const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
                           const isSelected = selectedExerciseIds.includes(ex.id);
                           const checked = isAdded || isSelected;
@@ -1501,8 +1494,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                 display: 'flex',
                                 flexDirection: 'column',
                                 borderRadius: '16px',
-                                border: checked ? '1.5px solid #1e293b' : '1px solid var(--border-color)',
-                                backgroundColor: '#ffffff',
+                                border: checked ? '1.5px solid var(--accent-color)' : '1px solid var(--border-color)',
+                                backgroundColor: 'var(--bg-card)',
                                 overflow: 'hidden',
                                 cursor: isAdded ? 'not-allowed' : 'pointer',
                                 position: 'relative',
@@ -1521,14 +1514,14 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   border: 'none',
                                   cursor: 'pointer',
                                   zIndex: 5,
-                                  color: bookmarkedIds.includes(ex.id) ? '#000000' : '#94a3b8',
+                                  color: bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'var(--text-muted)',
                                   padding: '4px',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center'
                                 }}
                               >
-                                <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? '#000000' : 'none'} strokeWidth={1.75} />
+                                <Bookmark size={20} fill={bookmarkedIds.includes(ex.id) ? 'var(--accent-color)' : 'none'} strokeWidth={1.75} />
                               </button>
 
                               {/* Checked indicator */}
@@ -1537,7 +1530,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   position: 'absolute',
                                   top: '12px',
                                   right: '12px',
-                                  color: '#000000',
+                                  color: 'var(--accent-color)',
                                   fontWeight: 'bold',
                                   zIndex: 5,
                                   display: 'flex',
@@ -1549,17 +1542,17 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                               )}
 
                               {/* Card image container */}
-                              <div style={{ height: '140px', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                              <div style={{ height: '140px', backgroundColor: '#F8F9FD', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
                                 <StaticExerciseImage mediaId={ex.media_id} alt={ex.name} />
                               </div>
 
                               {/* Card footer */}
-                              <div style={{ padding: '12px', backgroundColor: '#ffffff', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
+                              <div style={{ padding: '12px', backgroundColor: 'var(--bg-card)', borderTop: '1px solid var(--border-color)', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', position: 'relative' }}>
                                 <div style={{ paddingRight: '14px' }}>
-                                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#000000', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {translateExerciseName(ex.name)}
                                   </div>
-                                  <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
                                     {mapCategory(ex.muscle_group)}
                                   </div>
                                 </div>
@@ -1573,7 +1566,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                     right: '8px',
                                     background: 'none',
                                     border: 'none',
-                                    color: '#94a3b8',
+                                    color: 'var(--text-muted)',
                                     cursor: 'pointer',
                                     padding: '4px',
                                     display: 'flex',
@@ -1594,6 +1587,29 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                           </div>
                         )}
                       </div>
+
+                      {/* Mostrar mais botão se houver mais exercícios */}
+                      {filteredApiExercises.length > visibleLimit && (
+                        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                          <button
+                            type="button"
+                            onClick={() => setVisibleLimit(prev => prev + 30)}
+                            style={{
+                              background: '#FFFFFF',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '16px',
+                              padding: '12px 24px',
+                              color: 'var(--accent-color)',
+                              fontWeight: 800,
+                              fontSize: '0.85rem',
+                              cursor: 'pointer',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                            }}
+                          >
+                            Mostrar mais ({filteredApiExercises.length - visibleLimit} exercícios)
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
