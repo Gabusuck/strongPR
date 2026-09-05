@@ -143,7 +143,7 @@ html, body, #root {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   /* Padding inferior = altura da navbar + safe area, para o conteúdo não ficar por baixo da nav */
-  padding: 16px 16px calc(92px + env(safe-area-inset-bottom, 0px)) 16px;
+  padding: 16px 16px calc(82px + env(safe-area-inset-bottom, 0px)) 16px;
   background-color: var(--bg-primary);
 }
 
@@ -171,12 +171,12 @@ html, body, #root {
 /* Barra de Navegação — Pílula flutuante com bordas arredondadas */
 .bottom-nav {
   position: fixed;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  bottom: env(safe-area-inset-bottom, 0px);
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 40px);
+  width: calc(100% - 32px);
   max-width: 420px;
-  height: 64px;
+  height: 62px;
   padding-bottom: 0;
   background: #1c1c1f;
   border: 1px solid #2c2c30;
@@ -186,6 +186,7 @@ html, body, #root {
   align-items: center;
   z-index: 999;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  margin-bottom: 8px;
 }
 
 .nav-item {
