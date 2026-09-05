@@ -159,17 +159,120 @@ const OLD_EXERCISE_ID_MAPPING: Record<string, string> = {
 
 const OLD_EXERCISE_NAME_MAPPING: Record<string, string> = {
   'agachamento (squat)': 'qXTaZnJ',
+  'agachamento com barra': 'qXTaZnJ',
+  'agachamento': 'qXTaZnJ',
   'supino plano (bench press)': 'EIeI8Vf',
+  'supino reto com barra': 'EIeI8Vf',
+  'supino plano': 'EIeI8Vf',
+  'supino': 'EIeI8Vf',
   'peso morto (deadlift)': 'ila4NZS',
+  'levantamento terra (deadlift)': 'ila4NZS',
+  'peso morto': 'ila4NZS',
   'press militar (overhead press)': 'wdRZISl',
+  'desenvolvimento militar': 'wdRZISl',
+  'press militar': 'wdRZISl',
   'elevações (pull-ups)': 'lBDjFxJ',
+  'elevações': 'lBDjFxJ',
+  'pull-up': 'lBDjFxJ',
+  'pull-ups': 'lBDjFxJ',
   'remada com barra (barbell row)': 'eZyBC3j',
+  'remada curvada com barra': 'eZyBC3j',
+  'remada com barra': 'eZyBC3j',
   'bicep curl com halteres': '25GPyDY',
+  'bicep curl': '25GPyDY',
+  'curl com barra': '25GPyDY',
   'tricep pushdown': '3ZflifB',
+  'tríceps pushdown': '3ZflifB',
   'prensa de pernas (leg press)': '10Z2DXU',
+  'prensa 45° (leg press)': '10Z2DXU',
+  'prensa de pernas': '10Z2DXU',
+  'leg press': '10Z2DXU',
   'abdominais (crunches)': 'TFqbd8t',
+  'abdominais': 'TFqbd8t',
+  'crunches': 'TFqbd8t',
   'elevações laterais (lateral raises)': 'DsgkuIt',
+  'elevações laterais': 'DsgkuIt',
+  'elevação lateral': 'DsgkuIt',
   'supino inclinado (incline press)': '3TZduzM',
+  'supino inclinado': '3TZduzM',
+};
+
+const resolveExerciseMediaId = (
+  workoutExercise: { id?: string; name?: string },
+  apiExercisesList: ApiExercise[]
+): string | null => {
+  const id = workoutExercise.id || '';
+  const rawName = (workoutExercise.name || '').trim().toLowerCase();
+
+  // 1. Direct match by API exercise ID (e.g. '0025')
+  const byApiId = apiExercisesList.find(e => e.id === id);
+  if (byApiId?.media_id) return byApiId.media_id;
+
+  // 2. Direct match by API media_id (e.g. 'EIeI8Vf')
+  const byMediaId = apiExercisesList.find(e => e.media_id === id);
+  if (byMediaId?.media_id) return byMediaId.media_id;
+
+  // 3. If ID itself looks like a GymVisual media_id (alphanumeric 6-9 chars, not purely digits)
+  if (id && id.length >= 6 && id.length <= 10 && !/^\d+$/.test(id)) {
+    return id;
+  }
+
+  // 4. Match in OLD_EXERCISE_ID_MAPPING (default 1-12)
+  if (OLD_EXERCISE_ID_MAPPING[id]) {
+    return OLD_EXERCISE_ID_MAPPING[id];
+  }
+
+  // 5. Match by exact English name in apiExercises
+  const byName = apiExercisesList.find(e => e.name.toLowerCase() === rawName);
+  if (byName?.media_id) return byName.media_id;
+
+  // 6. Match in OLD_EXERCISE_NAME_MAPPING
+  if (OLD_EXERCISE_NAME_MAPPING[rawName]) {
+    return OLD_EXERCISE_NAME_MAPPING[rawName];
+  }
+
+  // 7. Comprehensive fuzzy Portuguese / English keyword matching
+  if (rawName.includes('supino reto') || (rawName.includes('supino') && !rawName.includes('inclinado') && !rawName.includes('declinado')) || rawName.includes('bench press')) {
+    return 'EIeI8Vf';
+  }
+  if (rawName.includes('supino inclinado') || rawName.includes('incline bench press') || rawName.includes('incline press')) {
+    return '3TZduzM';
+  }
+  if (rawName.includes('supino declinado') || rawName.includes('decline bench press')) {
+    return '1l2K2gN';
+  }
+  if (rawName.includes('militar') || rawName.includes('overhead press') || rawName.includes('desenvolvimento')) {
+    return 'wdRZISl';
+  }
+  if (rawName.includes('agachamento') || rawName.includes('squat')) {
+    return 'qXTaZnJ';
+  }
+  if (rawName.includes('peso morto') || rawName.includes('deadlift') || rawName.includes('terra')) {
+    return 'ila4NZS';
+  }
+  if (rawName.includes('elevações') || rawName.includes('elevaçoes') || rawName.includes('pull-up') || rawName.includes('pullup') || rawName.includes('dominadas')) {
+    return 'lBDjFxJ';
+  }
+  if (rawName.includes('remada') || rawName.includes('row')) {
+    return 'eZyBC3j';
+  }
+  if (rawName.includes('bicep') || rawName.includes('bíceps') || rawName.includes('curl')) {
+    return '25GPyDY';
+  }
+  if (rawName.includes('tricep') || rawName.includes('tríceps') || rawName.includes('pushdown')) {
+    return '3ZflifB';
+  }
+  if (rawName.includes('prensa') || rawName.includes('leg press')) {
+    return '10Z2DXU';
+  }
+  if (rawName.includes('lateral') || rawName.includes('elevação lateral') || rawName.includes('elevações laterais')) {
+    return 'DsgkuIt';
+  }
+  if (rawName.includes('abdominal') || rawName.includes('abdominais') || rawName.includes('crunch')) {
+    return 'TFqbd8t';
+  }
+
+  return null;
 };
 
 // ─── Props ─────────────────────────────────────────────────────────────────────
@@ -929,19 +1032,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
       {/* Exercises */}
       {(activeWorkout?.exercises || []).map((workoutExercise) => {
-        const apiEx = apiExercises.find(e => 
-          e.id === workoutExercise.id || 
-          e.name.toLowerCase() === workoutExercise.name.toLowerCase()
-        );
-        
-        let mediaId = apiEx?.media_id || null;
-        if (!mediaId) {
-          mediaId = OLD_EXERCISE_ID_MAPPING[workoutExercise.id] || 
-                    OLD_EXERCISE_NAME_MAPPING[workoutExercise.name.toLowerCase()] || 
-                    null;
-        }
-        
-
+        const mediaId = resolveExerciseMediaId(workoutExercise, apiExercises);
 
         return (
           <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
@@ -951,7 +1042,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                   {mediaId ? (
                     <StaticExerciseImage mediaId={mediaId} alt={workoutExercise.name} style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
                   ) : (
-                    <span style={{ fontSize: '1.25rem' }}>💪</span>
+                    <Dumbbell size={22} color="var(--accent-color)" opacity={0.4} />
                   )}
                 </div>
                 <div>
