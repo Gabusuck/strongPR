@@ -1,8 +1,9 @@
-const CACHE_NAME = 'strongpr-cache-v30';
+const CACHE_NAME = 'strongpr-cache-v31';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/exercises.json',
   '/logo.png',
   '/icon-192.png',
   '/icon-512.png'

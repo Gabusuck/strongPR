@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
@@ -15,6 +15,33 @@ interface ApiExercise {
 }
 
 const DB_JSON = '/exercises.json';
+
+// Global in-memory cache so exercises.json is loaded once in the background and instant forever
+let cachedApiExercises: ApiExercise[] | null = null;
+let fetchPromise: Promise<ApiExercise[]> | null = null;
+
+export const preloadExercises = (): Promise<ApiExercise[]> => {
+  if (cachedApiExercises) return Promise.resolve(cachedApiExercises);
+  if (!fetchPromise) {
+    fetchPromise = fetch(DB_JSON)
+      .then(r => r.json())
+      .then((data: ApiExercise[]) => {
+        cachedApiExercises = data;
+        return data;
+      })
+      .catch(err => {
+        console.error('Failed to preload exercises:', err);
+        fetchPromise = null;
+        return [];
+      });
+  }
+  return fetchPromise;
+};
+
+// Trigger background preload immediately on script load
+if (typeof window !== 'undefined') {
+  preloadExercises();
+}
 
 const MUSCLE_LABELS: Record<string, string> = {
   chest: 'Peito',
@@ -182,8 +209,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [muscleFilter, setMuscleFilter] = useState<string>('all');
   const [visibleLimit, setVisibleLimit] = useState(30);
   const [selectedApiExercise, setSelectedApiExercise] = useState<ApiExercise | null>(null);
-  const [apiExercises, setApiExercises] = useState<ApiExercise[]>([]);
-  const [apiLoading, setApiLoading] = useState(false);
+  const [apiExercises, setApiExercises] = useState<ApiExercise[]>(() => cachedApiExercises || []);
+  const [apiLoading, setApiLoading] = useState(() => !cachedApiExercises);
   const [apiError, setApiError] = useState(false);
 
   // Bookmarked exercises state
@@ -287,31 +314,17 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     return () => { if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current); };
   }, [restTimeLeft]);
 
-  // Fetch exercises from API on demand (modal open or active exercises need images) with self-healing retry
+  // Populate exercises from background preloader
   useEffect(() => {
-    if (showAddExerciseModal) {
-      setApiError(false); // Reset errors on reopen to force clean state
-    }
-
-    if (apiExercises.length > 0 || apiLoading) return;
-    
-    const shouldFetch = showAddExerciseModal || (activeWorkout && activeWorkout.exercises.length > 0);
-    if (!shouldFetch) return;
-
-    setApiLoading(true);
-    setApiError(false);
-    fetch(DB_JSON)
-      .then(r => r.json())
-      .then((data: ApiExercise[]) => {
-        setApiExercises(data);
-        setApiLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to fetch exercises:', err);
-        setApiError(true);
-        setApiLoading(false);
-      });
-  }, [showAddExerciseModal, activeWorkout, apiExercises.length, apiLoading]);
+    if (apiExercises.length > 0) return;
+    preloadExercises().then((data) => {
+      setApiExercises(data);
+      setApiLoading(false);
+    }).catch(() => {
+      setApiError(true);
+      setApiLoading(false);
+    });
+  }, [apiExercises.length]);
 
   const triggerRestEndNotifications = () => {
     if (settings.enableVibration && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
@@ -677,8 +690,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       };
     });
 
-    const localToAdd = localExercises.filter(ex => selectedExerciseIds.includes(ex.id));
-    const newLocalWorkoutExercises: WorkoutExercise[] = localToAdd.map(exercise => ({
+    const localToAdd = localExercises.filter((ex: Exercise) => selectedExerciseIds.includes(ex.id));
+    const newLocalWorkoutExercises: WorkoutExercise[] = localToAdd.map((exercise: Exercise) => ({
       id: exercise.id,
       name: exercise.name,
       category: exercise.category,
@@ -799,23 +812,29 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   };
 
   // Combine local custom exercises + filter API exercises
-  const localExercises = exercises.filter(ex => ex.isCustom);
+  const localExercises = useMemo(() => exercises.filter(ex => ex.isCustom), [exercises]);
 
-  const filteredApiExercises = apiExercises.filter(ex => {
-    const matchesMuscle = muscleFilter === 'bookmarked' 
-      ? bookmarkedIds.includes(ex.id)
-      : muscleMatchesFilter(ex.muscle_group, muscleFilter);
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
-      ex.name.toLowerCase().includes(q) ||
-      ex.muscle_group.toLowerCase().includes(q) ||
-      (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
-    return matchesMuscle && matchesSearch;
-  });
+  const filteredApiExercises = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return apiExercises.filter(ex => {
+      const matchesMuscle = muscleFilter === 'bookmarked' 
+        ? bookmarkedIds.includes(ex.id)
+        : muscleMatchesFilter(ex.muscle_group, muscleFilter);
+      if (!matchesMuscle) return false;
+      if (!q) return true;
+      return ex.name.toLowerCase().includes(q) ||
+        ex.muscle_group.toLowerCase().includes(q) ||
+        (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
+    });
+  }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
-  const filteredLocalExercises = localExercises.filter(ex =>
-    !searchQuery || ex.name.toLowerCase().includes(searchQuery.toLowerCase()) || ex.category.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLocalExercises = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return localExercises;
+    return localExercises.filter((ex: Exercise) =>
+      ex.name.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q)
+    );
+  }, [localExercises, searchQuery]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
@@ -1399,7 +1418,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
                         
                         {/* Custom local exercises first */}
-                        {filteredLocalExercises.map(ex => {
+                        {filteredLocalExercises.map((ex: Exercise) => {
                           const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
                           const isSelected = selectedExerciseIds.includes(ex.id);
                           const checked = isAdded || isSelected;
@@ -1481,7 +1500,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         })}
 
                         {/* GymVisual illustrated database exercises */}
-                        {filteredApiExercises.slice(0, visibleLimit).map(ex => {
+                        {filteredApiExercises.slice(0, visibleLimit).map((ex: ApiExercise) => {
                           const isAdded = activeWorkout.exercises.some(a => a.id === ex.id);
                           const isSelected = selectedExerciseIds.includes(ex.id);
                           const checked = isAdded || isSelected;
