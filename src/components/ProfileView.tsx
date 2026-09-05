@@ -138,15 +138,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     };
 
     // ── Palette ──────────────────────────────────────────
-    const CORAL   = '#FF5E3A';
-    const CORAL2  = '#FF8060';
-    const BLACK   = '#1A1A2E';
-    const GREY    = '#64748B';
-    const LGREY   = '#94A3B8';
+    const CORAL   = '#5B5EF4';
+    const CORAL2  = '#7B7FF5';
+    const BLACK   = '#1C1C1E';
+    const GREY    = '#8E8E93';
+    const LGREY   = '#AEAEB2';
     const WHITE   = '#FFFFFF';
-    const CREAM   = '#FFF7F4';
-    const CARD_BG = '#F8FAFC';
-    const BORDER  = '#E8EDF2';
+    const CREAM   = '#F2F2F7';
+    const CARD_BG = '#FFFFFF';
+    const BORDER  = '#E5E5EA';
 
     // ── COMPUTE STATS ────────────────────────────────────
     const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);

@@ -479,16 +479,16 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             gap: '16px', 
             padding: '22px 20px', 
             cursor: 'pointer', 
-            background: 'linear-gradient(135deg, rgba(255, 94, 58, 0.16) 0%, rgba(255, 122, 0, 0.1) 100%)',
-            border: '1px solid rgba(255, 94, 58, 0.3)',
-            borderRadius: '24px',
-            boxShadow: '0 8px 30px rgba(255, 94, 58, 0.15)',
+            background: 'linear-gradient(135deg, rgba(91, 94, 244, 0.1) 0%, rgba(123, 127, 245, 0.05) 100%)',
+            border: '1px solid rgba(91, 94, 244, 0.25)',
+            borderRadius: '20px',
+            boxShadow: '0 4px 18px var(--accent-glow)',
             transition: 'all var(--transition-fast)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ display: 'flex', padding: '14px', borderRadius: '50%', backgroundColor: 'var(--accent-color)', color: '#ffffff', boxShadow: '0 4px 14px rgba(255, 94, 58, 0.4)' }}>
-              <Plus size={24} strokeWidth={2.5} />
+            <div style={{ display: 'flex', padding: '12px', borderRadius: '50%', backgroundColor: 'var(--accent-color)', color: '#ffffff', boxShadow: '0 4px 14px var(--accent-glow)' }}>
+              <Plus size={22} strokeWidth={2.5} />
             </div>
             <div>
               <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>Iniciar Treino Vazio</h4>
@@ -1181,7 +1181,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                         height: '46px',
                         borderRadius: '12px',
                         backgroundColor: 'var(--bg-card)',
-                        border: muscleFilter === 'bookmarked' ? '2.5px solid #ff5e3a' : '1.5px solid var(--border-color)',
+                        border: muscleFilter === 'bookmarked' ? '2.5px solid var(--accent-color)' : '1.5px solid var(--border-color)',
                         cursor: 'pointer',
                         flexShrink: 0,
                         transition: 'all var(--transition-fast)',
@@ -1193,9 +1193,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     >
                       <Bookmark 
                         size={22} 
-                        fill={muscleFilter === 'bookmarked' ? '#ff5e3a' : 'none'} 
+                        fill={muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'none'} 
                         style={{
-                          color: muscleFilter === 'bookmarked' ? '#ff5e3a' : 'var(--text-muted)',
+                          color: muscleFilter === 'bookmarked' ? 'var(--accent-color)' : 'var(--text-muted)',
                           transition: 'all var(--transition-fast)'
                         }}
                       />
@@ -1216,13 +1216,13 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                             height: '46px',
                             borderRadius: '12px',
                             backgroundColor: 'var(--bg-card)',
-                            border: active ? '2.5px solid #ff5e3a' : '1.5px solid var(--border-color)',
+                            border: active ? '2.5px solid var(--accent-color)' : '1.5px solid var(--border-color)',
                             cursor: 'pointer',
                             flexShrink: 0,
                             padding: '4px',
                             transition: 'all var(--transition-fast)',
                             transform: active ? 'scale(1.1)' : 'scale(1.0)',
-                            boxShadow: active ? '0 4px 12px rgba(255, 94, 58, 0.25)' : '0 2px 6px rgba(0,0,0,0.05)',
+                            boxShadow: active ? '0 4px 12px var(--accent-glow)' : '0 2px 6px rgba(0,0,0,0.05)',
                             outline: 'none'
                           }}
                           aria-label={MUSCLE_LABELS[muscle]}
