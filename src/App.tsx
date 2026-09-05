@@ -529,29 +529,29 @@ export default function App() {
         {renderContent()}
       </main>
 
-      {/* Bottom Floating Capsule Navigation */}
+      {/* Bottom Translucent Glass Navigation Bar */}
       <nav className="bottom-nav">
         <button 
           className={`nav-item ${activeTab === 'history' ? 'active' : ''}`}
           onClick={() => setActiveTab('history')}
-          title="Histórico"
         >
-          <History size={22} />
+          <History size={20} />
+          <span>Histórico</span>
         </button>
 
         <button 
           className={`nav-item ${activeTab === 'workout' ? 'active' : ''}`}
           onClick={() => setActiveTab('workout')}
           style={{ position: 'relative' }}
-          title="Treinar"
         >
-          <Dumbbell size={22} />
+          <Dumbbell size={20} />
+          <span>Treinar</span>
           {activeWorkout && (
             <span 
               style={{
                 position: 'absolute',
-                top: '10px',
-                right: '16px',
+                top: '6px',
+                right: '22px',
                 width: '6px',
                 height: '6px',
                 backgroundColor: 'var(--accent-color)',
@@ -565,9 +565,9 @@ export default function App() {
         <button 
           className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
           onClick={() => setActiveTab('profile')}
-          title="Perfil"
         >
-          <User size={22} />
+          <User size={20} />
+          <span>Perfil</span>
         </button>
       </nav>
 

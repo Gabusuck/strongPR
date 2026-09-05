@@ -72,14 +72,14 @@ html, body, #root {
   overflow: hidden;
 }
 
-/* Container Principal (Dimensões Estilo iPhone Pro) */
+/* Container Principal (100% Altura até à Base do Telemóvel) */
 .app-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   height: 100dvh;
   width: 100%;
-  max-width: 430px; /* Largura padrão iPhone 14/15/16 Pro Max */
+  max-width: 480px;
   margin: 0 auto;
   background-color: var(--bg-primary);
   position: relative;
@@ -88,18 +88,14 @@ html, body, #root {
 
 @media (min-width: 576px) {
   body {
-    background-color: #cbd5e1; /* Fundo Slate para alto contraste */
+    background-color: #f1f5f9;
     display: flex;
     justify-content: center;
-    align-items: center;
   }
   .app-container {
-    height: 92vh;
-    height: 92dvh;
-    max-height: 880px;
-    border-radius: 44px;
-    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
-    border: 8px solid #ffffff; /* Moldura elegante imitando telemóvel no PC */
+    height: 100%;
+    height: 100dvh;
+    box-shadow: 0 0 40px rgba(15, 23, 42, 0.08);
   }
 }
 
@@ -138,7 +134,7 @@ html, body, #root {
   flex: 1;
   overflow-y: auto; /* Scroll apenas vertical dentro do conteúdo */
   -webkit-overflow-scrolling: touch;
-  padding: 16px 16px calc(86px + env(safe-area-inset-bottom, 0px)) 16px;
+  padding: 16px 16px calc(76px + env(safe-area-inset-bottom, 0px)) 16px;
   background-color: var(--bg-primary);
 }
 
@@ -163,44 +159,46 @@ html, body, #root {
   transform: scale(0.975);
 }
 
-/* Barra de Navegação Estilo Sólido no Fundo */
+/* Barra de Navegação no Fundo (Estilo iOS Glass Tab Bar) */
 .bottom-nav {
-  height: 56px;
-  position: absolute; /* Ancorada no fundo do container principal */
-  bottom: max(8px, env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 220px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 28px; /* Totalmente redonda e flutuante */
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: calc(58px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: rgba(255, 255, 255, 0.90);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 90;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 .nav-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   color: var(--text-secondary);
   text-decoration: none;
   transition: all var(--transition-fast);
   border: none;
   background: none;
   cursor: pointer;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  padding: 6px 20px;
+  border-radius: 16px;
   position: relative;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .nav-item:hover {
-  background: rgba(15, 23, 42, 0.03);
+  color: var(--text-primary);
 }
 
 .nav-item.active {
