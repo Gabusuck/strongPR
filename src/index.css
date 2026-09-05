@@ -60,46 +60,48 @@ body::-webkit-scrollbar,
   display: none; /* Chrome, Safari, Opera */
 }
 
-html {
+html, body, #root {
   background-color: #09090b;
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  /* Do NOT use position:fixed here — it breaks iOS Safari bottom anchoring */
-}
-
-body {
-  background-color: #09090b;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
   height: 100%;
   width: 100%;
   margin: 0;
   padding: 0;
   overflow: hidden;
-  font-family: var(--font-sans);
-  color: var(--text-primary);
-  display: flex;
-  justify-content: center;
+  position: fixed;
+  inset: 0;
 }
 
 #root {
   display: flex;
+  justify-content: center;
+  align-items: stretch;
+  background-color: #09090b;
+}
+
+/* Container Principal */
+.app-container {
+  display: flex;
   flex-direction: column;
+  height: 100%;
   width: 100%;
   max-width: 480px;
-  /* 100dvh = dynamic viewport height — shrinks/expands with Safari toolbar */
-  height: 100dvh;
-  min-height: 100dvh;
-  overflow: hidden;
+  margin: 0 auto;
   background-color: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
 }
 
 @media (min-width: 576px) {
   body {
     background-color: #000000;
+    display: flex;
+    justify-content: center;
     align-items: center;
   }
-  #root {
+  .app-container {
+    height: 100%;
     max-height: 920px;
     box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8);
     border-radius: 28px;
@@ -107,18 +109,7 @@ body {
   }
 }
 
-/* Container Principal (reuse as child of #root) */
-.app-container {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0; /* crucial — allows children to shrink below content size */
-  width: 100%;
-  background-color: var(--bg-primary);
-  overflow: hidden;
-}
-
-/* Header no topo (Flex item 1) */
+/* Header no topo */
 .app-header {
   flex-shrink: 0;
   height: calc(56px + env(safe-area-inset-top, 0px));
@@ -132,7 +123,7 @@ body {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--border-color);
-  z-index: 100;
+  z-index: 90;
 }
 
 .app-title {
@@ -146,14 +137,13 @@ body {
   gap: 8px;
 }
 
-/* Área de Conteúdo principal com scroll (Flex item 2 — cresce e rola) */
+/* Área de Conteúdo principal com scroll */
 .app-content {
   flex: 1;
-  min-height: 0; /* crucial — allows flex child to scroll independently */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-  padding: 16px 16px calc(20px) 16px;
+  /* Padding inferior = altura da navbar + safe area, para o conteúdo não ficar por baixo da nav */
+  padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px)) 16px;
   background-color: var(--bg-primary);
 }
 
@@ -178,19 +168,22 @@ body {
   transform: scale(0.98);
 }
 
-/* Barra de Navegação no Fundo — Flex item 3, ancorada na base física do ecrã */
+/* Barra de Navegação — position:fixed colada à base física do ecrã (funciona em PWA) */
 .bottom-nav {
-  flex-shrink: 0;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
-  /* 64px para os ícones + safe-area-inset-bottom para o home indicator do iPhone */
-  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  max-width: 480px;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: #121215;
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-around;
   align-items: center;
-  z-index: 100;
+  z-index: 999;
   box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.5);
 }
 
