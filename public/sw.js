@@ -1,24 +1,24 @@
-const CACHE_NAME = 'strongpr-cache-v6';
+const CACHE_NAME = 'strongpr-cache-v7';
 const PRECACHE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './logo.png',
-  './icon-192.png',
-  './icon-512.png'
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/logo.png',
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
-// Install Event
+// Install Event - Skip waiting immediately
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS);
     })
   );
-  self.skipWaiting();
 });
 
-// Activate Event
+// Activate Event - Claim clients and purge old cache versions
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -29,55 +29,48 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
-// Fetch Event
+// Fetch Event - Network First for HTML/Navigation, Stale-While-Revalidate for static assets
 self.addEventListener('fetch', (event) => {
-  // Only cache GET requests for local assets
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Stale-While-Revalidate: Serve cached but update in background
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse);
-              });
-            }
-          })
-          .catch(() => {
-            // Ignore background fetch failures
-          });
-        return cachedResponse;
-      }
-
-      return fetch(event.request)
+  // Network First for Navigation / HTML requests so deploys show immediately
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
         .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-            return networkResponse;
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
           }
-
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
           return networkResponse;
         })
         .catch(() => {
-          // If offline and navigating, return index.html
-          if (event.request.mode === 'navigate') {
-            return caches.match('./index.html').then((res) => res || caches.match('./') || caches.match('/'));
+          return caches.match(event.request).then((res) => res || caches.match('/index.html') || caches.match('/'));
+        })
+    );
+    return;
+  }
+
+  // Static assets: serve cached immediately if available, update cache in background
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
           }
-        });
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
+
+      return cachedResponse || fetchPromise;
     })
   );
 });
