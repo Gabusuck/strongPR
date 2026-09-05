@@ -1,4 +1,4 @@
-﻿/* CSS — StrongPR — Tema Claro Estilo Money Manager */
+/* CSS — StrongPR — Tema Claro Estilo Money Manager */
 
 :root {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -128,7 +128,7 @@ html, body, #root {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 16px 16px calc(82px + env(safe-area-inset-bottom, 0px)) 16px;
+  padding: 16px 16px calc(80px + env(safe-area-inset-bottom, 0px)) 16px;
   background-color: var(--bg-primary);
 }
 
@@ -144,24 +144,23 @@ html, body, #root {
 .glass-card:hover { background: var(--bg-card-hover); }
 .glass-card.interactive:active { transform: scale(0.98); }
 
-/* Navbar Pilula Branca — Money Manager */
+/* Navbar Pilula Branca — Estilo Money Manager */
 .bottom-nav {
   position: fixed;
-  bottom: env(safe-area-inset-bottom, 0px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
   left: 50%;
   transform: translateX(-50%);
-  width: calc(100% - 32px);
+  width: calc(100% - 28px);
   max-width: 420px;
-  height: 62px;
+  height: 60px;
   background: #FFFFFF;
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 32px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 30px;
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 999;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
-  margin-bottom: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1), 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .nav-item {
