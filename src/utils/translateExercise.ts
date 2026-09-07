@@ -502,3 +502,173 @@ export function filterExercisesBySearch<T extends { name: string; muscle_group?:
   });
 }
 
+export type MainMuscleCategory = 'Peito' | 'Costas' | 'Ombros' | 'Braços' | 'Pernas' | 'Abs' | 'Outro';
+
+export function getExerciseCategory(item: {
+  name: string;
+  muscle_group?: string;
+  target?: string;
+  secondary_muscles?: string[];
+  category?: string;
+}): MainMuscleCategory {
+  const name = (item.name || '').toLowerCase();
+  const target = (item.target || '').toLowerCase();
+  const muscleGroup = (item.muscle_group || '').toLowerCase();
+  const cat = (item.category || '').toLowerCase();
+
+  // 1. Direct name-based gym classification
+  if (
+    name.includes('bench press') ||
+    name.includes('chest press') ||
+    name.includes('chest fly') ||
+    name.includes('pec deck') ||
+    name.includes('push-up') ||
+    name.includes('push up') ||
+    name.includes('chest dip')
+  ) {
+    return 'Peito';
+  }
+  if (
+    name.includes('military') ||
+    name.includes('overhead press') ||
+    name.includes('shoulder press') ||
+    name.includes('lateral raise') ||
+    name.includes('front raise') ||
+    name.includes('rear delt') ||
+    name.includes('arnold press') ||
+    name.includes('face pull') ||
+    name.includes('shrug')
+  ) {
+    return 'Ombros';
+  }
+  if (
+    name.includes('row') ||
+    name.includes('pulldown') ||
+    name.includes('pull-up') ||
+    name.includes('pull up') ||
+    name.includes('chin-up') ||
+    name.includes('chin up') ||
+    name.includes('pullover') ||
+    name.includes('hyperextension') ||
+    name.includes('back extension')
+  ) {
+    return 'Costas';
+  }
+  if (
+    name.includes('curl') ||
+    name.includes('skull crusher') ||
+    name.includes('tricep extension') ||
+    name.includes('tricep pushdown') ||
+    name.includes('tricep kickback') ||
+    name.includes('wrist curl') ||
+    name.includes('tricep dip') ||
+    name.includes('triceps dip')
+  ) {
+    return 'Braços';
+  }
+  if (
+    name.includes('squat') ||
+    name.includes('leg press') ||
+    name.includes('lunge') ||
+    name.includes('leg extension') ||
+    name.includes('leg curl') ||
+    name.includes('calf raise') ||
+    name.includes('hip thrust') ||
+    name.includes('glute bridge') ||
+    name.includes('romanian deadlift') ||
+    name.includes('stiff leg')
+  ) {
+    return 'Pernas';
+  }
+  if (
+    name.includes('crunch') ||
+    name.includes('sit-up') ||
+    name.includes('plank') ||
+    name.includes('russian twist') ||
+    name.includes('hanging leg raise') ||
+    name.includes('ab wheel')
+  ) {
+    return 'Abs';
+  }
+
+  // 2. Target muscle classification
+  if (target === 'pectorals' || target === 'serratus anterior' || muscleGroup === 'chest') return 'Peito';
+  if (target === 'delts' || muscleGroup === 'shoulders' || muscleGroup === 'deltoids' || muscleGroup === 'rotator cuff') return 'Ombros';
+  if (
+    target === 'lats' ||
+    target === 'upper back' ||
+    target === 'traps' ||
+    target === 'spine' ||
+    target === 'levator scapulae' ||
+    muscleGroup === 'back' ||
+    muscleGroup === 'lats' ||
+    muscleGroup === 'traps' ||
+    muscleGroup === 'trapezius' ||
+    muscleGroup === 'upper back' ||
+    muscleGroup === 'lower back' ||
+    muscleGroup === 'rhomboids' ||
+    muscleGroup === 'latissimus dorsi'
+  ) return 'Costas';
+  if (
+    target === 'biceps' ||
+    target === 'triceps' ||
+    target === 'forearms' ||
+    muscleGroup === 'biceps' ||
+    muscleGroup === 'triceps' ||
+    muscleGroup === 'forearms' ||
+    muscleGroup === 'wrist flexors' ||
+    muscleGroup === 'wrist extensors' ||
+    muscleGroup === 'wrists' ||
+    muscleGroup === 'hands'
+  ) return 'Braços';
+  if (
+    target === 'quads' ||
+    target === 'hamstrings' ||
+    target === 'glutes' ||
+    target === 'calves' ||
+    target === 'adductors' ||
+    target === 'abductors' ||
+    muscleGroup === 'quadriceps' ||
+    muscleGroup === 'hamstrings' ||
+    muscleGroup === 'glutes' ||
+    muscleGroup === 'calves' ||
+    muscleGroup === 'soleus' ||
+    muscleGroup === 'ankles' ||
+    muscleGroup === 'ankle stabilizers'
+  ) return 'Pernas';
+  if (
+    target === 'abs' ||
+    muscleGroup === 'abdominals' ||
+    muscleGroup === 'core' ||
+    muscleGroup === 'obliques' ||
+    muscleGroup === 'hip flexors'
+  ) return 'Abs';
+
+  // 3. Category fallback
+  if (cat.includes('peito') || cat.includes('chest')) return 'Peito';
+  if (cat.includes('costas') || cat.includes('back')) return 'Costas';
+  if (cat.includes('ombro') || cat.includes('shoulder')) return 'Ombros';
+  if (cat.includes('braço') || cat.includes('arm')) return 'Braços';
+  if (cat.includes('perna') || cat.includes('leg')) return 'Pernas';
+  if (cat.includes('abs') || cat.includes('core')) return 'Abs';
+
+  return 'Outro';
+}
+
+export function matchesCategoryFilter(
+  item: { name: string; muscle_group?: string; target?: string; secondary_muscles?: string[]; category?: string },
+  filterKey: string
+): boolean {
+  if (filterKey === 'all' || filterKey === 'bookmarked') return true;
+  const cat = getExerciseCategory(item);
+  const filterMap: Record<string, MainMuscleCategory> = {
+    chest: 'Peito',
+    arms: 'Braços',
+    shoulders: 'Ombros',
+    back: 'Costas',
+    abdominals: 'Abs',
+    legs: 'Pernas'
+  };
+  return filterMap[filterKey] === cat;
+}
+

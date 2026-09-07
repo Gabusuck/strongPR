@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { WorkoutExercise, Exercise } from '../types';
 import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Info, Bookmark } from 'lucide-react';
-import { translateExerciseName, filterExercisesBySearch } from '../utils/translateExercise';
+import { translateExerciseName, filterExercisesBySearch, getExerciseCategory, matchesCategoryFilter } from '../utils/translateExercise';
 import { preloadExercises } from './WorkoutLog';
 
 export interface ApiExercise {
@@ -39,69 +39,7 @@ const MUSCLE_LABELS: Record<string, string> = {
   traps: 'Trapézio',
 };
 
-const mapCategory = (muscleGroup: string): string => {
-  const lower = (muscleGroup || '').toLowerCase();
-  if (lower === 'chest') return 'Peito';
-  if (lower === 'biceps' || lower === 'triceps' || lower === 'forearms') return 'Braços';
-  if (lower === 'shoulders' || lower === 'deltoids' || lower === 'delts') return 'Ombros';
-  if (lower === 'back' || lower === 'lats' || lower === 'traps' || lower === 'upper back' || lower === 'lower back') return 'Costas';
-  if (lower === 'abdominals' || lower === 'core' || lower === 'obliques') return 'Core';
-  if (lower === 'quadriceps' || lower === 'hamstrings' || lower === 'glutes' || lower === 'calves') return 'Pernas';
-  return MUSCLE_LABELS[lower] || muscleGroup || 'Outro';
-};
-
 const ALL_FILTER_MUSCLES = ['chest', 'arms', 'shoulders', 'back', 'abdominals', 'legs'];
-
-const MUSCLE_GROUPS: Record<string, string[]> = {
-  chest: ['chest', 'pectorals', 'upper chest', 'lower chest', 'inner chest', 'outer chest'],
-  arms: ['biceps', 'triceps', 'forearms', 'wrist flexors', 'wrist extensors', 'brachialis', 'brachioradialis', 'arms'],
-  shoulders: ['shoulders', 'deltoids', 'delts', 'delt', 'anterior deltoid', 'lateral deltoid', 'posterior deltoid', 'rotator cuff', 'rear delts', 'front delts', 'side delts'],
-  back: ['back', 'lats', 'latissimus dorsi', 'lower back', 'upper back', 'traps', 'trapezius', 'rhomboids', 'middle back', 'spine', 'erector spinae'],
-  abdominals: ['abdominals', 'core', 'obliques', 'hip flexors', 'abs', 'rectus abdominis', 'transverse abdominis'],
-  legs: ['quadriceps', 'quads', 'hamstrings', 'glutes', 'gluteus maximus', 'gluteus medius', 'calves', 'soleus', 'ankles', 'ankle stabilizers', 'thighs', 'adductors', 'abductors', 'legs'],
-};
-
-const muscleMatchesFilter = (
-  exercise: {
-    name?: string;
-    muscle_group?: string;
-    target?: string;
-    secondary_muscles?: string[];
-    category?: string;
-  } | string,
-  filter: string
-): boolean => {
-  if (filter === 'all' || filter === 'bookmarked') return true;
-  const targetFilterMuscles = MUSCLE_GROUPS[filter];
-  if (!targetFilterMuscles) return false;
-
-  if (typeof exercise === 'string') {
-    const lower = exercise.toLowerCase().trim();
-    return targetFilterMuscles.some(m => lower.includes(m) || m.includes(lower));
-  }
-
-  const primary = (exercise.muscle_group || '').toLowerCase().trim();
-  if (primary && targetFilterMuscles.some(m => primary.includes(m) || m.includes(primary))) return true;
-
-  const target = (exercise.target || '').toLowerCase().trim();
-  if (target && targetFilterMuscles.some(m => target.includes(m) || m.includes(target))) return true;
-
-  const secondaries = (exercise.secondary_muscles || []).map(m => m.toLowerCase().trim());
-  if (secondaries.some(sec => targetFilterMuscles.some(m => sec.includes(m) || m.includes(sec)))) return true;
-
-  const cat = (exercise.category || '').toLowerCase().trim();
-  const catFilterMap: Record<string, string[]> = {
-    chest: ['peito', 'chest'],
-    arms: ['braços', 'bracos', 'arms', 'biceps', 'triceps', 'antebraços', 'antebracos'],
-    shoulders: ['ombros', 'shoulders', 'delts'],
-    back: ['costas', 'back', 'lats', 'traps'],
-    abdominals: ['core', 'abdominais', 'abs'],
-    legs: ['pernas', 'legs', 'glutes', 'quads', 'gémeos', 'panturrilha']
-  };
-  if (cat && catFilterMap[filter]?.some(cf => cat.includes(cf) || cf.includes(cat))) return true;
-
-  return false;
-};
 
 const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: React.CSSProperties }> = ({ mediaId, alt, style }) => {
   const [loaded, setLoaded] = useState(false);
@@ -191,7 +129,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
       ? apiExercises
       : apiExercises.filter(ex => muscleFilter === 'bookmarked'
           ? bookmarkedIds.includes(ex.id)
-          : muscleMatchesFilter(ex, muscleFilter));
+          : matchesCategoryFilter(ex, muscleFilter));
     return filterExercisesBySearch(base, searchQuery);
   }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
@@ -200,7 +138,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
       ? localExercises
       : localExercises.filter(ex => muscleFilter === 'bookmarked'
           ? bookmarkedIds.includes(ex.id)
-          : muscleMatchesFilter(ex, muscleFilter));
+          : matchesCategoryFilter(ex, muscleFilter));
     return filterExercisesBySearch(base, searchQuery);
   }, [localExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
@@ -229,7 +167,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
       workoutExercises.push({
         id: ex.id,
         name: ex.name,
-        category: mapCategory(ex.muscle_group),
+        category: getExerciseCategory(ex),
         sets: [
           { id: `s_${Date.now()}_${idx}_1`, weight: 0, reps: 10, isCompleted: false },
           { id: `s_${Date.now()}_${idx}_2`, weight: 0, reps: 10, isCompleted: false },
@@ -307,7 +245,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
                   {selectedDetailExercise.name}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginTop: '2px' }}>
-                  {mapCategory(selectedDetailExercise.muscle_group)}
+                  {getExerciseCategory(selectedDetailExercise)}
                 </div>
               </div>
               <button onClick={() => setSelectedDetailExercise(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -332,7 +270,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
               <div style={{ marginBottom: '14px' }}>
                 <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>Músculo Principal</div>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(91,94,244,0.08)', color: 'var(--accent-color)', border: '1px solid rgba(91,94,244,0.2)' }}>
-                  {mapCategory(selectedDetailExercise.muscle_group)}
+                  {getExerciseCategory(selectedDetailExercise)}
                 </span>
               </div>
 
@@ -343,7 +281,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {selectedDetailExercise.secondary_muscles.map(m => (
                       <span key={m} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
-                        {mapCategory(m)}
+                        {MUSCLE_LABELS[m.toLowerCase()] || m}
                       </span>
                     ))}
                   </div>
@@ -590,7 +528,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                           <span style={{ fontSize: '0.62rem', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-                            {mapCategory(ex.muscle_group)}
+                            {getExerciseCategory(ex)}
                           </span>
                         </div>
                       </div>
