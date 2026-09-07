@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2, Eye } from "lucide-react";
 import type { Workout, PersonalRecord, UserProfile, WorkoutTemplate } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
+import { useLongPress } from "../utils/useLongPress";
 
 interface DashboardViewProps {
   workouts: Workout[];
@@ -11,6 +12,7 @@ interface DashboardViewProps {
   onStartWorkout: () => void;
   onStartWorkoutFromTemplate: (template: WorkoutTemplate) => void;
   onNavigate: (tab: string) => void;
+  onDeleteTemplate?: (id: string) => void;
 }
 
 const DEFAULT_STARTER_ROUTINES: WorkoutTemplate[] = [
@@ -59,9 +61,29 @@ function getWeekDays() {
   }));
 }
 
-export function DashboardView({ workouts, prs, profile, templates, onStartWorkout, onStartWorkoutFromTemplate, onNavigate }: DashboardViewProps) {
+export function DashboardView({ workouts, prs, profile, templates, onStartWorkout, onStartWorkoutFromTemplate, onNavigate, onDeleteTemplate }: DashboardViewProps) {
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const activeRoutines = templates.length > 0 ? templates : DEFAULT_STARTER_ROUTINES;
+
+  const { bind } = useLongPress<WorkoutTemplate>({
+    onLongPress: (routine) => {
+      if (onDeleteTemplate && templates.some(t => t.id === routine.id)) {
+        window.customConfirm(
+          "Eliminar Rotina",
+          `Tens a certeza que desejas eliminar a rotina "${routine.name}"?`,
+          () => onDeleteTemplate(routine.id)
+        );
+      } else {
+        window.customAlert(
+          "Rotina Predefinida",
+          "Esta é uma rotina padrão de exemplo. Podes criar e gerir as tuas próprias rotinas na aba de Rotinas!"
+        );
+      }
+    },
+    onClick: (routine) => {
+      setPreviewTemplate(routine);
+    }
+  });
 
   // Compute weekly workouts and weekly streak (consecutive weeks hitting the weekly goal)
   const { weekDaysTrained, thisWeekCount, weeklyGoal, weeklyStreak, isFlameLit, lastWorkout } = useMemo(() => {
@@ -367,7 +389,7 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
             return (
               <div
                 key={routine.id}
-                onClick={() => setPreviewTemplate(routine)}
+                {...bind(routine)}
                 style={{
                   background: "#FFFFFF",
                   border: "1px solid var(--border-color)",
@@ -378,7 +400,10 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
                   justifyContent: "space-between",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
                   cursor: "pointer",
-                  transition: "transform var(--transition-fast)"
+                  transition: "transform var(--transition-fast)",
+                  userSelect: "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none"
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>

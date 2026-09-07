@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye } from "lucide-react";
 import type { WorkoutTemplate, WorkoutExercise, Exercise } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
+import { useLongPress } from "../utils/useLongPress";
 
 interface RoutinesViewProps {
   templates: WorkoutTemplate[];
@@ -15,6 +16,19 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
+
+  const { bind } = useLongPress<WorkoutTemplate>({
+    onLongPress: (template) => {
+      window.customConfirm(
+        "Eliminar Rotina",
+        `Tens a certeza que desejas eliminar a rotina "${template.name}"?`,
+        () => onDeleteTemplate(template.id)
+      );
+    },
+    onClick: (template) => {
+      setPreviewTemplate(template);
+    }
+  });
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -79,11 +93,14 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
           {templates.map((template, i) => (
             <div 
               key={template.id} 
-              onClick={() => setPreviewTemplate(template)}
+              {...bind(template)}
               style={{
                 borderBottom: i < templates.length - 1 ? "1px solid var(--border-color)" : "none",
                 cursor: "pointer",
                 transition: "background-color 0.15s ease",
+                userSelect: "none",
+                WebkitUserSelect: "none",
+                WebkitTouchCallout: "none"
               }}
             >
               <div style={{ display: "flex", alignItems: "center", padding: "14px 18px", gap: 12 }}>

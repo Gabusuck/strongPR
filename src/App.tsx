@@ -422,6 +422,7 @@ export default function App() {
             onStartWorkout={handleStartWorkout}
             onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
             onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
+            onDeleteTemplate={handleDeleteTemplate}
           />
         );
       case 'history':

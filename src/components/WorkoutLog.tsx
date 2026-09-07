@@ -4,6 +4,7 @@ import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, 
 import { translateExerciseName } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
+import { useLongPress } from '../utils/useLongPress';
 
 export const SET_TYPE_OPTIONS: { type: SetType; label: string; badge: string; desc: string; color: string; bg: string; border: string }[] = [
   { type: 'normal', label: 'Série Normal', badge: 'N', desc: 'Série de trabalho padrão', color: 'var(--text-primary)', bg: 'var(--bg-secondary)', border: 'var(--border-color)' },
@@ -665,6 +666,26 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
   const [templateSearchQuery, setTemplateSearchQuery] = useState('');
 
+  const { bind: bindRoutineLongPress } = useLongPress<WorkoutTemplate>({
+    onLongPress: (template) => {
+      if (templates.some(t => t.id === template.id)) {
+        window.customConfirm(
+          'Eliminar Rotina',
+          `Tens a certeza que desejas eliminar a rotina "${template.name}"?`,
+          () => onDeleteTemplate(template.id)
+        );
+      } else {
+        window.customAlert(
+          'Rotina Predefinida',
+          'Esta é uma rotina padrão de exemplo. Podes criar e gerir as tuas próprias rotinas!'
+        );
+      }
+    },
+    onClick: (template) => {
+      setPreviewTemplate(template);
+    }
+  });
+
   // Helper to fetch recently performed or popular exercises
   const getRecentExercises = () => {
     const recents: ApiExercise[] = [];
@@ -1209,8 +1230,20 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
               <div 
                 key={template.id} 
                 className="glass-card" 
-                onClick={() => setPreviewTemplate(template)}
-                style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', cursor: 'pointer' }}
+                {...bindRoutineLongPress(template)}
+                style={{
+                  padding: '20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                  marginBottom: 0,
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  WebkitTouchCallout: 'none'
+                }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
