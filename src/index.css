@@ -53,9 +53,6 @@ html {
   background-color: var(--bg-primary);
   margin: 0;
   padding: 0;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -65,9 +62,8 @@ body {
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
 }
@@ -75,24 +71,22 @@ body {
 #root {
   width: 100%;
   max-width: 480px;
-  height: 100%;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: hidden;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: hidden;
 }
 
 @media (min-width: 576px) {
@@ -102,15 +96,6 @@ body {
     justify-content: center;
     align-items: center;
     padding: 20px 0;
-    height: auto;
-    min-height: 100vh;
-    overflow: auto;
-  }
-  #root {
-    height: 920px;
-    max-height: 92vh;
-    box-shadow: 0 25px 70px rgba(0,0,0,0.18);
-    border-radius: 28px;
   }
   .app-container {
     height: 100%;
@@ -118,10 +103,6 @@ body {
     box-shadow: 0 25px 70px rgba(0,0,0,0.18);
     border-radius: 28px;
     border: 1px solid var(--border-color);
-  }
-  .bottom-nav {
-    position: absolute !important;
-    bottom: 24px !important;
   }
 }
 
@@ -155,10 +136,7 @@ body {
 .app-content {
   flex: 1;
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  padding: 16px 16px calc(100px + env(safe-area-inset-bottom, 0px)) 16px;
+  padding: 16px 16px 95px 16px;
   background-color: var(--bg-primary);
 }
 
@@ -177,7 +155,7 @@ body {
 /* Navbar Pilula Branca — Estilo Money Manager */
 .bottom-nav {
   position: fixed;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 48px);
