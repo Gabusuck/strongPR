@@ -36,16 +36,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   // Consistency Year Modal states
   const [showYearGridModal, setShowYearGridModal] = useState(false);
 
-  // Auto-scroll the full-year grid to the end (today) on load
+  // Auto-scroll the full-year grid to the end (today) on load & lock body scroll
   React.useEffect(() => {
-    if (showYearGridModal && scrollContainerRef.current) {
-      const timer = setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
-        }
-      }, 150);
-      return () => clearTimeout(timer);
+    if (showYearGridModal) {
+      document.body.style.overflow = 'hidden';
+      if (scrollContainerRef.current) {
+        const timer = setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => { document.body.style.overflow = ''; };
   }, [showYearGridModal]);
 
   // Modal edit states
@@ -986,17 +992,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         return (
           <div 
             onClick={() => setShowYearGridModal(false)}
-            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+            style={{ 
+              position: 'fixed', 
+              inset: 0, 
+              backgroundColor: 'rgba(15,23,42,0.65)', 
+              backdropFilter: 'blur(6px)', 
+              zIndex: 1100, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '16px'
+            }}
           >
             <div 
               onClick={(e) => e.stopPropagation()}
-              style={{ width: '100%', maxWidth: '480px', backgroundColor: 'var(--bg-primary)', borderRadius: '24px 24px 0 0', padding: '16px 20px 32px', boxShadow: '0 -8px 40px rgba(15, 23, 42, 0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}
+              style={{ 
+                width: '100%', 
+                maxWidth: '440px', 
+                backgroundColor: '#FFFFFF', 
+                borderRadius: '24px', 
+                padding: '22px 20px', 
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)', 
+                border: '1px solid var(--border-color)',
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: '16px',
+                maxHeight: '90vh',
+                overflowY: 'auto'
+              }}
             >
-              {/* Drag Handle */}
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <div style={{ width: '36px', height: '4px', borderRadius: '2px', backgroundColor: 'var(--border-color)' }} />
-              </div>
-
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Consistência Anual</h3>
