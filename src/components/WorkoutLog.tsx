@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy, Edit2, ChevronDown, GripVertical, ChevronsUpDown } from 'lucide-react';
 import { translateExerciseName, filterExercisesBySearch, getExerciseCategory, matchesCategoryFilter } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
@@ -450,6 +450,114 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
 
+  // Accordion push-down state for exercises in active workout
+  const [expandedExerciseIds, setExpandedExerciseIds] = useState<Record<string, boolean>>({});
+  const [draggingExerciseIdx, setDraggingExerciseIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  const toggleExerciseExpanded = (id: string) => {
+    setExpandedExerciseIds(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const toggleAllExercisesExpanded = () => {
+    if (!activeWorkout || !activeWorkout.exercises) return;
+    const allExpanded = activeWorkout.exercises.every(e => Boolean(expandedExerciseIds[e.id]));
+    const nextState: Record<string, boolean> = {};
+    activeWorkout.exercises.forEach(e => {
+      nextState[e.id] = !allExpanded;
+    });
+    setExpandedExerciseIds(nextState);
+  };
+
+  const reorderExercises = (fromIndex: number, toIndex: number) => {
+    if (!activeWorkout || fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+    const list = [...(activeWorkout.exercises || [])];
+    if (fromIndex >= list.length || toIndex >= list.length) return;
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    onUpdateWorkout({
+      ...activeWorkout,
+      exercises: list
+    });
+  };
+
+  // Touch reordering refs and handlers
+  const touchStartY = React.useRef<number>(0);
+  const touchActiveIdx = React.useRef<number | null>(null);
+  const exerciseContainerRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchActiveIdx.current = idx;
+    setDraggingExerciseIdx(idx);
+    setDragOverIdx(idx);
+    if (window.navigator?.vibrate) {
+      window.navigator.vibrate(20);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchActiveIdx.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const activeIdx = touchActiveIdx.current;
+    for (let i = 0; i < exerciseContainerRefs.current.length; i++) {
+      const el = exerciseContainerRefs.current[i];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (currentY >= rect.top && currentY <= rect.bottom) {
+          if (i !== activeIdx) {
+            reorderExercises(activeIdx, i);
+            touchActiveIdx.current = i;
+            setDraggingExerciseIdx(i);
+            setDragOverIdx(i);
+            if (window.navigator?.vibrate) {
+              window.navigator.vibrate(10);
+            }
+          }
+          break;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchActiveIdx.current = null;
+    setDraggingExerciseIdx(null);
+    setDragOverIdx(null);
+  };
+
+  // Desktop drag handlers
+  const handleDragStart = (idx: number, e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', String(idx));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingExerciseIdx(idx);
+  };
+
+  const handleDragOver = (idx: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIdx !== idx) {
+      setDragOverIdx(idx);
+    }
+  };
+
+  const handleDrop = (toIdx: number, e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggingExerciseIdx !== null && draggingExerciseIdx !== toIdx) {
+      reorderExercises(draggingExerciseIdx, toIdx);
+    }
+    setDraggingExerciseIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingExerciseIdx(null);
+    setDragOverIdx(null);
+  };
+
   const { bind: bindRoutineLongPress } = useLongPress<WorkoutTemplate>({
     onLongPress: (template) => {
       window.customConfirm(
@@ -741,6 +849,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }));
 
     if (!activeWorkout) return;
+    const newExpanded = { ...expandedExerciseIds };
+    newWorkoutExercises.forEach(e => { newExpanded[e.id] = true; });
+    newLocalWorkoutExercises.forEach(e => { newExpanded[e.id] = true; });
+    setExpandedExerciseIds(newExpanded);
+
     onUpdateWorkout({
       ...activeWorkout,
       exercises: [
@@ -773,6 +886,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       category,
       sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }],
     };
+    setExpandedExerciseIds(prev => ({ ...prev, [newWorkoutExercise.id]: true }));
     onUpdateWorkout({ ...activeWorkout, exercises: [...(activeWorkout.exercises || []), newWorkoutExercise] });
     setShowAddExerciseModal(false);
     setSelectedApiExercise(null);
@@ -1283,149 +1397,347 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         </div>
       )}
 
-      {/* Exercises */}
-      {(activeWorkout?.exercises || []).map((workoutExercise) => {
-        const mediaId = resolveExerciseMediaId(workoutExercise, apiExercises);
-
-        return (
-          <div key={workoutExercise.id} className="glass-card" style={{ padding: '20px 16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  {mediaId ? (
-                    <StaticExerciseImage mediaId={mediaId} alt={workoutExercise.name} style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
-                  ) : (
-                    <Dumbbell size={22} color="var(--accent-color)" opacity={0.4} />
-                  )}
-                </div>
-                <div>
-                  <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    {translateExerciseName(workoutExercise.name)}
-                  </h4>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>
-                      {workoutExercise.category}
-                    </span>
-                    {isDoubleDumbbellExercise(workoutExercise) && (
-                      <span style={{ fontSize: '0.65rem', color: '#D97706', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '1px 6px', borderRadius: '6px', fontWeight: 800 }}>
-                        2× Halteres
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <button onClick={() => handleRemoveExercise(workoutExercise.id)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', opacity: 0.6, marginTop: '4px' }}>
-                <X size={16} />
-              </button>
-            </div>
-
-          {/* Set headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <span style={{ textAlign: 'center' }}>Série</span>
-            <span style={{ textAlign: 'center' }}>{isDoubleDumbbellExercise(workoutExercise) ? 'Peso (2×kg)' : 'Peso (kg)'}</span>
-            <span style={{ textAlign: 'center' }}>Reps</span>
-            <span style={{ textAlign: 'center' }}>OK</span>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {workoutExercise.sets.map((set, setIdx) => (
-              <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', alignItems: 'center', padding: '6px 8px', borderRadius: '10px', backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)', border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)', transition: 'all var(--transition-fast)' }}>
-                {/* Set Number / Type Picker Button */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSetTypePicker({
-                      exerciseId: workoutExercise.id,
-                      setId: set.id,
-                      currentType: set.type || 'normal',
-                      setIndex: setIdx
-                    })}
-                    title="Configurar tipo de série (Dropset, Braço Direito/Esquerdo, etc.)"
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      padding: '2px 4px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '24px',
-                      transition: 'transform 0.15s, opacity 0.15s'
-                    }}
-                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.9)')}
-                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-                  >
-                    {(() => {
-                      const type = set.type || 'normal';
-                      if (type === 'dropset') {
-                        return <span style={{ color: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>D</span>;
-                      }
-                      if (type === 'right') {
-                        return <span style={{ color: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '2px 4px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900 }}>Dir</span>;
-                      }
-                      if (type === 'left') {
-                        return <span style={{ color: '#0EA5E9', backgroundColor: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', padding: '2px 4px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900 }}>Esq</span>;
-                      }
-                      if (type === 'warmup') {
-                        return <span style={{ color: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>W</span>;
-                      }
-                      if (type === 'failure') {
-                        return <span style={{ color: '#EF4444', backgroundColor: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>F</span>;
-                      }
-                      return <span style={{ color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', fontFamily: 'var(--font-display)', fontWeight: 850, fontSize: '0.9rem' }}>{setIdx + 1}</span>;
-                    })()}
-                  </button>
-                </div>
-
-                {/* Weight */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
-                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}>-</button>
-                  <input
-                    type="number"
-                    className="form-input set-input"
-                    value={set.weight || ''}
-                    readOnly={set.isCompleted}
-                    onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { weight: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
-                    style={{ width: '46px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', padding: '4px 2px', opacity: set.isCompleted ? 0.7 : 1, minHeight: 'auto', height: '32px' }}
-                  />
-                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}>+</button>
-                </div>
-
-                {/* Reps */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
-                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}>-</button>
-                  <input
-                    type="number"
-                    className="form-input set-input"
-                    value={set.reps || ''}
-                    readOnly={set.isCompleted}
-                    onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { reps: parseInt(e.target.value, 10) || 0 })}
-                    placeholder="0"
-                    style={{ width: '36px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', padding: '4px 2px', opacity: set.isCompleted ? 0.7 : 1, minHeight: 'auto', height: '32px' }}
-                  />
-                  <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}>+</button>
-                </div>
-
-                {/* Check */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button className={`set-checkbox ${set.isCompleted ? 'checked' : ''}`} style={{ width: '26px', height: '26px' }} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { isCompleted: !set.isCompleted })}>
-                    <Check size={14} strokeWidth={3} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Add Set */}
-          <button onClick={() => handleAddSet(workoutExercise.id)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700, padding: '10px', borderRadius: '10px', cursor: 'pointer', marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            <Plus size={14} /> Adicionar Série
+      {/* Header with Exercise Count and Expand/Collapse All */}
+      {activeWorkout && (activeWorkout.exercises || []).length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 4px' }}>
+          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Exercícios ({activeWorkout.exercises.length})
+          </span>
+          <button
+            type="button"
+            onClick={toggleAllExercisesExpanded}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent-color)',
+              fontSize: '0.78rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 6px',
+              borderRadius: '6px',
+            }}
+          >
+            <ChevronsUpDown size={14} />
+            {activeWorkout.exercises.every(e => Boolean(expandedExerciseIds[e.id])) ? 'Recolher todos' : 'Expandir todos'}
           </button>
         </div>
-      );
-    })}
+      )}
+
+      {/* Exercises with Drag & Reorder and Push-Down Sets Accordion */}
+      {(activeWorkout?.exercises || []).map((workoutExercise, idx) => {
+        const mediaId = resolveExerciseMediaId(workoutExercise, apiExercises);
+        const isExpanded = Boolean(expandedExerciseIds[workoutExercise.id]);
+        const completedSetsCount = (workoutExercise.sets || []).filter(s => s.isCompleted).length;
+        const totalSetsCount = (workoutExercise.sets || []).length;
+        const allCompleted = totalSetsCount > 0 && completedSetsCount === totalSetsCount;
+        const isDragging = draggingExerciseIdx === idx;
+        const isDragOver = dragOverIdx === idx && draggingExerciseIdx !== null && draggingExerciseIdx !== idx;
+
+        return (
+          <div
+            key={workoutExercise.id}
+            ref={(el) => { exerciseContainerRefs.current[idx] = el; }}
+            className="glass-card"
+            draggable={true}
+            onDragStart={(e) => handleDragStart(idx, e)}
+            onDragOver={(e) => handleDragOver(idx, e)}
+            onDrop={(e) => handleDrop(idx, e)}
+            onDragEnd={handleDragEnd}
+            style={{
+              padding: '16px',
+              transition: 'all var(--transition-fast)',
+              border: isDragging 
+                ? '2px solid var(--accent-color)' 
+                : isDragOver
+                  ? '2px dashed var(--accent-color)'
+                  : '1px solid var(--border-color)',
+              backgroundColor: isDragging ? 'rgba(91,94,244,0.06)' : 'var(--bg-card)',
+              transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+              boxShadow: isDragging ? '0 10px 28px rgba(0,0,0,0.14)' : '0 1px 4px rgba(0,0,0,0.04)',
+              userSelect: isDragging ? 'none' : 'auto',
+            }}
+          >
+            {/* Header: Drag Handle, Thumbnail, Info, Expand Chevron, Remove */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleExerciseExpanded(workoutExercise.id)}
+            >
+              {/* Drag Handle */}
+              <div
+                style={{
+                  touchAction: 'none',
+                  cursor: 'grab',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isDragging ? 'var(--accent-color)' : 'var(--text-muted)',
+                  padding: '6px 2px',
+                  flexShrink: 0,
+                }}
+                title="Manter premido e deslizar para mudar a ordem"
+                onTouchStart={(e) => handleTouchStart(idx, e)}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical size={20} />
+              </div>
+
+              {/* Media Thumbnail */}
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '10px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {mediaId ? (
+                  <StaticExerciseImage mediaId={mediaId} alt={workoutExercise.name} style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                ) : (
+                  <Dumbbell size={20} color="var(--accent-color)" opacity={0.4} />
+                )}
+              </div>
+
+              {/* Title, Category & Sets Status Badge */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h4
+                  style={{
+                    fontSize: '0.98rem',
+                    fontWeight: 800,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-display)',
+                    margin: 0,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {translateExerciseName(workoutExercise.name)}
+                </h4>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                    {workoutExercise.category}
+                  </span>
+                  {isDoubleDumbbellExercise(workoutExercise) && (
+                    <span style={{ fontSize: '0.62rem', color: '#D97706', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '1px 5px', borderRadius: '5px', fontWeight: 800 }}>
+                      2× Halteres
+                    </span>
+                  )}
+                  {/* Summary of sets badge */}
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '1px 7px',
+                      borderRadius: '8px',
+                      backgroundColor: allCompleted
+                        ? 'rgba(16, 185, 129, 0.12)'
+                        : completedSetsCount > 0
+                          ? 'rgba(91, 94, 244, 0.1)'
+                          : 'var(--bg-secondary)',
+                      color: allCompleted
+                        ? '#10B981'
+                        : completedSetsCount > 0
+                          ? 'var(--accent-color)'
+                          : 'var(--text-muted)',
+                      border: allCompleted
+                        ? '1px solid rgba(16, 185, 129, 0.25)'
+                        : completedSetsCount > 0
+                          ? '1px solid rgba(91, 94, 244, 0.2)'
+                          : '1px solid var(--border-color)',
+                    }}
+                  >
+                    {allCompleted
+                      ? `✓ ${totalSetsCount}/${totalSetsCount}`
+                      : completedSetsCount > 0
+                        ? `${completedSetsCount}/${totalSetsCount} séries`
+                        : `${totalSetsCount} série${totalSetsCount !== 1 ? 's' : ''}`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action buttons on right: Chevron Down (Push-Down Accordion) + Remove */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExerciseExpanded(workoutExercise.id);
+                  }}
+                  title={isExpanded ? 'Recolher séries' : 'Ver séries (Push Down)'}
+                  style={{
+                    background: isExpanded ? 'rgba(91, 94, 244, 0.12)' : 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '10px',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isExpanded ? 'var(--accent-color)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  <ChevronDown
+                    size={18}
+                    style={{
+                      transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveExercise(workoutExercise.id);
+                  }}
+                  title="Remover exercício"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: 0.7,
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Push Down / Accordion Content: Sets Table & Add Set */}
+            {isExpanded && (
+              <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--border-color)' }}>
+                {/* Set headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 800, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <span style={{ textAlign: 'center' }}>Série</span>
+                  <span style={{ textAlign: 'center' }}>{isDoubleDumbbellExercise(workoutExercise) ? 'Peso (2×kg)' : 'Peso (kg)'}</span>
+                  <span style={{ textAlign: 'center' }}>Reps</span>
+                  <span style={{ textAlign: 'center' }}>OK</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {workoutExercise.sets.map((set, setIdx) => (
+                    <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', alignItems: 'center', padding: '6px 8px', borderRadius: '10px', backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)', border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)', transition: 'all var(--transition-fast)' }}>
+                      {/* Set Number / Type Picker Button */}
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveSetTypePicker({
+                            exerciseId: workoutExercise.id,
+                            setId: set.id,
+                            currentType: set.type || 'normal',
+                            setIndex: setIdx
+                          })}
+                          title="Configurar tipo de série (Dropset, Braço Direito/Esquerdo, etc.)"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: '2px 4px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '24px',
+                            transition: 'transform 0.15s, opacity 0.15s'
+                          }}
+                          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.9)')}
+                          onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                        >
+                          {(() => {
+                            const type = set.type || 'normal';
+                            if (type === 'dropset') {
+                              return <span style={{ color: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>D</span>;
+                            }
+                            if (type === 'right') {
+                              return <span style={{ color: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '2px 4px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900 }}>Dir</span>;
+                            }
+                            if (type === 'left') {
+                              return <span style={{ color: '#0EA5E9', backgroundColor: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', padding: '2px 4px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900 }}>Esq</span>;
+                            }
+                            if (type === 'warmup') {
+                              return <span style={{ color: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>W</span>;
+                            }
+                            if (type === 'failure') {
+                              return <span style={{ color: '#EF4444', backgroundColor: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>F</span>;
+                            }
+                            return <span style={{ color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', fontFamily: 'var(--font-display)', fontWeight: 850, fontSize: '0.9rem' }}>{setIdx + 1}</span>;
+                          })()}
+                        </button>
+                      </div>
+
+                      {/* Weight */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
+                        <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: Math.max(0, set.weight - 2.5) })}>-</button>
+                        <input
+                          type="number"
+                          className="form-input set-input"
+                          value={set.weight || ''}
+                          readOnly={set.isCompleted}
+                          onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { weight: parseFloat(e.target.value) || 0 })}
+                          placeholder="0"
+                          style={{ width: '46px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', padding: '4px 2px', opacity: set.isCompleted ? 0.7 : 1, minHeight: 'auto', height: '32px' }}
+                        />
+                        <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { weight: set.weight + 2.5 })}>+</button>
+                      </div>
+
+                      {/* Reps */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'center' }}>
+                        <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: Math.max(0, set.reps - 1) })}>-</button>
+                        <input
+                          type="number"
+                          className="form-input set-input"
+                          value={set.reps || ''}
+                          readOnly={set.isCompleted}
+                          onChange={(e) => handleUpdateSet(workoutExercise.id, set.id, { reps: parseInt(e.target.value, 10) || 0 })}
+                          placeholder="0"
+                          style={{ width: '36px', textAlign: 'center', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.95rem', padding: '4px 2px', opacity: set.isCompleted ? 0.7 : 1, minHeight: 'auto', height: '32px' }}
+                        />
+                        <button className="btn-inc-dec" style={{ width: '22px', height: '22px', borderRadius: '6px', fontSize: '0.8rem' }} disabled={set.isCompleted} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { reps: set.reps + 1 })}>+</button>
+                      </div>
+
+                      {/* Check */}
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
+                        <button className={`set-checkbox ${set.isCompleted ? 'checked' : ''}`} style={{ width: '26px', height: '26px' }} onClick={() => handleUpdateSet(workoutExercise.id, set.id, { isCompleted: !set.isCompleted })}>
+                          <Check size={14} strokeWidth={3} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Set */}
+                <button onClick={() => handleAddSet(workoutExercise.id)} style={{ width: '100%', background: 'none', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '0.82rem', fontWeight: 700, padding: '10px', borderRadius: '10px', cursor: 'pointer', marginTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Plus size={14} /> Adicionar Série
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
     {/* Add Exercise Button */}
     <button
