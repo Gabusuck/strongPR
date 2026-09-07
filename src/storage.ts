@@ -1,4 +1,4 @@
-import type { AppData, Exercise, Workout, PersonalRecord, AppSettings, UserProfile } from './types';
+import type { AppData, Exercise, Workout, PersonalRecord, AppSettings, UserProfile, WorkoutTemplate } from './types';
 
 const STORAGE_KEY = 'strongpr_app_data';
 
@@ -16,6 +16,35 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   { id: '10', name: 'Abdominais (Crunches)', category: 'Core' },
   { id: '11', name: 'Elevações Laterais (Lateral Raises)', category: 'Ombros' },
   { id: '12', name: 'Supino Inclinado (Incline Press)', category: 'Peito' },
+];
+
+export const DEFAULT_TEMPLATES: WorkoutTemplate[] = [
+  {
+    id: "starter-push",
+    name: "Treino A — Push (Peito & Ombros)",
+    exercises: [
+      { id: "EIeI8Vf", name: "Supino Reto com Barra", category: "Peito", sets: [{ id: "s1", weight: 60, reps: 10, isCompleted: false }, { id: "s2", weight: 60, reps: 10, isCompleted: false }, { id: "s3", weight: 60, reps: 8, isCompleted: false }] },
+      { id: "3TZduzM", name: "Supino Inclinado", category: "Peito", sets: [{ id: "s4", weight: 50, reps: 10, isCompleted: false }, { id: "s5", weight: 50, reps: 10, isCompleted: false }] },
+      { id: "wdRZISl", name: "Desenvolvimento Militar", category: "Ombros", sets: [{ id: "s6", weight: 40, reps: 10, isCompleted: false }] },
+    ]
+  },
+  {
+    id: "starter-pull",
+    name: "Treino B — Pull (Costas & Bíceps)",
+    exercises: [
+      { id: "lBDjFxJ", name: "Elevações (Pull-ups)", category: "Costas", sets: [{ id: "s10", weight: 0, reps: 8, isCompleted: false }, { id: "s11", weight: 0, reps: 8, isCompleted: false }] },
+      { id: "eZyBC3j", name: "Remada Curvada com Barra", category: "Costas", sets: [{ id: "s12", weight: 50, reps: 10, isCompleted: false }] },
+      { id: "ila4NZS", name: "Levantamento Terra (Deadlift)", category: "Costas", sets: [{ id: "s14", weight: 80, reps: 6, isCompleted: false }] },
+    ]
+  },
+  {
+    id: "starter-legs",
+    name: "Treino C — Legs (Pernas & Core)",
+    exercises: [
+      { id: "qXTaZnJ", name: "Agachamento com Barra", category: "Pernas", sets: [{ id: "s18", weight: 70, reps: 10, isCompleted: false }, { id: "s19", weight: 70, reps: 10, isCompleted: false }] },
+      { id: "10Z2DXU", name: "Prensa 45° (Leg Press)", category: "Pernas", sets: [{ id: "s21", weight: 120, reps: 12, isCompleted: false }] },
+    ]
+  }
 ];
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -42,7 +71,7 @@ export const INITIAL_DATA: AppData = {
   prs: [],
   settings: DEFAULT_SETTINGS,
   profile: DEFAULT_PROFILE,
-  templates: [],
+  templates: DEFAULT_TEMPLATES,
 };
 
 // Calculate Estimated 1-Rep Max (1RM) using Epley's formula
@@ -63,6 +92,17 @@ export function loadAppData(): AppData {
     }
     
     const parsed = JSON.parse(rawData);
+
+    // One-time initialization of templates into user storage if previously empty
+    let userTemplates: WorkoutTemplate[] = parsed.templates || [];
+    const templatesInitialized = localStorage.getItem('strongpr_templates_init_v2');
+    if (!templatesInitialized) {
+      localStorage.setItem('strongpr_templates_init_v2', 'done');
+      if (userTemplates.length === 0) {
+        userTemplates = DEFAULT_TEMPLATES;
+        saveAppData({ ...parsed, templates: userTemplates });
+      }
+    }
     
     // Ensure structure is correct
     return {
@@ -71,7 +111,7 @@ export function loadAppData(): AppData {
       prs: parsed.prs || [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       profile: { ...DEFAULT_PROFILE, ...(parsed.profile || {}) },
-      templates: parsed.templates || [],
+      templates: userTemplates,
     };
   } catch (error) {
     console.error('Failed to load data from localStorage', error);

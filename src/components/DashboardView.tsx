@@ -15,35 +15,6 @@ interface DashboardViewProps {
   onDeleteTemplate?: (id: string) => void;
 }
 
-const DEFAULT_STARTER_ROUTINES: WorkoutTemplate[] = [
-  {
-    id: "starter-push",
-    name: "Treino A — Push (Peito & Ombros)",
-    exercises: [
-      { id: "EIeI8Vf", name: "Supino Reto com Barra", category: "Peito", sets: [{ id: "s1", weight: 60, reps: 10, isCompleted: false }, { id: "s2", weight: 60, reps: 10, isCompleted: false }, { id: "s3", weight: 60, reps: 8, isCompleted: false }] },
-      { id: "3TZduzM", name: "Supino Inclinado", category: "Peito", sets: [{ id: "s4", weight: 50, reps: 10, isCompleted: false }, { id: "s5", weight: 50, reps: 10, isCompleted: false }] },
-      { id: "wdRZISl", name: "Desenvolvimento Militar", category: "Ombros", sets: [{ id: "s6", weight: 40, reps: 10, isCompleted: false }] },
-    ]
-  },
-  {
-    id: "starter-pull",
-    name: "Treino B — Pull (Costas & Bíceps)",
-    exercises: [
-      { id: "lBDjFxJ", name: "Elevações (Pull-ups)", category: "Costas", sets: [{ id: "s10", weight: 0, reps: 8, isCompleted: false }, { id: "s11", weight: 0, reps: 8, isCompleted: false }] },
-      { id: "eZyBC3j", name: "Remada Curvada com Barra", category: "Costas", sets: [{ id: "s12", weight: 50, reps: 10, isCompleted: false }] },
-      { id: "ila4NZS", name: "Levantamento Terra (Deadlift)", category: "Costas", sets: [{ id: "s14", weight: 80, reps: 6, isCompleted: false }] },
-    ]
-  },
-  {
-    id: "starter-legs",
-    name: "Treino C — Legs (Pernas & Core)",
-    exercises: [
-      { id: "qXTaZnJ", name: "Agachamento com Barra", category: "Pernas", sets: [{ id: "s18", weight: 70, reps: 10, isCompleted: false }, { id: "s19", weight: 70, reps: 10, isCompleted: false }] },
-      { id: "10Z2DXU", name: "Prensa 45° (Leg Press)", category: "Pernas", sets: [{ id: "s21", weight: 120, reps: 12, isCompleted: false }] },
-    ]
-  }
-];
-
 function getGreeting(name: string): string {
   const firstName = (name || '').trim().split(/\s+/)[0] || 'Atleta';
   return `Olá, ${firstName}!`;
@@ -63,20 +34,15 @@ function getWeekDays() {
 
 export function DashboardView({ workouts, prs, profile, templates, onStartWorkout, onStartWorkoutFromTemplate, onNavigate, onDeleteTemplate }: DashboardViewProps) {
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
-  const activeRoutines = templates.length > 0 ? templates : DEFAULT_STARTER_ROUTINES;
+  const activeRoutines = templates;
 
   const { bind } = useLongPress<WorkoutTemplate>({
     onLongPress: (routine) => {
-      if (onDeleteTemplate && templates.some(t => t.id === routine.id)) {
+      if (onDeleteTemplate) {
         window.customConfirm(
           "Eliminar Rotina",
           `Tens a certeza que desejas eliminar a rotina "${routine.name}"?`,
           () => onDeleteTemplate(routine.id)
-        );
-      } else {
-        window.customAlert(
-          "Rotina Predefinida",
-          "Esta é uma rotina padrão de exemplo. Podes criar e gerir as tuas próprias rotinas na aba de Rotinas!"
         );
       }
     },
@@ -382,70 +348,92 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
           </button>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          {activeRoutines.map((routine, idx) => {
-            const colors = ["#5B5EF4", "#00B2FE", "#00C6AE", "#FF9500"];
-            const accent = colors[idx % colors.length];
-            return (
-              <div
-                key={routine.id}
-                {...bind(routine)}
-                style={{
-                  background: "#FFFFFF",
-                  border: "1px solid var(--border-color)",
-                  borderRadius: "18px",
-                  padding: "16px 18px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-                  cursor: "pointer",
-                  transition: "transform var(--transition-fast)",
-                  userSelect: "none",
-                  WebkitUserSelect: "none",
-                  WebkitTouchCallout: "none"
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        {activeRoutines.length === 0 ? (
+          <div style={{
+            background: "#FFFFFF",
+            border: "1px solid var(--border-color)",
+            borderRadius: "18px",
+            padding: "24px 20px",
+            textAlign: "center",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+          }}>
+            <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "12px" }}>
+              Ainda não tens rotinas criadas.
+            </p>
+            <button 
+              onClick={() => onNavigate("routines")} 
+              className="btn btn-secondary" 
+              style={{ padding: "8px 16px", fontSize: "0.8rem", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px" }}
+            >
+              <Plus size={15} /> Criar Rotina
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {activeRoutines.map((routine, idx) => {
+              const colors = ["#5B5EF4", "#00B2FE", "#00C6AE", "#FF9500"];
+              const accent = colors[idx % colors.length];
+              return (
+                <div
+                  key={routine.id}
+                  {...bind(routine)}
+                  style={{
+                    background: "#FFFFFF",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "18px",
+                    padding: "16px 18px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                    cursor: "pointer",
+                    transition: "transform var(--transition-fast)",
+                    userSelect: "none",
+                    WebkitUserSelect: "none",
+                    WebkitTouchCallout: "none"
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                    <div style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: "14px",
+                      background: `${accent}15`,
+                      color: accent,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 800
+                    }}>
+                      <Dumbbell size={20} color={accent} />
+                    </div>
+                    <div>
+                      <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                        {routine.name}
+                      </h4>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+                        {routine.exercises.length} exercícios configurados
+                      </p>
+                    </div>
+                  </div>
+
                   <div style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: "14px",
-                    background: `${accent}15`,
-                    color: accent,
+                    width: 36,
+                    height: 36,
+                    borderRadius: "12px",
+                    background: "rgba(91, 94, 244, 0.08)",
+                    color: "var(--accent-color)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontWeight: 800
                   }}>
-                    <Dumbbell size={20} color={accent} />
-                  </div>
-                  <div>
-                    <h4 style={{ fontSize: "0.92rem", fontWeight: 800, color: "var(--text-primary)" }}>
-                      {routine.name}
-                    </h4>
-                    <p style={{ fontSize: "0.75rem", color: "var(--text-secondary)", marginTop: "2px" }}>
-                      {routine.exercises.length} exercícios configurados
-                    </p>
+                    <Eye size={18} />
                   </div>
                 </div>
-
-                <div style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "12px",
-                  background: "rgba(91, 94, 244, 0.08)",
-                  color: "var(--accent-color)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}>
-                  <Eye size={18} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 5. ÚLTIMOS RECORDS PESSOAIS (PRs) */}
