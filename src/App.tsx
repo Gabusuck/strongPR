@@ -202,21 +202,41 @@ export default function App() {
     setActiveTab('workout');
   };
 
-  // Add a new template
-  const handleAddTemplate = (name: string, templateExercises: any[]) => {
-    const newTemplate = {
-      id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
-      name,
-      exercises: templateExercises.map((ex: any) => ({
-        ...ex,
-        sets: ex.sets.map((s: any) => ({ ...s, isCompleted: false }))
-      }))
-    };
-    
-    updateAppDataState({
-      ...appData,
-      templates: [...appData.templates, newTemplate]
-    });
+  // Add or edit a template
+  const handleAddTemplate = (name: string, templateExercises: any[], templateId?: string) => {
+    if (templateId) {
+      const updatedTemplates = appData.templates.map(t => {
+        if (t.id === templateId) {
+          return {
+            ...t,
+            name,
+            exercises: templateExercises.map((ex: any) => ({
+              ...ex,
+              sets: ex.sets.map((s: any) => ({ ...s, isCompleted: false }))
+            }))
+          };
+        }
+        return t;
+      });
+      updateAppDataState({
+        ...appData,
+        templates: updatedTemplates
+      });
+    } else {
+      const newTemplate = {
+        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+        name,
+        exercises: templateExercises.map((ex: any) => ({
+          ...ex,
+          sets: ex.sets.map((s: any) => ({ ...s, isCompleted: false }))
+        }))
+      };
+      
+      updateAppDataState({
+        ...appData,
+        templates: [...appData.templates, newTemplate]
+      });
+    }
   };
 
   // Delete an existing template
@@ -257,20 +277,41 @@ export default function App() {
     const { updatedPRs, newPRsCount } = checkAndUpdatePRs(finalWorkout, appData.prs);
     const updatedWorkouts = [finalWorkout, ...appData.workouts];
 
-    // Atualizar os pesos/reps no template correspondente se este treino veio de um template
+    // Atualizar os pesos/reps no template correspondente se este treino veio de um template.
+    // A rotina mantém rigorosamente a sua lista original de exercícios (não adiciona exercícios novos
+    // feitos pontualmente naquele dia, nem remove exercícios que tenham sido omitidos hoje).
     let updatedTemplates = [...appData.templates];
     if (finalWorkout.templateId) {
       const templateIdx = updatedTemplates.findIndex(t => t.id === finalWorkout.templateId);
       if (templateIdx !== -1) {
-        updatedTemplates[templateIdx] = {
-          ...updatedTemplates[templateIdx],
-          exercises: completedExercises.map(ex => ({
-            ...ex,
-            sets: ex.sets.map(s => ({
+        const originalTemplate = updatedTemplates[templateIdx];
+        const updatedExercises = originalTemplate.exercises.map(origEx => {
+          // Procura se este exercício da rotina foi realizado hoje
+          const completedEx = completedExercises.find(
+            cEx => (cEx.id && origEx.id && cEx.id === origEx.id) ||
+                   cEx.name.trim().toLowerCase() === origEx.name.trim().toLowerCase()
+          );
+
+          if (!completedEx || !completedEx.sets || completedEx.sets.length === 0) {
+            // Se o utilizador não realizou este exercício hoje, mantém a configuração anterior da rotina
+            return origEx;
+          }
+
+          // Se realizou este exercício hoje, atualiza as séries com os novos pesos e repetições efetuados
+          return {
+            ...origEx,
+            category: completedEx.category || origEx.category,
+            sets: completedEx.sets.map(s => ({
               ...s,
+              id: s.id || (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9)),
               isCompleted: false // Reset para a próxima sessão
             }))
-          }))
+          };
+        });
+
+        updatedTemplates[templateIdx] = {
+          ...originalTemplate,
+          exercises: updatedExercises
         };
       }
     }

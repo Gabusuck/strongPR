@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Play, X, Dumbbell } from 'lucide-react';
+import { Play, X, Dumbbell, Edit2 } from 'lucide-react';
 import type { WorkoutTemplate } from '../types';
 import { translateExerciseName } from '../utils/translateExercise';
 
@@ -8,12 +8,14 @@ interface RoutinePreviewModalProps {
   template: WorkoutTemplate | null;
   onClose: () => void;
   onStartWorkout: (template: WorkoutTemplate) => void;
+  onEdit?: (template: WorkoutTemplate) => void;
 }
 
 export const RoutinePreviewModal: React.FC<RoutinePreviewModalProps> = ({
   template,
   onClose,
   onStartWorkout,
+  onEdit,
 }) => {
   useEffect(() => {
     if (template) {
@@ -290,6 +292,29 @@ export const RoutinePreviewModal: React.FC<RoutinePreviewModalProps> = ({
           >
             Fechar
           </button>
+          {onEdit && (
+            <button
+              onClick={() => {
+                onClose();
+                onEdit(template);
+              }}
+              style={{
+                padding: '14px 18px',
+                borderRadius: '16px',
+                border: '1px solid rgba(91,94,244,0.3)',
+                background: 'rgba(91,94,244,0.08)',
+                color: 'var(--accent-color)',
+                fontWeight: 800,
+                fontSize: '0.88rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Edit2 size={16} /> Editar
+            </button>
+          )}
           <button
             onClick={() => {
               onStartWorkout(template);

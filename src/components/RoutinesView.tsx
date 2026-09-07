@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye } from "lucide-react";
+import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye, Edit2 } from "lucide-react";
 import type { WorkoutTemplate, WorkoutExercise, Exercise } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
 import { CreateRoutineModal } from "./CreateRoutineModal";
@@ -10,12 +10,13 @@ interface RoutinesViewProps {
   templates: WorkoutTemplate[];
   exercises: Exercise[];
   onStartWorkoutFromTemplate: (template: WorkoutTemplate) => void;
-  onAddTemplate: (name: string, exercises: WorkoutExercise[]) => void;
+  onAddTemplate: (name: string, exercises: WorkoutExercise[], templateId?: string) => void;
   onDeleteTemplate: (id: string) => void;
 }
 
 export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate, onAddTemplate, onDeleteTemplate }: RoutinesViewProps) {
   const [showCreate, setShowCreate] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
 
   const { bind } = useLongPress<WorkoutTemplate>({
@@ -55,12 +56,20 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
         </button>
       </div>
 
-      {/* Modal: Create Routine */}
+      {/* Modal: Create or Edit Routine */}
       <CreateRoutineModal
         isOpen={showCreate}
-        onClose={() => setShowCreate(false)}
-        onSave={onAddTemplate}
+        onClose={() => {
+          setShowCreate(false);
+          setEditingTemplate(null);
+        }}
+        onSave={(name, exList, tId) => {
+          onAddTemplate(name, exList, tId);
+          setShowCreate(false);
+          setEditingTemplate(null);
+        }}
         exercises={exercises}
+        initialTemplate={editingTemplate}
       />
 
       {/* Templates list */}
@@ -98,6 +107,23 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => {
+                      setEditingTemplate(template);
+                      setShowCreate(true);
+                    }}
+                    title="Editar rotina"
+                    style={{
+                      width: 36, height: 36, borderRadius: 10,
+                      background: "rgba(91,94,244,0.08)",
+                      color: "var(--accent-color)",
+                      border: "none",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Edit2 size={15} />
+                  </button>
                   <button
                     onClick={() => setPreviewTemplate(template)}
                     title="Ver exercícios"
@@ -154,6 +180,11 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
         template={previewTemplate}
         onClose={() => setPreviewTemplate(null)}
         onStartWorkout={onStartWorkoutFromTemplate}
+        onEdit={(t) => {
+          setPreviewTemplate(null);
+          setEditingTemplate(t);
+          setShowCreate(true);
+        }}
       />
     </div>
   );

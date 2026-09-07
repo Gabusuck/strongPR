@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy, Edit2 } from 'lucide-react';
 import { translateExerciseName, filterExercisesBySearch, getExerciseCategory, matchesCategoryFilter } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
@@ -285,7 +285,7 @@ interface WorkoutLogProps {
   onSaveWorkout: () => void;
   onCancelWorkout: () => void;
   onStartWorkout: () => void;
-  onAddTemplate: (name: string, exercises: WorkoutExercise[]) => void;
+  onAddTemplate: (name: string, exercises: WorkoutExercise[], templateId?: string) => void;
   onDeleteTemplate: (id: string) => void;
   onStartWorkoutFromTemplate: (template: WorkoutTemplate) => void;
 }
@@ -446,6 +446,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Template creation / exercise multi-select state
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
 
@@ -972,6 +973,18 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                     <button 
                       type="button"
                       className="btn btn-secondary"
+                      onClick={() => {
+                        setEditingTemplate(template);
+                        setShowCreateTemplateModal(true);
+                      }}
+                      title="Editar rotina"
+                      style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}
+                    >
+                      <Edit2 size={16} /> Editar
+                    </button>
+                    <button 
+                      type="button"
+                      className="btn btn-secondary"
                       onClick={() => setPreviewTemplate(template)}
                       style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}
                     >
@@ -991,12 +1004,20 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           )}
         </div>
 
-        {/* Modal: Create Routine */}
+        {/* Modal: Create or Edit Routine */}
         <CreateRoutineModal
           isOpen={showCreateTemplateModal}
-          onClose={() => setShowCreateTemplateModal(false)}
-          onSave={onAddTemplate}
+          onClose={() => {
+            setShowCreateTemplateModal(false);
+            setEditingTemplate(null);
+          }}
+          onSave={(name, exList, tId) => {
+            onAddTemplate(name, exList, tId);
+            setShowCreateTemplateModal(false);
+            setEditingTemplate(null);
+          }}
           exercises={exercises}
+          initialTemplate={editingTemplate}
         />
 
         {/* Modal: Routine Preview */}
@@ -1005,6 +1026,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             template={previewTemplate}
             onClose={() => setPreviewTemplate(null)}
             onStartWorkout={onStartWorkoutFromTemplate}
+            onEdit={(t) => {
+              setPreviewTemplate(null);
+              setEditingTemplate(t);
+              setShowCreateTemplateModal(true);
+            }}
           />
         )}
 

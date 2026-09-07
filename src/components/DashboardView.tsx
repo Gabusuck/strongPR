@@ -564,6 +564,10 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
         template={previewTemplate}
         onClose={() => setPreviewTemplate(null)}
         onStartWorkout={onStartWorkoutFromTemplate}
+        onEdit={() => {
+          setPreviewTemplate(null);
+          onNavigate('routines');
+        }}
       />
 
     </div>

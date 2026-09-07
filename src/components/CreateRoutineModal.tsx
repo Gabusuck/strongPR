@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import type { WorkoutExercise, Exercise } from '../types';
+import type { WorkoutExercise, Exercise, WorkoutTemplate } from '../types';
 import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Info, Bookmark } from 'lucide-react';
 import { translateExerciseName, filterExercisesBySearch, getExerciseCategory, matchesCategoryFilter } from '../utils/translateExercise';
 import { preloadExercises } from './WorkoutLog';
@@ -17,8 +17,9 @@ export interface ApiExercise {
 interface CreateRoutineModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, exercises: WorkoutExercise[]) => void;
+  onSave: (name: string, exercises: WorkoutExercise[], templateId?: string) => void;
   exercises?: Exercise[];
+  initialTemplate?: WorkoutTemplate | null;
 }
 
 const MUSCLE_LABELS: Record<string, string> = {
@@ -80,7 +81,7 @@ const StaticExerciseImage: React.FC<{ mediaId: string; alt: string; style?: Reac
   );
 };
 
-export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: CreateRoutineModalProps) {
+export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], initialTemplate }: CreateRoutineModalProps) {
   const [routineName, setRoutineName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string>('all');
@@ -110,10 +111,19 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
 
   useEffect(() => {
     if (!isOpen) return;
+    if (initialTemplate) {
+      setRoutineName(initialTemplate.name || '');
+      setSelectedExerciseIds(initialTemplate.exercises.map(e => e.id));
+    } else {
+      setRoutineName('');
+      setSelectedExerciseIds([]);
+    }
+    setSearchQuery('');
+    setMuscleFilter('all');
     preloadExercises().then(data => {
       setApiExercises(data);
     });
-  }, [isOpen]);
+  }, [isOpen, initialTemplate]);
 
   const toggleSelectExercise = (id: string) => {
     setSelectedExerciseIds(prev => 
@@ -164,33 +174,39 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
 
     // Map selected API exercises
     apiExercises.filter(ex => selectedExerciseIds.includes(ex.id)).forEach((ex, idx) => {
+      const existing = initialTemplate?.exercises.find(e => e.id === ex.id || e.name.toLowerCase() === ex.name.toLowerCase());
       workoutExercises.push({
         id: ex.id,
         name: ex.name,
         category: getExerciseCategory(ex),
-        sets: [
-          { id: `s_${Date.now()}_${idx}_1`, weight: 0, reps: 10, isCompleted: false },
-          { id: `s_${Date.now()}_${idx}_2`, weight: 0, reps: 10, isCompleted: false },
-          { id: `s_${Date.now()}_${idx}_3`, weight: 0, reps: 10, isCompleted: false },
-        ]
+        sets: existing && existing.sets && existing.sets.length > 0
+          ? existing.sets.map(s => ({ ...s, isCompleted: false }))
+          : [
+              { id: `s_${Date.now()}_${idx}_1`, weight: 0, reps: 10, isCompleted: false },
+              { id: `s_${Date.now()}_${idx}_2`, weight: 0, reps: 10, isCompleted: false },
+              { id: `s_${Date.now()}_${idx}_3`, weight: 0, reps: 10, isCompleted: false },
+            ]
       });
     });
 
     // Map selected custom exercises
     localExercises.filter(ex => selectedExerciseIds.includes(ex.id)).forEach((ex, idx) => {
+      const existing = initialTemplate?.exercises.find(e => e.id === ex.id || e.name.toLowerCase() === ex.name.toLowerCase());
       workoutExercises.push({
         id: ex.id,
         name: ex.name,
         category: ex.category,
-        sets: [
-          { id: `s_loc_${Date.now()}_${idx}_1`, weight: 0, reps: 10, isCompleted: false },
-          { id: `s_loc_${Date.now()}_${idx}_2`, weight: 0, reps: 10, isCompleted: false },
-          { id: `s_loc_${Date.now()}_${idx}_3`, weight: 0, reps: 10, isCompleted: false },
-        ]
+        sets: existing && existing.sets && existing.sets.length > 0
+          ? existing.sets.map(s => ({ ...s, isCompleted: false }))
+          : [
+              { id: `s_loc_${Date.now()}_${idx}_1`, weight: 0, reps: 10, isCompleted: false },
+              { id: `s_loc_${Date.now()}_${idx}_2`, weight: 0, reps: 10, isCompleted: false },
+              { id: `s_loc_${Date.now()}_${idx}_3`, weight: 0, reps: 10, isCompleted: false },
+            ]
       });
     });
 
-    onSave(routineName.trim(), workoutExercises);
+    onSave(routineName.trim(), workoutExercises, initialTemplate?.id);
     setRoutineName('');
     setSelectedExerciseIds([]);
     setSearchQuery('');
@@ -327,7 +343,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
             <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--border-color)', flexShrink: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: 850, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
-                  Criar Nova Rotina
+                  {initialTemplate ? 'Editar Rotina' : 'Criar Nova Rotina'}
                 </h3>
                 <button
                   type="button"
@@ -589,7 +605,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
                 className="btn btn-primary"
                 style={{ flex: 1, padding: '14px', fontSize: '0.92rem', fontWeight: 800 }}
               >
-                <Plus size={16} /> Criar Rotina ({selectedExerciseIds.length})
+                {initialTemplate ? <Check size={16} /> : <Plus size={16} />} {initialTemplate ? 'Guardar Alterações' : `Criar Rotina (${selectedExerciseIds.length})`}
               </button>
             </div>
           </form>
