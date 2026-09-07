@@ -42,10 +42,8 @@ const DEFAULT_STARTER_ROUTINES: WorkoutTemplate[] = [
 ];
 
 function getGreeting(name: string): string {
-  const h = new Date().getHours();
-  if (h < 12) return `Bom dia, ${name}!`;
-  if (h < 18) return `Boa tarde, ${name}!`;
-  return `Boa noite, ${name}!`;
+  const firstName = (name || '').trim().split(/\s+/)[0] || 'Atleta';
+  return `Olá, ${firstName}!`;
 }
 
 function getWeekDays() {
