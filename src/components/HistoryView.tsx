@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { Workout } from '../types';
 import { Trash2, Calendar, Clock, ChevronDown, ChevronUp, Dumbbell, Award } from 'lucide-react';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
+import { translateExerciseName } from '../utils/translateExercise';
 
 interface HistoryViewProps {
   workouts: Workout[];
@@ -214,7 +215,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
                           <div key={workoutExercise?.id || idx} style={{ paddingBottom: '8px', borderBottom: idx < (workout.exercises || []).length - 1 ? '1px dashed rgba(15,23,42,0.06)' : 'none' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                               <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>
-                                {workoutExercise?.name || 'Exercício'}
+                                {workoutExercise?.name ? translateExerciseName(workoutExercise.name) : 'Exercício'}
                               </h4>
                               {workoutExercise?.category && (
                                 <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#f1f5f9', color: 'var(--text-muted)' }}>

@@ -4,6 +4,7 @@ import type { WorkoutTemplate, WorkoutExercise, Exercise } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
 import { CreateRoutineModal } from "./CreateRoutineModal";
 import { useLongPress } from "../utils/useLongPress";
+import { translateExerciseName } from "../utils/translateExercise";
 
 interface RoutinesViewProps {
   templates: WorkoutTemplate[];
@@ -92,7 +93,7 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
                   <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{template.name}</p>
                   <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 2 }}>
                     {template.exercises.length > 0
-                      ? template.exercises.map(e => e.name).join(" · ")
+                      ? template.exercises.map(e => translateExerciseName(e.name)).join(" · ")
                       : "Sem exercícios"}
                   </p>
                 </div>

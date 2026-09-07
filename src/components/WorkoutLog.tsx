@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy } from 'lucide-react';
-import { translateExerciseName, getExerciseAliases } from '../utils/translateExercise';
+import { translateExerciseName, matchesExerciseQuery } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
 import { CreateRoutineModal } from './CreateRoutineModal';
@@ -915,34 +915,22 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const localExercises = useMemo(() => exercises.filter(ex => ex.isCustom), [exercises]);
 
   const filteredApiExercises = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     return apiExercises.filter(ex => {
       const matchesMuscle = muscleFilter === 'bookmarked' 
         ? bookmarkedIds.includes(ex.id)
         : muscleMatchesFilter(ex, muscleFilter);
       if (!matchesMuscle) return false;
-      if (!q) return true;
-      const translated = translateExerciseName(ex.name).toLowerCase();
-      const secMuscles = (ex.secondary_muscles || []).join(' ').toLowerCase();
-      const aliases = getExerciseAliases(ex.name).join(' ');
-      return ex.name.toLowerCase().includes(q) ||
-        translated.includes(q) ||
-        aliases.includes(q) ||
-        ex.muscle_group.toLowerCase().includes(q) ||
-        secMuscles.includes(q) ||
-        (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
+      return matchesExerciseQuery(ex, searchQuery);
     });
   }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   const filteredLocalExercises = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     return localExercises.filter((ex: Exercise) => {
       const matchesMuscle = muscleFilter === 'bookmarked' 
         ? bookmarkedIds.includes(ex.id)
         : muscleMatchesFilter(ex, muscleFilter);
       if (!matchesMuscle) return false;
-      if (!q) return true;
-      return ex.name.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q);
+      return matchesExerciseQuery(ex, searchQuery);
     });
   }, [localExercises, muscleFilter, bookmarkedIds, searchQuery]);
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { PersonalRecord, Exercise } from '../types';
 import { Trophy, TrendingUp, Calendar, Plus, X, ArrowLeft, Search, Filter } from 'lucide-react';
-import { translateExerciseName } from '../utils/translateExercise';
+import { translateExerciseName, matchesExerciseQuery } from '../utils/translateExercise';
 
 interface PRTrackerProps {
   prs: PersonalRecord[];
@@ -68,11 +68,8 @@ export const PRTracker: React.FC<PRTrackerProps> = ({
     let filtered = [...bestPRs];
     
     if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(pr => {
-        const engName = pr.exerciseName.toLowerCase();
-        const ptName = translateExerciseName(pr.exerciseName).toLowerCase();
-        return engName.includes(q) || ptName.includes(q);
+        return matchesExerciseQuery({ name: pr.exerciseName }, searchQuery);
       });
     }
 
