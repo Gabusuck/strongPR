@@ -213,13 +213,21 @@ const NAME_OVERRIDES: Record<string, string> = {
   'Lever Calf Press': 'Prensa de Gémeos na Máquina',
   'Nordic Curl': 'Curl Nórdico',
 
-  // Ombros
+  // Ombros / Press Militar / Desenvolvimento
   'Overhead Press': 'Press Militar de Ombros',
   'Barbell Overhead Press': 'Press Militar com Barra',
+  'Barbell Seated Overhead Press': 'Press de Ombros Sentado com Barra',
   'Military Press': 'Press Militar',
   'Barbell Standing Military Press': 'Press Militar em Pé com Barra',
+  'Barbell Standing Close Grip Military Press': 'Press Militar em Pé com Barra (Pega Fechada)',
+  'Barbell Standing Wide Military Press': 'Press Militar em Pé com Barra (Pega Larga)',
+  'Barbell Seated Behind Head Military Press': 'Press Militar Sentado Atrás da Cabeça com Barra',
   'Shoulder Press': 'Press de Ombros',
   'Dumbbell Shoulder Press': 'Press de Ombros com Halteres',
+  'Dumbbell Seated Shoulder Press': 'Press de Ombros Sentado com Halteres',
+  'Dumbbell Standing Overhead Press': 'Press de Ombros em Pé com Halteres',
+  'Dumbbell Standing Alternate Overhead Press': 'Press de Ombros Alternado em Pé com Halteres',
+  'Dumbbell One Arm Shoulder Press': 'Press de Ombros Unilateral com Haltere',
   'Arnold Press': 'Press Arnold com Halteres',
   'Lateral Raise': 'Elevação Lateral',
   'Dumbbell Lateral Raise': 'Elevação Lateral com Halteres',
@@ -235,8 +243,17 @@ const NAME_OVERRIDES: Record<string, string> = {
   'Shrug': 'Encolhimento de Ombros / Trapézio',
   'Dumbbell Shrug': 'Encolhimento de Ombros com Halteres',
   'Barbell Shrug': 'Encolhimento de Ombros com Barra',
+  'Lever Military Press': 'Press Militar na Máquina',
   'Lever Shoulder Press': 'Press de Ombros na Máquina',
+  'Lever One Arm Shoulder Press': 'Press de Ombros Unilateral na Máquina',
   'Lever Lateral Raise': 'Elevação Lateral na Máquina',
+  'Smith Standing Military Press': 'Press Militar em Pé na Smith Machine',
+  'Smith Seated Shoulder Press': 'Press de Ombros Sentado na Smith Machine',
+  'Kettlebell Two Arm Military Press': 'Press Militar com Kettlebells',
+  'Kettlebell Seated Two Arm Military Press': 'Press Militar Sentado com Kettlebells',
+  'Kettlebell One Arm Military Press To The Side': 'Press Militar Unilateral com Kettlebell',
+  'Cable Shoulder Press': 'Press de Ombros no Cabo',
+  'Band Shoulder Press': 'Press de Ombros com Elástico',
 
   // Braços / Bíceps
   'Bicep Curl': 'Rosca Bíceps',
@@ -405,9 +422,9 @@ export function getExerciseAliases(name: string): string[] {
     aliases.push('triceps', 'tricep', 'bracos', 'testa', 'frances');
   }
 
-  // Ombros
-  if (lower.includes('shoulder') || lower.includes('lateral raise') || lower.includes('military press') || lower.includes('arnold')) {
-    aliases.push('ombro', 'ombros', 'deltoide', 'deltoides');
+  // Ombros / Press Militar / Desenvolvimento
+  if (lower.includes('shoulder') || lower.includes('military') || lower.includes('overhead') || lower.includes('lateral raise') || lower.includes('arnold')) {
+    aliases.push('ombro', 'ombros', 'deltoide', 'deltoides', 'militar', 'press militar', 'overhead press', 'desenvolvimento');
   }
 
   // Posições / Modificadores
