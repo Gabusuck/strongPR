@@ -251,16 +251,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.fillText(text, x, y);
       };
 
-      // ── Palette ──────────────────────────────────────────
-      const CORAL   = '#5B5EF4';
-      const CORAL2  = '#7B7FF5';
-      const BLACK   = '#1C1C1E';
-      const GREY    = '#8E8E93';
-      const LGREY   = '#AEAEB2';
-      const WHITE   = '#FFFFFF';
-      const CREAM   = '#F2F2F7';
-      const CARD_BG = '#FFFFFF';
-      const BORDER  = '#E5E5EA';
+      // ── Palette matching site theme ─────────────────────
+      const ACCENT      = '#5B5EF4';
+      const ACCENT_DARK = '#4347D0';
+      const ACCENT_GLOW = 'rgba(91,94,244,0.35)';
+      const TIER_1      = '#C7C8FC';
+      const TIER_2      = '#9395F8';
+      const TIER_3      = '#5B5EF4';
+      const TIER_4      = '#4347D0';
+      const EMPTY_CELL  = '#E5E5EA';
+
+      const BLACK       = '#1C1C1E';
+      const GREY        = '#8E8E93';
+      const LGREY       = '#AEAEB2';
+      const WHITE       = '#FFFFFF';
+      const CREAM       = '#F2F2F7';
+      const CARD_BG     = '#FFFFFF';
+      const BORDER      = '#E5E5EA';
 
       // ── COMPUTE STATS ────────────────────────────────────
       const currentYear = new Date().getFullYear();
@@ -323,12 +330,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       ];
 
       // ══════════════════════════════════════════════════════
-      // SECTION 1 — CORAL TOP  (0 → 680px)
+      // SECTION 1 — BRAND INDIGO TOP  (0 → 680px)
       // ══════════════════════════════════════════════════════
       const topH = 680;
       const topGrad = ctx.createLinearGradient(0, 0, W, topH);
-      topGrad.addColorStop(0, '#FF6B44');
-      topGrad.addColorStop(1, '#FF3D1A');
+      topGrad.addColorStop(0, ACCENT);
+      topGrad.addColorStop(1, ACCENT_DARK);
       ctx.fillStyle = topGrad;
       ctx.fillRect(0, 0, W, topH);
 
@@ -396,7 +403,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         drawRoundRectPath(ctx, cx, cy, CARD_W, CARD_H, 22);
         ctx.stroke();
         // left accent dot
-        rr(cx + 24, cy + CARD_H/2 - 18, 6, 36, 3, CORAL);
+        rr(cx + 24, cy + CARD_H/2 - 18, 6, 36, 3, ACCENT);
         // value
         txt(s.v, cx + 48, cy + 72, 'bold 52px system-ui,sans-serif', BLACK);
         txt(s.l, cx + 48, cy + 108, '500 24px system-ui,sans-serif', LGREY);
@@ -405,7 +412,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       // ─ GRID LABEL ─
       const afterCards = cardsTop + 3 * (CARD_H + CARD_GAP) + 30;
       // label row
-      rr(60, afterCards, 8, 36, 4, CORAL);
+      rr(60, afterCards, 8, 36, 4, ACCENT);
       txt(`Consistência ${currentYear}`, 84, afterCards + 28, '700 30px system-ui,sans-serif', BLACK);
       txt(`1 Jan – 31 Dez · ${yw.length} treinos`, W - 60, afterCards + 28, '500 24px system-ui,sans-serif', LGREY, 'right');
 
@@ -424,11 +431,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         const col = Math.floor(idx / 7), row = idx % 7;
         const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
         let fc: string;
-        if (day.volume === 0)        fc = '#E2E8F0';
-        else if (day.volume <= p33)  fc = '#FFD4C2';
-        else if (day.volume <= p66)  fc = '#FF9070';
-        else if (day.volume <= p90)  fc = CORAL2;
-        else { fc = CORAL; ctx.shadowColor = 'rgba(255,94,58,0.35)'; ctx.shadowBlur = 6; }
+        if (day.volume === 0)        fc = EMPTY_CELL;
+        else if (day.volume <= p33)  fc = TIER_1;
+        else if (day.volume <= p66)  fc = TIER_2;
+        else if (day.volume <= p90)  fc = TIER_3;
+        else { fc = TIER_4; ctx.shadowColor = ACCENT_GLOW; ctx.shadowBlur = 6; }
         rr(x, y, CELL, CELL, 3, fc);
         ctx.shadowBlur = 0;
       });
@@ -436,13 +443,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       // ─ LEGEND ─
       const legY2 = gY2 + gH2 + 28;
       txt('menos', gX2, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
-      ['#E2E8F0','#FFD4C2','#FF9070',CORAL2,CORAL].forEach((c, i) => rr(gX2 + 96 + i*26, legY2, 18, 18, 5, c));
+      [EMPTY_CELL, TIER_1, TIER_2, TIER_3, TIER_4].forEach((c, i) => rr(gX2 + 96 + i*26, legY2, 18, 18, 5, c));
       txt('mais', gX2 + 96 + 5*26 + 10, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
 
       // ─ BOTTOM STRIP ─
       const stripY = H - 90;
       rr(0, stripY, W, 90, 0, CREAM);
-      ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(60, stripY + 45, 7, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = ACCENT; ctx.beginPath(); ctx.arc(60, stripY + 45, 7, 0, Math.PI*2); ctx.fill();
       txt('strong app', 82, stripY + 52, '700 28px system-ui,sans-serif', GREY);
       txt('strong-pr.vercel.app', W - 60, stripY + 52, '500 24px system-ui,sans-serif', LGREY, 'right');
 
