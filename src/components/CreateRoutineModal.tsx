@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { WorkoutExercise, Exercise } from '../types';
 import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Info, Bookmark } from 'lucide-react';
-import { translateExerciseName, matchesExerciseQuery } from '../utils/translateExercise';
+import { translateExerciseName, filterExercisesBySearch } from '../utils/translateExercise';
 import { preloadExercises } from './WorkoutLog';
 
 export interface ApiExercise {
@@ -43,7 +43,7 @@ const mapCategory = (muscleGroup: string): string => {
   const lower = (muscleGroup || '').toLowerCase();
   if (lower === 'chest') return 'Peito';
   if (lower === 'biceps' || lower === 'triceps' || lower === 'forearms') return 'Braços';
-  if (lower === 'shoulders' || lower === 'deltoids') return 'Ombros';
+  if (lower === 'shoulders' || lower === 'deltoids' || lower === 'delts') return 'Ombros';
   if (lower === 'back' || lower === 'lats' || lower === 'traps' || lower === 'upper back' || lower === 'lower back') return 'Costas';
   if (lower === 'abdominals' || lower === 'core' || lower === 'obliques') return 'Core';
   if (lower === 'quadriceps' || lower === 'hamstrings' || lower === 'glutes' || lower === 'calves') return 'Pernas';
@@ -55,7 +55,7 @@ const ALL_FILTER_MUSCLES = ['chest', 'arms', 'shoulders', 'back', 'abdominals', 
 const MUSCLE_GROUPS: Record<string, string[]> = {
   chest: ['chest', 'pectorals', 'upper chest', 'lower chest', 'inner chest', 'outer chest'],
   arms: ['biceps', 'triceps', 'forearms', 'wrist flexors', 'wrist extensors', 'brachialis', 'brachioradialis', 'arms'],
-  shoulders: ['shoulders', 'deltoids', 'anterior deltoid', 'lateral deltoid', 'posterior deltoid', 'rotator cuff', 'rear delts', 'front delts', 'side delts'],
+  shoulders: ['shoulders', 'deltoids', 'delts', 'delt', 'anterior deltoid', 'lateral deltoid', 'posterior deltoid', 'rotator cuff', 'rear delts', 'front delts', 'side delts'],
   back: ['back', 'lats', 'latissimus dorsi', 'lower back', 'upper back', 'traps', 'trapezius', 'rhomboids', 'middle back', 'spine', 'erector spinae'],
   abdominals: ['abdominals', 'core', 'obliques', 'hip flexors', 'abs', 'rectus abdominis', 'transverse abdominis'],
   legs: ['quadriceps', 'quads', 'hamstrings', 'glutes', 'gluteus maximus', 'gluteus medius', 'calves', 'soleus', 'ankles', 'ankle stabilizers', 'thighs', 'adductors', 'abductors', 'legs'],
@@ -187,23 +187,21 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
   const localExercises = useMemo(() => exercises.filter(ex => ex.isCustom), [exercises]);
 
   const filteredApiExercises = useMemo(() => {
-    return apiExercises.filter(ex => {
-      const matchesMuscle = muscleFilter === 'bookmarked'
-        ? bookmarkedIds.includes(ex.id)
-        : muscleMatchesFilter(ex, muscleFilter);
-      if (!matchesMuscle) return false;
-      return matchesExerciseQuery(ex, searchQuery);
-    });
+    const base = searchQuery.trim() !== ''
+      ? apiExercises
+      : apiExercises.filter(ex => muscleFilter === 'bookmarked'
+          ? bookmarkedIds.includes(ex.id)
+          : muscleMatchesFilter(ex, muscleFilter));
+    return filterExercisesBySearch(base, searchQuery);
   }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   const filteredLocalExercises = useMemo(() => {
-    return localExercises.filter((ex: Exercise) => {
-      const matchesMuscle = muscleFilter === 'bookmarked'
-        ? bookmarkedIds.includes(ex.id)
-        : muscleMatchesFilter(ex, muscleFilter);
-      if (!matchesMuscle) return false;
-      return matchesExerciseQuery(ex, searchQuery);
-    });
+    const base = searchQuery.trim() !== ''
+      ? localExercises
+      : localExercises.filter(ex => muscleFilter === 'bookmarked'
+          ? bookmarkedIds.includes(ex.id)
+          : muscleMatchesFilter(ex, muscleFilter));
+    return filterExercisesBySearch(base, searchQuery);
   }, [localExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {

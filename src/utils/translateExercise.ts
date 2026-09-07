@@ -471,3 +471,34 @@ export function matchesExerciseQuery(
   return tokens.every(token => searchable.includes(token));
 }
 
+export function filterExercisesBySearch<T extends { name: string; muscle_group?: string; target?: string; secondary_muscles?: string[]; category?: string }>(
+  list: T[],
+  query: string
+): T[] {
+  const qNorm = normalizeStr(query);
+  if (!qNorm) return list;
+
+  const tokens = qNorm.split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return list;
+
+  // 1. Strict multi-token search (all tokens must match)
+  const strictMatches = list.filter(item => matchesExerciseQuery(item, query));
+  if (strictMatches.length > 0) return strictMatches;
+
+  // 2. Typo-tolerant fallback: match any token with length >= 3
+  const validTokens = tokens.filter(t => t.length >= 3);
+  if (validTokens.length === 0) return [];
+
+  return list.filter(item => {
+    const rawName = normalizeStr(item.name);
+    const translated = normalizeStr(translateExerciseName(item.name));
+    const aliases = getExerciseAliases(item.name).map(normalizeStr).join(' ');
+    const muscle = normalizeStr(item.muscle_group || item.category || '');
+    const target = normalizeStr(item.target || '');
+    const secondaries = (item.secondary_muscles || []).map(normalizeStr).join(' ');
+    const searchable = `${rawName} ${translated} ${aliases} ${muscle} ${target} ${secondaries}`;
+
+    return validTokens.some(token => searchable.includes(token));
+  });
+}
+

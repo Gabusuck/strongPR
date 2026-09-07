@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy } from 'lucide-react';
-import { translateExerciseName, matchesExerciseQuery } from '../utils/translateExercise';
+import { translateExerciseName, filterExercisesBySearch } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
 import { CreateRoutineModal } from './CreateRoutineModal';
@@ -94,7 +94,7 @@ const ALL_FILTER_MUSCLES = [
 const MUSCLE_GROUPS: Record<string, string[]> = {
   chest: ['chest', 'pectorals', 'upper chest', 'lower chest', 'inner chest', 'outer chest'],
   arms: ['biceps', 'triceps', 'forearms', 'wrist flexors', 'wrist extensors', 'brachialis', 'brachioradialis', 'arms'],
-  shoulders: ['shoulders', 'deltoids', 'anterior deltoid', 'lateral deltoid', 'posterior deltoid', 'rotator cuff', 'rear delts', 'front delts', 'side delts'],
+  shoulders: ['shoulders', 'deltoids', 'delts', 'delt', 'anterior deltoid', 'lateral deltoid', 'posterior deltoid', 'rotator cuff', 'rear delts', 'front delts', 'side delts'],
   back: ['back', 'lats', 'latissimus dorsi', 'lower back', 'upper back', 'traps', 'trapezius', 'rhomboids', 'middle back', 'spine', 'erector spinae'],
   abdominals: ['abdominals', 'core', 'obliques', 'hip flexors', 'abs', 'rectus abdominis', 'transverse abdominis'],
   legs: ['quadriceps', 'quads', 'hamstrings', 'glutes', 'gluteus maximus', 'gluteus medius', 'calves', 'soleus', 'ankles', 'ankle stabilizers', 'thighs', 'adductors', 'abductors', 'legs'],
@@ -915,23 +915,21 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const localExercises = useMemo(() => exercises.filter(ex => ex.isCustom), [exercises]);
 
   const filteredApiExercises = useMemo(() => {
-    return apiExercises.filter(ex => {
-      const matchesMuscle = muscleFilter === 'bookmarked' 
-        ? bookmarkedIds.includes(ex.id)
-        : muscleMatchesFilter(ex, muscleFilter);
-      if (!matchesMuscle) return false;
-      return matchesExerciseQuery(ex, searchQuery);
-    });
+    const base = searchQuery.trim() !== ''
+      ? apiExercises
+      : apiExercises.filter(ex => muscleFilter === 'bookmarked' 
+          ? bookmarkedIds.includes(ex.id)
+          : muscleMatchesFilter(ex, muscleFilter));
+    return filterExercisesBySearch(base, searchQuery);
   }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   const filteredLocalExercises = useMemo(() => {
-    return localExercises.filter((ex: Exercise) => {
-      const matchesMuscle = muscleFilter === 'bookmarked' 
-        ? bookmarkedIds.includes(ex.id)
-        : muscleMatchesFilter(ex, muscleFilter);
-      if (!matchesMuscle) return false;
-      return matchesExerciseQuery(ex, searchQuery);
-    });
+    const base = searchQuery.trim() !== ''
+      ? localExercises
+      : localExercises.filter(ex => muscleFilter === 'bookmarked' 
+          ? bookmarkedIds.includes(ex.id)
+          : muscleMatchesFilter(ex, muscleFilter));
+    return filterExercisesBySearch(base, searchQuery);
   }, [localExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   // Add multiple selected exercises to active workout
