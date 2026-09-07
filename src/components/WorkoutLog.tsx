@@ -511,7 +511,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   templates,
   workouts,
   onUpdateWorkout,
-  onCancelWorkout,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onCancelWorkout: _onCancelWorkout,
   onStartWorkout,
   onAddTemplate,
   onDeleteTemplate,
@@ -1339,15 +1340,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
             <span style={{ fontSize: '0.85rem' }}>⏱️</span>
             <span>{formatElapsed(elapsedSeconds)}</span>
           </div>
-
-          {/* Discard button — subtle trash icon */}
-          <button
-            onClick={onCancelWorkout}
-            style={{ background: 'none', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
-            title="Descartar treino"
-          >
-            <Trash2 size={15} />
-          </button>
         </div>
       </div>
 

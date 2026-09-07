@@ -7,7 +7,7 @@ import { ProfileView } from './components/ProfileView';
 import { DashboardView } from './components/DashboardView';
 import { PRView } from './components/PRView';
 import { RoutinesView } from './components/RoutinesView';
-import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X, BarChart3, Medal } from 'lucide-react';
+import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X, BarChart3, Medal, Trash2 } from 'lucide-react';
 
 interface CustomDialogConfig {
   isOpen: boolean;
@@ -509,25 +509,47 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {/* Workout header buttons */}
           {activeWorkout && activeTab === 'workout' && (
-            <button
-              onClick={handleSaveWorkout}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                backgroundColor: '#10b981',
-                border: 'none',
-                color: '#fff',
-                padding: '7px 14px',
-                borderRadius: '20px',
-                fontSize: '0.78rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
-              }}
-            >
-              ✓ Finalizar
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={handleCancelWorkout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '20px',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  color: 'var(--danger)',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Apagar / Descartar treino"
+                aria-label="Apagar treino"
+              >
+                <Trash2 size={16} />
+              </button>
+              <button
+                onClick={handleSaveWorkout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: '#10b981',
+                  border: 'none',
+                  color: '#fff',
+                  padding: '7px 14px',
+                  borderRadius: '20px',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(16,185,129,0.3)',
+                }}
+              >
+                ✓ Finalizar
+              </button>
+            </div>
           )}
           {activeWorkout && activeTab !== 'workout' && (
             <div
