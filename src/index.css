@@ -116,9 +116,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(242,242,247,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   z-index: 90;
   flex-shrink: 0;
