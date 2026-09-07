@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
@@ -700,27 +700,120 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     return recents.slice(0, 6);
   };
 
-  // Rest timer
-  const [restTimeLeft, setRestTimeLeft] = useState<number | null>(null);
-  const [restDuration, setRestDuration] = useState<number>(settings.defaultRestDuration);
-  const timerIntervalRef = useRef<number | null>(null);
+  // Rest timer target end timestamp (wall-clock based)
+  const [restEndTime, setRestEndTime] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem('strongpr_rest_end_time');
+      if (saved) {
+        const time = Number(saved);
+        if (time > Date.now()) return time;
+      }
+    } catch {}
+    return null;
+  });
 
-  // Elapsed workout time
+  const [restDuration, setRestDuration] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('strongpr_rest_duration');
+      if (saved) return Number(saved) || settings.defaultRestDuration;
+    } catch {}
+    return settings.defaultRestDuration;
+  });
+
+  const [restTimeLeft, setRestTimeLeft] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem('strongpr_rest_end_time');
+      if (saved) {
+        const time = Number(saved);
+        const left = Math.ceil((time - Date.now()) / 1000);
+        if (left > 0) return left;
+      }
+    } catch {}
+    return null;
+  });
+
+  // Elapsed workout time (wall-clock based)
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Active workout duration tick
+  // Helper functions for Rest Timer
+  const startRestTimer = (seconds: number) => {
+    const endTime = Date.now() + seconds * 1000;
+    setRestDuration(seconds);
+    setRestEndTime(endTime);
+    setRestTimeLeft(seconds);
+    try {
+      localStorage.setItem('strongpr_rest_end_time', endTime.toString());
+      localStorage.setItem('strongpr_rest_duration', seconds.toString());
+    } catch {}
+  };
+
+  const addRestTime = (additionalSeconds: number) => {
+    const currentEnd = restEndTime && restEndTime > Date.now() ? restEndTime : Date.now();
+    const newEnd = currentEnd + additionalSeconds * 1000;
+    const newDuration = (restDuration || settings.defaultRestDuration) + additionalSeconds;
+    const newLeft = Math.ceil((newEnd - Date.now()) / 1000);
+    setRestDuration(newDuration);
+    setRestEndTime(newEnd);
+    setRestTimeLeft(newLeft);
+    try {
+      localStorage.setItem('strongpr_rest_end_time', newEnd.toString());
+      localStorage.setItem('strongpr_rest_duration', newDuration.toString());
+    } catch {}
+  };
+
+  const clearRestTimer = () => {
+    setRestEndTime(null);
+    setRestTimeLeft(null);
+    try {
+      localStorage.removeItem('strongpr_rest_end_time');
+      localStorage.removeItem('strongpr_rest_duration');
+    } catch {}
+  };
+
+  // Synchronized workout & rest timer loop with visibility & focus sync
   useEffect(() => {
-    if (!activeWorkout) {
-      setElapsedSeconds(0);
-      return;
-    }
-    const startTime = activeWorkout.date ? new Date(activeWorkout.date).getTime() : Date.now();
-    const interval = window.setInterval(() => {
-      const seconds = Math.floor((Date.now() - startTime) / 1000);
-      setElapsedSeconds(seconds >= 0 ? seconds : 0);
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [activeWorkout]);
+    const updateTimers = () => {
+      // 1. Workout Elapsed Time (Real Wall-Clock)
+      if (activeWorkout) {
+        const startTime = activeWorkout.date ? new Date(activeWorkout.date).getTime() : Date.now();
+        const seconds = Math.floor((Date.now() - startTime) / 1000);
+        setElapsedSeconds(seconds >= 0 ? seconds : 0);
+      } else {
+        setElapsedSeconds(0);
+      }
+
+      // 2. Rest Timer Countdown (Real Wall-Clock)
+      if (restEndTime) {
+        const left = Math.ceil((restEndTime - Date.now()) / 1000);
+        if (left <= 0) {
+          triggerRestEndNotifications();
+          clearRestTimer();
+        } else {
+          setRestTimeLeft(left);
+        }
+      }
+    };
+
+    updateTimers();
+    const interval = window.setInterval(updateTimers, 1000);
+
+    const handleVisibilityChange = () => {
+      updateTimers();
+    };
+
+    const handleFocus = () => {
+      updateTimers();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [activeWorkout, restEndTime]);
 
   // Save elapsed duration on each tick
   useEffect(() => {
@@ -729,20 +822,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsedSeconds]);
-
-  // Rest timer countdown
-  useEffect(() => {
-    if (restTimeLeft === null) return;
-    if (restTimeLeft <= 0) {
-      triggerRestEndNotifications();
-      setRestTimeLeft(null);
-      return;
-    }
-    timerIntervalRef.current = window.setInterval(() => {
-      setRestTimeLeft((prev) => (prev !== null ? prev - 1 : null));
-    }, 1000);
-    return () => { if (timerIntervalRef.current) window.clearInterval(timerIntervalRef.current); };
-  }, [restTimeLeft]);
 
   // Populate exercises from background preloader
   useEffect(() => {
@@ -1016,8 +1095,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           sets: (ex.sets || []).map((s) => {
             if (s.id !== setId) return s;
             if (updates.isCompleted === true && !s.isCompleted) {
-              setRestTimeLeft(settings.defaultRestDuration);
-              setRestDuration(settings.defaultRestDuration);
+              startRestTimer(settings.defaultRestDuration);
 
               // Pedir permissão de notificações no telemóvel quando inicia o primeiro temporizador
               if ('Notification' in window && Notification.permission === 'default') {
@@ -1526,13 +1604,13 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                 {Math.floor(restTimeLeft / 60)}:{(restTimeLeft % 60).toString().padStart(2, '0')}
               </span>
               <button 
-                onClick={() => setRestTimeLeft((prev) => (prev !== null ? prev + 30 : 30))}
+                onClick={() => addRestTime(30)}
                 style={{ backgroundColor: 'rgba(255, 94, 58, 0.08)', border: 'none', borderRadius: '8px', padding: '4px 8px', fontSize: '0.68rem', fontWeight: 800, color: 'var(--accent-color)', cursor: 'pointer' }}
               >
                 +30s
               </button>
               <button 
-                onClick={() => setRestTimeLeft(null)}
+                onClick={() => clearRestTimer()}
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', marginLeft: '2px' }}
               >
                 <X size={16} />
