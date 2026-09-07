@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
+import { RoutinePreviewModal } from './RoutinePreviewModal';
 
 export const SET_TYPE_OPTIONS: { type: SetType; label: string; badge: string; desc: string; color: string; bg: string; border: string }[] = [
   { type: 'normal', label: 'Série Normal', badge: 'N', desc: 'Série de trabalho padrão', color: 'var(--text-primary)', bg: 'var(--bg-secondary)', border: 'var(--border-color)' },
@@ -631,6 +632,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   // Template creation / exercise multi-select state
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const [newTemplateName, setNewTemplateName] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
   const [templateSearchQuery, setTemplateSearchQuery] = useState('');
@@ -1101,7 +1103,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
               <div 
                 key={template.id} 
                 className="glass-card" 
-                style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+                onClick={() => setPreviewTemplate(template)}
+                style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: 0, border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', cursor: 'pointer' }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div>
@@ -1114,7 +1117,8 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                   </div>
                   {templates.length > 0 && (
                     <button 
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         window.customConfirm(
                           'Eliminar Rotina',
                           `Tens a certeza que desejas eliminar a rotina "${template.name}"?`,
@@ -1128,13 +1132,23 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                   )}
                 </div>
 
-                <button 
-                  className="btn btn-primary"
-                  onClick={() => onStartWorkoutFromTemplate(template)}
-                  style={{ padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.88rem', width: '100%' }}
-                >
-                  <Dumbbell size={18} /> Iniciar Treino
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }} onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setPreviewTemplate(template)}
+                    style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 700 }}
+                  >
+                    <Eye size={16} /> Ver
+                  </button>
+                  <button 
+                    className="btn btn-primary"
+                    onClick={() => onStartWorkoutFromTemplate(template)}
+                    style={{ flex: 1, padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '0.88rem' }}
+                  >
+                    <Dumbbell size={18} /> Iniciar Treino
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1244,6 +1258,15 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
               </form>
             </div>
           </div>
+        )}
+
+        {/* Modal: Routine Preview */}
+        {previewTemplate && (
+          <RoutinePreviewModal
+            template={previewTemplate}
+            onClose={() => setPreviewTemplate(null)}
+            onStartWorkout={onStartWorkoutFromTemplate}
+          />
         )}
 
       </div>

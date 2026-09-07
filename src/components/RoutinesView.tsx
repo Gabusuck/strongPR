@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { LayoutTemplate, Play, Trash2, Plus, Dumbbell } from "lucide-react";
+import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye } from "lucide-react";
 import type { WorkoutTemplate, WorkoutExercise, Exercise } from "../types";
+import { RoutinePreviewModal } from "./RoutinePreviewModal";
 
 interface RoutinesViewProps {
   templates: WorkoutTemplate[];
@@ -13,6 +14,7 @@ interface RoutinesViewProps {
 export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTemplate, onDeleteTemplate }: RoutinesViewProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
+  const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -75,9 +77,15 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
       ) : (
         <div style={{ background: "#fff", border: "1px solid var(--border-color)", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
           {templates.map((template, i) => (
-            <div key={template.id} style={{
-              borderBottom: i < templates.length - 1 ? "1px solid var(--border-color)" : "none",
-            }}>
+            <div 
+              key={template.id} 
+              onClick={() => setPreviewTemplate(template)}
+              style={{
+                borderBottom: i < templates.length - 1 ? "1px solid var(--border-color)" : "none",
+                cursor: "pointer",
+                transition: "background-color 0.15s ease",
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", padding: "14px 18px", gap: 12 }}>
                 <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(91,94,244,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <LayoutTemplate size={18} color="var(--accent-color)" />
@@ -90,23 +98,26 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
                       : "Sem exercícios"}
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => onStartWorkoutFromTemplate(template)}
+                    onClick={() => setPreviewTemplate(template)}
+                    title="Ver exercícios"
                     style={{
                       width: 36, height: 36, borderRadius: 10,
-                      background: "var(--accent-gradient)",
+                      background: "rgba(91,94,244,0.08)",
+                      color: "var(--accent-color)",
                       border: "none",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       cursor: "pointer",
                     }}
                   >
-                    <Play size={16} color="#fff" fill="#fff" />
+                    <Eye size={16} />
                   </button>
                   <button
                     onClick={() => {
                       window.customConfirm("Eliminar Rotina", `Eliminar "${template.name}"?`, () => onDeleteTemplate(template.id));
                     }}
+                    title="Eliminar rotina"
                     style={{
                       width: 36, height: 36, borderRadius: 10,
                       background: "rgba(255,59,48,0.1)",
@@ -132,12 +143,19 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
             <div>
               <p style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>Dica</p>
               <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                Cria rotinas como "Push Day", "Pull Day" ou "Pernas" para iniciar treinos rapidamente com os teus exercícios favoritos.
+                Cria rotinas como "Push Day", "Pull Day" ou "Pernas" para organizar os teus exercícios favoritos e começar a treinar quando quiseres.
               </p>
             </div>
           </div>
         </div>
       )}
+
+      {/* Routine Preview Modal */}
+      <RoutinePreviewModal
+        template={previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onStartWorkout={onStartWorkoutFromTemplate}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
-import { useMemo } from "react";
-import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2, Eye } from "lucide-react";
 import type { Workout, PersonalRecord, UserProfile, WorkoutTemplate } from "../types";
+import { RoutinePreviewModal } from "./RoutinePreviewModal";
 
 interface DashboardViewProps {
   workouts: Workout[];
@@ -59,6 +60,7 @@ function getWeekDays() {
 }
 
 export function DashboardView({ workouts, prs, profile, templates, onStartWorkout, onStartWorkoutFromTemplate, onNavigate }: DashboardViewProps) {
+  const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const activeRoutines = templates.length > 0 ? templates : DEFAULT_STARTER_ROUTINES;
 
   // Compute weekly workouts and weekly streak (consecutive weeks hitting the weekly goal)
@@ -204,23 +206,27 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
       </div>
 
       {/* 2. CARD PRINCIPAL DE GINÁSIO: O Teu Próximo Treino (Destaque Maior) */}
-      <div style={{
-        background: "linear-gradient(135deg, #5B5EF4 0%, #7B7FF5 100%)",
-        borderRadius: "26px",
-        padding: "22px",
-        color: "#ffffff",
-        boxShadow: "0 10px 30px rgba(91, 94, 244, 0.35)",
-        position: "relative",
-        overflow: "hidden"
-      }}>
+      <div 
+        onClick={() => nextRoutine && setPreviewTemplate(nextRoutine)}
+        style={{
+          background: "linear-gradient(135deg, #5B5EF4 0%, #7B7FF5 100%)",
+          borderRadius: "26px",
+          padding: "22px",
+          color: "#ffffff",
+          boxShadow: "0 10px 30px rgba(91, 94, 244, 0.35)",
+          position: "relative",
+          overflow: "hidden",
+          cursor: nextRoutine ? "pointer" : "default"
+        }}
+      >
         <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.1)", pointerEvents: "none" }} />
         
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
           <span style={{ fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", background: "rgba(255,255,255,0.2)", padding: "4px 10px", borderRadius: "10px" }}>
             SUGESTÃO DE HOJE
           </span>
-          <span style={{ fontSize: "0.75rem", opacity: 0.85, fontWeight: 600 }}>
-            {nextRoutine ? `${nextRoutine.exercises.length} exercícios` : "Treino livre"}
+          <span style={{ fontSize: "0.75rem", opacity: 0.9, fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}>
+            <Eye size={13} /> {nextRoutine ? `${nextRoutine.exercises.length} exercícios` : "Treino livre"}
           </span>
         </div>
 
@@ -235,7 +241,7 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
         </p>
 
         {/* Botão de Começar Imediatamente */}
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={{ display: "flex", gap: "10px" }} onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => nextRoutine ? onStartWorkoutFromTemplate(nextRoutine) : onStartWorkout()}
             style={{
@@ -361,7 +367,7 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
             return (
               <div
                 key={routine.id}
-                onClick={() => onStartWorkoutFromTemplate(routine)}
+                onClick={() => setPreviewTemplate(routine)}
                 style={{
                   background: "#FFFFFF",
                   border: "1px solid var(--border-color)",
@@ -403,13 +409,13 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
                   width: 36,
                   height: 36,
                   borderRadius: "12px",
-                  background: "var(--accent-gradient)",
+                  background: "rgba(91, 94, 244, 0.08)",
+                  color: "var(--accent-color)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 3px 10px var(--accent-glow)"
                 }}>
-                  <Play size={16} color="#fff" fill="#fff" />
+                  <Eye size={18} />
                 </div>
               </div>
             );
@@ -539,6 +545,13 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
       >
         <Plus size={28} strokeWidth={2.5} />
       </button>
+
+      {/* Routine Preview Modal */}
+      <RoutinePreviewModal
+        template={previewTemplate}
+        onClose={() => setPreviewTemplate(null)}
+        onStartWorkout={onStartWorkoutFromTemplate}
+      />
 
     </div>
   );
