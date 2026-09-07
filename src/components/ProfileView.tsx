@@ -62,6 +62,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [editAge, setEditAge] = useState(profile.age.toString());
   const [editAvatarUrl, setEditAvatarUrl] = useState(profile.avatarUrl);
   const [editAvatarType, setEditAvatarType] = useState(profile.avatarType);
+  const [editWeeklyGoal, setEditWeeklyGoal] = useState(profile.weeklyGoal || 4);
 
   // Calculate statistics
   const totalWorkouts = workouts.length;
@@ -845,6 +846,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               setEditAge(profile.age.toString());
               setEditAvatarUrl(profile.avatarUrl);
               setEditAvatarType(profile.avatarType);
+              setEditWeeklyGoal(profile.weeklyGoal || 4);
               setShowEditProfileModal(true);
             }}
           >
@@ -859,8 +861,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
           <div>
             <h2 style={{ fontSize: '1.3rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>{profile.name || 'Sem Nome'}</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700 }}>
-              ⚖️ {profile.weight} kg • {profile.age} anos
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+              <span>⚖️ {profile.weight} kg</span>
+              <span>•</span>
+              <span>{profile.age} anos</span>
+              <span>•</span>
+              <span style={{ color: 'var(--accent-color)', backgroundColor: 'rgba(255, 94, 58, 0.08)', padding: '2px 8px', borderRadius: '8px' }}>🎯 {profile.weeklyGoal || 4}x/semana</span>
             </p>
           </div>
         </div>
@@ -873,6 +879,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             setEditAge(profile.age.toString());
             setEditAvatarUrl(profile.avatarUrl);
             setEditAvatarType(profile.avatarType);
+            setEditWeeklyGoal(profile.weeklyGoal || 4);
             setShowEditProfileModal(true);
           }}
           style={{ padding: '8px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '4px' }}
@@ -1000,7 +1007,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 age: parseInt(editAge, 10) || 0,
                 avatarUrl: editAvatarUrl,
                 avatarType: editAvatarType,
-                onboarded: true
+                onboarded: true,
+                weeklyGoal: editWeeklyGoal,
               });
               setShowEditProfileModal(false);
             }} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1105,6 +1113,36 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   onChange={(e) => setEditAge(e.target.value)}
                   style={{ fontWeight: 600 }}
                 />
+              </div>
+
+              {/* Weekly Frequency Selection */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frequência Semanal de Treino</label>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--accent-color)' }}>{editWeeklyGoal}x por semana</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+                  {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setEditWeeklyGoal(num)}
+                      style={{
+                        padding: '10px 0',
+                        borderRadius: '10px',
+                        border: editWeeklyGoal === num ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                        background: editWeeklyGoal === num ? 'rgba(255, 94, 58, 0.12)' : 'var(--bg-secondary)',
+                        color: editWeeklyGoal === num ? 'var(--accent-color)' : 'var(--text-primary)',
+                        fontWeight: 800,
+                        fontSize: '0.88rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      {num}x
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <button type="submit" className="btn btn-primary" style={{ marginTop: '8px', padding: '14px' }}>

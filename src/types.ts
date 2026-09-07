@@ -51,6 +51,7 @@ export interface UserProfile {
   avatarUrl: string; // base64 string or silhouette/emoji
   avatarType: 'emoji' | 'image' | 'silhouette';
   onboarded: boolean;
+  weeklyGoal?: number; // Target workout days per week (1-7)
 }
 
 export type ActiveTab = 'dashboard' | 'workout' | 'history' | 'prs' | 'routines' | 'profile';

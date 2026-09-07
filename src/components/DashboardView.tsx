@@ -242,8 +242,8 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
             <Calendar size={16} color="var(--accent-color)" />
             <p style={{ fontSize: "0.85rem", fontWeight: 800, color: "var(--text-primary)" }}>Frequência Semanal</p>
           </div>
-          <span style={{ fontSize: "0.78rem", fontWeight: 800, color: "var(--accent-color)" }}>
-            {thisWeekCount} de 5 treinos
+          <span style={{ fontSize: "0.78rem", fontWeight: 800, color: thisWeekCount >= (profile?.weeklyGoal || 4) ? '#10b981' : "var(--accent-color)" }}>
+            {thisWeekCount} de {profile?.weeklyGoal || 4} treinos {thisWeekCount >= (profile?.weeklyGoal || 4) && '🎉'}
           </span>
         </div>
 

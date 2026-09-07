@@ -32,6 +32,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   avatarUrl: '',
   avatarType: 'silhouette',
   onboarded: false,
+  weeklyGoal: 4,
 };
 
 // Initial App State
@@ -69,7 +70,7 @@ export function loadAppData(): AppData {
       exercises: parsed.exercises && parsed.exercises.length > 0 ? parsed.exercises : DEFAULT_EXERCISES,
       prs: parsed.prs || [],
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
-      profile: parsed.profile || DEFAULT_PROFILE,
+      profile: { ...DEFAULT_PROFILE, ...(parsed.profile || {}) },
       templates: parsed.templates || [],
     };
   } catch (error) {

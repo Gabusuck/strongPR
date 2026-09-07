@@ -869,6 +869,54 @@ export default function App() {
                     <Smartphone size={18} />
                   </button>
                 </div>
+
+                {/* Workout Frequency / Weekly Goal */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>Meta de Treinos Semanal</div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Quantos dias por semana planeias treinar.</div>
+                    </div>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--accent-color)' }}>
+                      {appData.profile.weeklyGoal || 4}x / semana
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginTop: '2px' }}>
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => {
+                      const currentGoal = appData.profile.weeklyGoal || 4;
+                      const isSelected = currentGoal === num;
+                      return (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => {
+                            updateAppDataState({
+                              ...appData,
+                              profile: {
+                                ...appData.profile,
+                                weeklyGoal: num
+                              }
+                            });
+                          }}
+                          style={{
+                            padding: '8px 0',
+                            borderRadius: '10px',
+                            border: isSelected ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                            background: isSelected ? 'rgba(255, 94, 58, 0.12)' : 'var(--bg-secondary)',
+                            color: isSelected ? 'var(--accent-color)' : 'var(--text-primary)',
+                            fontWeight: 800,
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {num}x
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Backups */}
@@ -971,7 +1019,7 @@ export default function App() {
 }
 
 interface OnboardWizardProps {
-  onComplete: (profile: { name: string; weight: number; height: number; age: number; avatarUrl: string; avatarType: 'emoji' | 'image' | 'silhouette' }) => void;
+  onComplete: (profile: { name: string; weight: number; height: number; age: number; avatarUrl: string; avatarType: 'emoji' | 'image' | 'silhouette'; weeklyGoal: number }) => void;
 }
 
 const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
@@ -981,6 +1029,7 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
   const [age, setAge] = useState('25');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarType, setAvatarType] = useState<'emoji' | 'image' | 'silhouette'>('silhouette');
+  const [weeklyGoal, setWeeklyGoal] = useState<number>(4);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1058,7 +1107,8 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
       height: parseFloat(height) || 175,
       age: parseInt(age, 10) || 25,
       avatarUrl,
-      avatarType
+      avatarType,
+      weeklyGoal,
     });
   };
 
@@ -1119,6 +1169,53 @@ const OnboardWizard: React.FC<OnboardWizardProps> = ({ onComplete }) => {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Idade</label>
             <input type="number" required className="form-input" value={age} onChange={(e) => setAge(e.target.value)} style={{ fontWeight: 700, fontFamily: 'var(--font-display)', padding: '10px 8px', textAlign: 'center' }} />
+          </div>
+        </div>
+
+        {/* Weekly workout frequency selector */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Frequência de Treino
+            </label>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--accent-color)' }}>
+              {weeklyGoal} {weeklyGoal === 1 ? 'dia' : 'dias'} / semana
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
+            {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setWeeklyGoal(num)}
+                style={{
+                  padding: '10px 0',
+                  borderRadius: '12px',
+                  border: weeklyGoal === num ? '2px solid var(--accent-color)' : '1px solid var(--border-color)',
+                  background: weeklyGoal === num ? 'rgba(255, 94, 58, 0.12)' : 'var(--bg-secondary)',
+                  color: weeklyGoal === num ? 'var(--accent-color)' : 'var(--text-primary)',
+                  fontWeight: 800,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+              >
+                <span>{num}x</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+            {weeklyGoal <= 2 && 'Iniciante / Manutenção'}
+            {weeklyGoal === 3 && '3 dias (Push / Pull / Legs)'}
+            {weeklyGoal === 4 && '4 dias (Recomendado — Upper / Lower)'}
+            {weeklyGoal === 5 && '5 dias (PPL + Upper Lower)'}
+            {weeklyGoal === 6 && '6 dias (Avançado — PPL 2x)'}
+            {weeklyGoal === 7 && '7 dias (Todos os dias)'}
           </div>
         </div>
 
