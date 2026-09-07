@@ -1,4 +1,4 @@
-const CACHE_NAME = 'strongpr-cache-v65';
+const CACHE_NAME = 'strongpr-cache-v66';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',

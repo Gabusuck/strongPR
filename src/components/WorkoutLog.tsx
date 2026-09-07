@@ -558,6 +558,26 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     setDragOverIdx(null);
   };
 
+  // Auto-expand current active exercise when starting or changing workout
+  const activeWorkoutId = activeWorkout?.id;
+  useEffect(() => {
+    if (!activeWorkout || !activeWorkout.exercises || activeWorkout.exercises.length === 0) return;
+    setExpandedExerciseIds(prev => {
+      // If user has already opened or closed an exercise manually during this workout, preserve state
+      if (Object.keys(prev).length > 0) return prev;
+      
+      // Otherwise, open the first exercise with incomplete sets
+      const firstIncomplete = activeWorkout.exercises.find(
+        e => (e.sets || []).some(s => !s.isCompleted)
+      ) || activeWorkout.exercises[0];
+
+      if (firstIncomplete) {
+        return { [firstIncomplete.id]: true };
+      }
+      return prev;
+    });
+  }, [activeWorkoutId]);
+
   const { bind: bindRoutineLongPress } = useLongPress<WorkoutTemplate>({
     onLongPress: (template) => {
       window.customConfirm(
@@ -944,6 +964,33 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
   const handleUpdateSet = (exerciseId: string, setId: string, updates: Partial<Set>) => {
     if (!activeWorkout) return;
+
+    // Se concluiu uma série, verifica se todas as séries deste exercício ficaram completas
+    if (updates.isCompleted === true) {
+      const targetExercise = (activeWorkout.exercises || []).find((e) => e.id === exerciseId);
+      if (targetExercise) {
+        const willBeAllCompleted = (targetExercise.sets || []).every((s) =>
+          s.id === setId ? true : s.isCompleted
+        );
+
+        if (willBeAllCompleted) {
+          const currentIndex = (activeWorkout.exercises || []).findIndex((e) => e.id === exerciseId);
+          const nextExercise = (activeWorkout.exercises || [])[currentIndex + 1];
+
+          // Fecha o exercício atual e abre o seguinte suavemente
+          setTimeout(() => {
+            setExpandedExerciseIds((prev) => {
+              const updated = { ...prev, [exerciseId]: false };
+              if (nextExercise) {
+                updated[nextExercise.id] = true;
+              }
+              return updated;
+            });
+          }, 280);
+        }
+      }
+    }
+
     onUpdateWorkout({
       ...activeWorkout,
       exercises: (activeWorkout.exercises || []).map((ex) => {
