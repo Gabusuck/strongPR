@@ -7,7 +7,7 @@ import { ProfileView } from './components/ProfileView';
 import { DashboardView } from './components/DashboardView';
 import { PRView } from './components/PRView';
 import { RoutinesView } from './components/RoutinesView';
-import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X, BarChart3, Medal, Trash2 } from 'lucide-react';
+import { History, Dumbbell, User, Sparkles, CheckCircle2, Trophy, Upload, MoreVertical, Volume2, VolumeX, Smartphone, Download, ShieldAlert, RotateCcw, X, BarChart3, Medal, Trash2, AlertTriangle } from 'lucide-react';
 
 interface CustomDialogConfig {
   isOpen: boolean;
@@ -75,6 +75,7 @@ export default function App() {
 
   // Settings modal states
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const [importStatus, setImportStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' });
 
@@ -974,32 +975,130 @@ export default function App() {
               </div>
 
               {/* Danger Zone */}
-              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: 0, padding: '16px' }}>
+              <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px', border: '1.5px solid rgba(239, 68, 68, 0.25)', backgroundColor: 'rgba(239, 68, 68, 0.02)', marginBottom: 0, padding: '16px' }}>
                 <h4 style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ShieldAlert size={16} />
                   Zona de Perigo
                 </h4>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                  Elimina todos os treinos, histórico, PRs e dados da app inteira.
+                </p>
                 <button 
                   className="btn btn-danger btn-small"
-                  onClick={() => {
-                    window.customConfirm(
-                      'Eliminar Todo o Progresso',
-                      'ATENÇÃO: Tens a certeza absoluta de que queres eliminar TODOS os teus dados de treinos, exercícios personalizados e recordes pessoais? Esta ação é irreversível.',
-                      () => {
-                        handleResetData();
-                        setShowSettingsModal(false);
-                      }
-                    );
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', fontSize: '0.78rem' }}
+                  onClick={() => setShowResetConfirmModal(true)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', fontSize: '0.8rem', fontWeight: 800, padding: '10px' }}
                 >
-                  <RotateCcw size={14} /> Eliminar Progresso
+                  <RotateCcw size={14} /> Eliminar Todo o Progresso
                 </button>
               </div>
 
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '10px' }}>
                 StrongPR PWA • Versão 1.3.0
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* High-Visibility Reset All Data Confirmation Modal */}
+      {showResetConfirmModal && (
+        <div 
+          onClick={() => setShowResetConfirmModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 1200,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '380px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '24px 20px',
+              boxShadow: '0 25px 60px rgba(239, 68, 68, 0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              border: '2px solid rgba(239, 68, 68, 0.5)',
+              animation: 'scaleUp var(--transition-fast) cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }}
+          >
+            {/* Header Icon + Title */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '8px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                color: 'var(--danger)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid rgba(239, 68, 68, 0.3)'
+              }}>
+                <AlertTriangle size={28} />
+              </div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--font-display)', color: 'var(--danger)', letterSpacing: '-0.02em', margin: 0 }}>
+                APAGAR DADOS E PROGRESSO?
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontWeight: 600, margin: 0, lineHeight: '1.4' }}>
+                Aviso: Estás prestes a apagar permanentemente <strong style={{ color: 'var(--text-primary)' }}>todos os dados da app inteira</strong>.
+              </p>
+            </div>
+
+            {/* Warning details list card */}
+            <div style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.05)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '16px',
+              padding: '14px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--danger)', letterSpacing: '0.04em' }}>
+                O que vai ser eliminado:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '0.78rem', color: 'var(--text-primary)', fontWeight: 600, lineHeight: '1.6' }}>
+                <li>Todos os treinos e séries gravadas</li>
+                <li>Todos os Recordes Pessoais (PRs) e histórico</li>
+                <li>Todas as rotinas e exercícios personalizados</li>
+                <li>Perfil do atleta e metas configuradas</li>
+              </ul>
+              <div style={{ fontSize: '0.72rem', color: 'var(--danger)', fontWeight: 800, marginTop: '4px', textAlign: 'center' }}>
+                ⚠️ Esta ação é permanente e irreversível!
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+              <button
+                className="btn btn-danger"
+                onClick={() => {
+                  handleResetData();
+                  setShowResetConfirmModal(false);
+                  setShowSettingsModal(false);
+                }}
+                style={{ width: '100%', padding: '14px', fontSize: '0.88rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <Trash2 size={16} /> Sim, Apagar Tudo
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowResetConfirmModal(false)}
+                style={{ width: '100%', padding: '12px', fontSize: '0.84rem', fontWeight: 800 }}
+              >
+                Cancelar (Manter os Meus Dados)
+              </button>
             </div>
           </div>
         </div>
