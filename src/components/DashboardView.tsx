@@ -63,8 +63,9 @@ function getWeekDays() {
 export function DashboardView({ workouts, prs, profile, templates, onStartWorkout, onStartWorkoutFromTemplate, onNavigate }: DashboardViewProps) {
   const activeRoutines = templates.length > 0 ? templates : DEFAULT_STARTER_ROUTINES;
 
-  // Compute weekly workouts and streak
-  const { weekDaysTrained, thisWeekCount, streak, lastWorkout } = useMemo(() => {
+  // Compute weekly workouts and weekly streak (consecutive weeks hitting the weekly goal)
+  const { weekDaysTrained, thisWeekCount, weeklyGoal, weeklyStreak, isFlameLit, lastWorkout } = useMemo(() => {
+    const goal = profile?.weeklyGoal || 4;
     const now = new Date();
     const todayIdx = now.getDay() === 0 ? 6 : now.getDay() - 1;
     const weekStart = new Date(now);
@@ -76,8 +77,20 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
 
     const validWorkouts = (workouts || []).filter(w => w && w.date);
 
+    // Group workouts by ISO week (Monday 00:00:00 timestamp)
+    const workoutsByWeek = new Map<number, number>();
+
     validWorkouts.forEach(w => {
       const d = new Date(w.date);
+      if (isNaN(d.getTime())) return;
+      const dDay = d.getDay() === 0 ? 6 : d.getDay() - 1;
+      const wWeekStart = new Date(d);
+      wWeekStart.setDate(d.getDate() - dDay);
+      wWeekStart.setHours(0, 0, 0, 0);
+      const weekKey = wWeekStart.getTime();
+
+      workoutsByWeek.set(weekKey, (workoutsByWeek.get(weekKey) || 0) + 1);
+
       if (d >= weekStart) {
         const idx = d.getDay() === 0 ? 6 : d.getDay() - 1;
         weekDaysTrained[idx] = true;
@@ -85,28 +98,43 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
       }
     });
 
-    // Compute streak
-    let streak = 0;
-    const sorted = [...validWorkouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    const check = new Date();
-    check.setHours(0, 0, 0, 0);
-    for (const w of sorted) {
-      const d = new Date(w.date);
-      d.setHours(0, 0, 0, 0);
-      const diff = Math.round((check.getTime() - d.getTime()) / 86400000);
-      if (diff === 0 || diff === streak) {
-        streak = diff + 1;
-        check.setDate(check.getDate() - 1);
-      } else break;
+    const isThisWeekMet = count >= goal;
+
+    // Check past consecutive weeks
+    let pastConsecutiveWeeks = 0;
+    const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+    let checkWeekTime = weekStart.getTime() - oneWeekMs;
+
+    while (true) {
+      const countForWeek = workoutsByWeek.get(checkWeekTime) || 0;
+      if (countForWeek >= goal) {
+        pastConsecutiveWeeks++;
+        checkWeekTime -= oneWeekMs;
+      } else {
+        break;
+      }
     }
+
+    // Weekly streak: past met weeks + 1 if current week is already met
+    let totalWeeklyStreak = pastConsecutiveWeeks;
+    if (isThisWeekMet) {
+      totalWeeklyStreak += 1;
+    }
+
+    // Flame is lit only when streak is active (current week met or maintaining unbroken streak from past weeks)
+    const flameLit = isThisWeekMet || pastConsecutiveWeeks > 0;
+
+    const sorted = [...validWorkouts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       weekDaysTrained,
       thisWeekCount: count,
-      streak,
+      weeklyGoal: goal,
+      weeklyStreak: totalWeeklyStreak,
+      isFlameLit: flameLit,
       lastWorkout: sorted.length > 0 ? sorted[0] : null
     };
-  }, [workouts]);
+  }, [workouts, profile?.weeklyGoal]);
 
   // Next suggested routine to perform (smart rotation)
   const nextRoutine = useMemo(() => {
@@ -124,31 +152,56 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       
       {/* 1. TOPO: Saudação & Resumo de Streak */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-display)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px" }}>
+        <div style={{ minWidth: 0, flex: "1 1 auto" }}>
+          <h2 style={{ 
+            fontSize: "1.35rem", 
+            fontWeight: 800, 
+            color: "var(--text-primary)", 
+            fontFamily: "var(--font-display)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+          }}>
             {getGreeting(profile?.name || "Atleta")}
           </h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "2px" }}>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             Pronto para o treino de hoje?
           </p>
         </div>
 
-        {/* Streak Badge */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          background: "#FFF4E5",
-          border: "1px solid #FFE2B8",
-          padding: "8px 14px",
-          borderRadius: "20px",
-          color: "#D97706",
-          fontWeight: 800,
-          fontSize: "0.85rem"
-        }}>
-          <Flame size={18} color="#FF9500" fill="#FF9500" />
-          <span>{streak > 0 ? `${streak} dias` : "0 dias"}</span>
+        {/* Streak Badge — Single line, no wrapping */}
+        <div 
+          title={isFlameLit 
+            ? `${weeklyStreak} ${weeklyStreak === 1 ? 'semana consecutiva' : 'semanas consecutivas'} a bater a meta de ${weeklyGoal} treinos!` 
+            : `Bate a meta de ${weeklyGoal} treinos esta semana para acender o foguinho! (${thisWeekCount}/${weeklyGoal})`
+          }
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "6px",
+            background: isFlameLit ? "#FFF4E5" : "var(--bg-secondary)",
+            border: isFlameLit ? "1px solid #FFE2B8" : "1px solid var(--border-color)",
+            padding: "8px 14px",
+            borderRadius: "20px",
+            color: isFlameLit ? "#D97706" : "var(--text-muted)",
+            fontWeight: 800,
+            fontSize: "0.82rem",
+            flexShrink: 0,
+            whiteSpace: "nowrap",
+            boxShadow: isFlameLit ? "0 2px 8px rgba(217, 119, 6, 0.15)" : "none",
+            transition: "all 0.2s ease"
+          }}
+        >
+          <Flame 
+            size={18} 
+            color={isFlameLit ? "#FF9500" : "#94a3b8"} 
+            fill={isFlameLit ? "#FF9500" : "none"} 
+            style={{ flexShrink: 0 }}
+          />
+          <span style={{ whiteSpace: "nowrap" }}>
+            {weeklyStreak > 0 ? `${weeklyStreak} ${weeklyStreak === 1 ? 'semana' : 'semanas'}` : "0 sem"}
+          </span>
         </div>
       </div>
 
