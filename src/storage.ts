@@ -92,53 +92,82 @@ export function saveAppData(data: AppData): void {
 export function checkAndUpdatePRs(workout: Workout, existingPRs: PersonalRecord[]): { updatedPRs: PersonalRecord[], newPRsCount: number } {
   const updatedPRs = [...existingPRs];
   let newPRsCount = 0;
-  const nowStr = new Date().toISOString();
+  const nowStr = workout.date || new Date().toISOString();
 
-  workout.exercises.forEach((workoutExercise) => {
+  (workout.exercises || []).forEach((workoutExercise) => {
     // Find the best completed set for this exercise in this workout
-    const completedSets = workoutExercise.sets.filter((s) => s.isCompleted);
+    const completedSets = (workoutExercise.sets || []).filter((s) => s && s.isCompleted);
     if (completedSets.length === 0) return;
 
-    // Find the set with highest weight, or highest estimated 1RM
-    // We count a new PR if either weight is higher than previous max weight, OR 1RM is higher.
-    // In our app, let's track the maximum 1RM or maximum absolute weight as PR.
-    // Let's use weight as the primary PR criterion, and reps as tiebreaker.
-    // Specifically: we find the set with highest weight and reps, compute its 1RM.
     let bestSet = completedSets[0];
     completedSets.forEach((s) => {
-      // Best weight or (equal weight and more reps)
-      if (s.weight > bestSet.weight || (s.weight === bestSet.weight && s.reps > bestSet.reps)) {
+      const sw = Number(s.weight) || 0;
+      const sr = Number(s.reps) || 0;
+      const bw = Number(bestSet.weight) || 0;
+      const br = Number(bestSet.reps) || 0;
+      if (sw > bw || (sw === bw && sr > br)) {
         bestSet = s;
       }
     });
 
-    const est1RM = calculate1RM(bestSet.weight, bestSet.reps);
-    
-    // Find existing best PR for this exercise
-    const exercisePRs = updatedPRs.filter((p) => p.exerciseId === workoutExercise.id);
-    const previousBestPR = exercisePRs.length > 0
-      ? exercisePRs.reduce((prev, curr) => (curr.weight > prev.weight ? curr : prev))
-      : null;
+    const currWeight = Number(bestSet.weight) || 0;
+    const currReps = Number(bestSet.reps) || 0;
+    if (currWeight <= 0 && currReps <= 0) return;
 
-    if (!previousBestPR || bestSet.weight > previousBestPR.weight || (bestSet.weight === previousBestPR.weight && bestSet.reps > previousBestPR.reps)) {
-      // We have a new Personal Record!
+    const est1RM = calculate1RM(currWeight, currReps);
+    
+    // Find existing PR for this exercise (by ID or case-insensitive exercise name)
+    const existingIndex = updatedPRs.findIndex(
+      (p) => p.exerciseId === workoutExercise.id || p.exerciseName.toLowerCase().trim() === workoutExercise.name.toLowerCase().trim()
+    );
+    const previousPR = existingIndex !== -1 ? updatedPRs[existingIndex] : null;
+
+    const isBetter = !previousPR || 
+      currWeight > previousPR.weight || 
+      (currWeight === previousPR.weight && currReps > previousPR.reps) ||
+      est1RM > previousPR.estimated1RM;
+
+    if (isBetter) {
+      // We have a new or improved Personal Record!
       const newPR: PersonalRecord = {
-        id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
+        id: previousPR ? previousPR.id : (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9)),
         exerciseId: workoutExercise.id,
         exerciseName: workoutExercise.name,
-        weight: bestSet.weight,
-        reps: bestSet.reps,
+        weight: currWeight,
+        reps: currReps,
         estimated1RM: est1RM,
         date: nowStr,
         workoutId: workout.id,
       };
       
-      updatedPRs.push(newPR);
+      if (existingIndex !== -1) {
+        // Replace previous old PR with the new PR
+        updatedPRs[existingIndex] = newPR;
+      } else {
+        updatedPRs.push(newPR);
+      }
       newPRsCount++;
     }
   });
 
   return { updatedPRs, newPRsCount };
+}
+
+// Recalculates all PRs from a list of workouts and optional manual PRs
+export function recalculateAllPRs(workouts: Workout[], manualPRs: PersonalRecord[] = []): PersonalRecord[] {
+  let currentPRs: PersonalRecord[] = (manualPRs || []).filter(p => !p.workoutId);
+
+  // Sort workouts chronologically from oldest to newest
+  const validWorkouts = (workouts || [])
+    .filter(w => w && w.date && w.exercises && w.exercises.length > 0)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  validWorkouts.forEach((w) => {
+    const { updatedPRs } = checkAndUpdatePRs(w, currentPRs);
+    currentPRs = updatedPRs;
+  });
+
+  return currentPRs;
 }
 
 // Export backup to JSON file

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import type { ActiveTab, AppData, Workout, AppSettings } from './types';
-import { loadAppData, saveAppData, checkAndUpdatePRs, INITIAL_DATA, exportBackup, importBackup } from './storage';
+import type { ActiveTab, AppData, Workout, AppSettings, PersonalRecord } from './types';
+import { loadAppData, saveAppData, checkAndUpdatePRs, recalculateAllPRs, INITIAL_DATA, exportBackup, importBackup } from './storage';
 import { WorkoutLog } from './components/WorkoutLog';
 import { HistoryView } from './components/HistoryView';
 import { ProfileView } from './components/ProfileView';
@@ -309,12 +309,16 @@ export default function App() {
     );
   };
 
-  // Delete a workout from history
+  // Delete a workout from history and recalculate PRs
   const handleDeleteWorkout = (workoutId: string) => {
     const updatedWorkouts = (appData.workouts || []).filter(w => w && w.id !== workoutId);
+    const manualPRs = (appData.prs || []).filter(p => !p.workoutId || p.workoutId !== workoutId);
+    const updatedPRs = recalculateAllPRs(updatedWorkouts, manualPRs);
+
     updateAppDataState({
       ...appData,
-      workouts: updatedWorkouts
+      workouts: updatedWorkouts,
+      prs: updatedPRs
     });
     if (activeWorkout && activeWorkout.id === workoutId) {
       setActiveWorkout(null);
@@ -350,26 +354,37 @@ export default function App() {
     });
   };
 
-  // Add manual PR
+  // Add manual PR (replaces previous PR for that exercise)
   const handleAddManualPR = (exerciseId: string, weight: number, reps: number, date: string) => {
     const exercise = appData.exercises.find((e) => e.id === exerciseId);
     if (!exercise) return;
 
     const est1RM = Math.round(weight * (1 + 0.0333 * reps) * 10) / 10;
     
-    const newPR = {
+    const newPR: PersonalRecord = {
       id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 9),
       exerciseId,
       exerciseName: exercise.name,
       weight,
       reps,
       estimated1RM: est1RM,
-      date,
+      date: date || new Date().toISOString(),
     };
+
+    const existingIndex = (appData.prs || []).findIndex(
+      (p) => p.exerciseId === exerciseId || p.exerciseName.toLowerCase().trim() === exercise.name.toLowerCase().trim()
+    );
+
+    let updatedPRs = [...(appData.prs || [])];
+    if (existingIndex !== -1) {
+      updatedPRs[existingIndex] = newPR;
+    } else {
+      updatedPRs.push(newPR);
+    }
 
     updateAppDataState({
       ...appData,
-      prs: [...appData.prs, newPR]
+      prs: updatedPRs
     });
   };
 
