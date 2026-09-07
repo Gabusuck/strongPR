@@ -4,6 +4,7 @@ import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, 
 import { translateExerciseName } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
+import { CreateRoutineModal } from './CreateRoutineModal';
 import { useLongPress } from '../utils/useLongPress';
 
 export const SET_TYPE_OPTIONS: { type: SetType; label: string; badge: string; desc: string; color: string; bg: string; border: string }[] = [
@@ -662,9 +663,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   // Template creation / exercise multi-select state
   const [showCreateTemplateModal, setShowCreateTemplateModal] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
-  const [newTemplateName, setNewTemplateName] = useState('');
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
-  const [templateSearchQuery, setTemplateSearchQuery] = useState('');
 
   const { bind: bindRoutineLongPress } = useLongPress<WorkoutTemplate>({
     onLongPress: (template) => {
@@ -904,43 +903,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
       }
     }
   };
-
-  const handleCreateTemplateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTemplateName.trim()) {
-      window.customAlert('Nome Inválido', 'Tens de introduzir um nome para o treino.');
-      return;
-    }
-    if (selectedExerciseIds.length === 0) {
-      window.customAlert('Nenhum Exercício', 'Seleciona pelo menos um exercício para a rotina.');
-      return;
-    }
-
-    const templateExercises: WorkoutExercise[] = selectedExerciseIds.map(id => {
-      const ex = exercises.find(e => e.id === id);
-      return {
-        id,
-        name: ex ? ex.name : 'Exercício',
-        category: ex ? ex.category : 'Outro',
-        sets: [{ id: Math.random().toString(36).substring(2, 9), weight: 0, reps: 0, isCompleted: false }]
-      };
-    });
-
-    onAddTemplate(newTemplateName, templateExercises);
-    setNewTemplateName('');
-    setSelectedExerciseIds([]);
-    setShowCreateTemplateModal(false);
-  };
-
-  const toggleSelectExercise = (id: string) => {
-    setSelectedExerciseIds(prev => 
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
-  };
-
-  const filteredTemplateExercises = exercises.filter(ex => 
-    !templateSearchQuery || ex.name.toLowerCase().includes(templateSearchQuery.toLowerCase()) || ex.category.toLowerCase().includes(templateSearchQuery.toLowerCase())
-  );
 
   const formatElapsed = (totalSecs: number) => {
     const hrs = Math.floor(totalSecs / 3600);
@@ -1262,111 +1224,13 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           )}
         </div>
 
-        {/* Modal: Create Template */}
-        {showCreateTemplateModal && (
-          <div className="modal-overlay" onClick={() => setShowCreateTemplateModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: '20px 20px 16px' }}>
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-display)' }}>Nova Rotina de Treino</h3>
-                <button 
-                  onClick={() => setShowCreateTemplateModal(false)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Form Content */}
-              <form onSubmit={handleCreateTemplateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0 }}>
-                
-                {/* Template Name */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nome da Rotina</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input"
-                    placeholder="ex: Treino A - Empurrar"
-                    value={newTemplateName}
-                    onChange={(e) => setNewTemplateName(e.target.value)}
-                    style={{ fontWeight: 600 }}
-                  />
-                </div>
-
-                {/* Exercises Selection */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, minHeight: 0 }}>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Selecionar Exercícios ({selectedExerciseIds.length})
-                  </label>
-                  
-                  {/* Search inside modal */}
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="Procurar exercício..."
-                      value={templateSearchQuery}
-                      onChange={(e) => setTemplateSearchQuery(e.target.value)}
-                      style={{ paddingLeft: '36px' }}
-                    />
-                  </div>
-
-                  {/* Scrollable list */}
-                  <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px', backgroundColor: 'rgba(0,0,0,0.02)' }}>
-                    {filteredTemplateExercises.map((ex) => {
-                      const isSelected = selectedExerciseIds.includes(ex.id);
-                      return (
-                        <div 
-                          key={ex.id}
-                          onClick={() => toggleSelectExercise(ex.id)}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: '10px 12px',
-                            borderRadius: '8px',
-                            border: `1px solid ${isSelected ? 'rgba(255, 94, 58, 0.2)' : 'transparent'}`,
-                            backgroundColor: isSelected ? 'rgba(255, 94, 58, 0.04)' : 'transparent',
-                            cursor: 'pointer',
-                            transition: 'all var(--transition-fast)'
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: isSelected ? 'var(--accent-color)' : 'var(--text-primary)' }}>
-                              {translateExerciseName(ex.name)}
-                            </div>
-                            <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{ex.category}</div>
-                          </div>
-                          <div style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '6px',
-                            border: `2px solid ${isSelected ? 'var(--accent-color)' : 'var(--border-color)'}`,
-                            backgroundColor: isSelected ? 'var(--accent-color)' : 'transparent',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#fff',
-                            transition: 'all var(--transition-fast)'
-                          }}>
-                            {isSelected && <Check size={14} strokeWidth={3} />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Footer buttons */}
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '14px', flexShrink: 0 }}>
-                  Criar Rotina de Treino
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
+        {/* Modal: Create Routine */}
+        <CreateRoutineModal
+          isOpen={showCreateTemplateModal}
+          onClose={() => setShowCreateTemplateModal(false)}
+          onSave={onAddTemplate}
+          exercises={exercises}
+        />
 
         {/* Modal: Routine Preview */}
         {previewTemplate && (

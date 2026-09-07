@@ -2,6 +2,7 @@ import { useState } from "react";
 import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye } from "lucide-react";
 import type { WorkoutTemplate, WorkoutExercise, Exercise } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
+import { CreateRoutineModal } from "./CreateRoutineModal";
 import { useLongPress } from "../utils/useLongPress";
 
 interface RoutinesViewProps {
@@ -12,9 +13,8 @@ interface RoutinesViewProps {
   onDeleteTemplate: (id: string) => void;
 }
 
-export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTemplate, onDeleteTemplate }: RoutinesViewProps) {
+export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate, onAddTemplate, onDeleteTemplate }: RoutinesViewProps) {
   const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
 
   const { bind } = useLongPress<WorkoutTemplate>({
@@ -29,13 +29,6 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
       setPreviewTemplate(template);
     }
   });
-
-  const handleCreate = () => {
-    if (!newName.trim()) return;
-    onAddTemplate(newName.trim(), []);
-    setNewName("");
-    setShowCreate(false);
-  };
 
   return (
     <div>
@@ -61,25 +54,13 @@ export function RoutinesView({ templates, onStartWorkoutFromTemplate, onAddTempl
         </button>
       </div>
 
-      {/* Create form inline */}
-      {showCreate && (
-        <div style={{ background: "#fff", border: "1px solid var(--border-color)", borderRadius: 16, padding: 16, marginBottom: 12, boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-          <p style={{ fontWeight: 700, fontSize: "0.88rem", color: "var(--text-primary)", marginBottom: 10 }}>Nova Rotina</p>
-          <input
-            className="form-input"
-            placeholder="Nome da rotina (ex: Push Day)"
-            value={newName}
-            onChange={e => setNewName(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleCreate()}
-            autoFocus
-            style={{ marginBottom: 10 }}
-          />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn btn-primary btn-small" style={{ flex: 1 }} onClick={handleCreate}>Criar</button>
-            <button className="btn btn-secondary btn-small" style={{ flex: 1 }} onClick={() => { setShowCreate(false); setNewName(""); }}>Cancelar</button>
-          </div>
-        </div>
-      )}
+      {/* Modal: Create Routine */}
+      <CreateRoutineModal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        onSave={onAddTemplate}
+        exercises={exercises}
+      />
 
       {/* Templates list */}
       {templates.length === 0 ? (
