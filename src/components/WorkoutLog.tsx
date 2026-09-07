@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
-import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye } from 'lucide-react';
+import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List, Eye, Timer, Zap, Trophy } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 import { RoutinePreviewModal } from './RoutinePreviewModal';
@@ -533,8 +533,6 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     }, 0);
   }, [activeWorkout]);
 
-  const liveVolumeStr = liveVolume >= 1000 ? `${(liveVolume / 1000).toFixed(1)}t` : `${Math.round(liveVolume)}kg`;
-
   // Live PRs count calculation for the active workout
   const livePRsCount = useMemo(() => {
     if (!activeWorkout || !activeWorkout.exercises) return 0;
@@ -598,6 +596,36 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
     return count;
   }, [activeWorkout, prs, workouts]);
+
+  const liveVolumeFormatted = useMemo(() => {
+    if (liveVolume >= 10000) {
+      return { value: (liveVolume / 1000).toFixed(1), unit: 'ton' };
+    }
+    return { value: Math.round(liveVolume).toLocaleString('pt-PT'), unit: 'kg' };
+  }, [liveVolume]);
+
+  const { completedSetsCount, totalSetsCount } = useMemo(() => {
+    if (!activeWorkout?.exercises) return { completedSetsCount: 0, totalSetsCount: 0 };
+    let completed = 0;
+    let total = 0;
+    activeWorkout.exercises.forEach(ex => {
+      (ex.sets || []).forEach(s => {
+        total++;
+        if (s.isCompleted) completed++;
+      });
+    });
+    return { completedSetsCount: completed, totalSetsCount: total };
+  }, [activeWorkout]);
+
+  const startTimeFormatted = useMemo(() => {
+    if (!activeWorkout?.date) return '';
+    try {
+      const d = new Date(activeWorkout.date);
+      return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  }, [activeWorkout?.date]);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -1276,92 +1304,200 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-      {/* Workout Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        <div style={{ minWidth: '130px', flex: '1 1 auto' }}>
-          <input
-            type="text"
-            className="form-input"
-            value={activeWorkout?.name || ''}
-            onChange={(e) => activeWorkout && onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
-            style={{ fontSize: '1.3rem', fontWeight: 850, fontFamily: 'var(--font-display)', background: 'transparent', border: 'none', padding: '2px 0', width: '100%', maxWidth: '240px', borderBottom: '1px solid transparent', borderRadius: 0 }}
-            placeholder="Nome do Treino"
-            onFocus={(e) => e.target.style.borderBottom = '1px solid var(--accent-color)'}
-            onBlur={(e) => e.target.style.borderBottom = '1px solid transparent'}
-          />
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: 'var(--accent-color)', borderRadius: '50%', boxShadow: '0 0 6px var(--accent-color)' }} />
-            A treinar...
+      {/* Active Workout Header & Professional Live HUD */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        
+        {/* Workout Name & Status Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+          <div style={{ minWidth: 0, flex: '1 1 auto' }}>
+            <input
+              type="text"
+              className="form-input"
+              value={activeWorkout?.name || ''}
+              onChange={(e) => activeWorkout && onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: 850,
+                fontFamily: 'var(--font-display)',
+                background: 'transparent',
+                border: 'none',
+                padding: '0',
+                width: '100%',
+                borderBottom: '1.5px dashed transparent',
+                borderRadius: 0,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.02em',
+                transition: 'border-color 0.2s'
+              }}
+              placeholder="Nome do Treino"
+              onFocus={(e) => e.target.style.borderBottom = '1.5px dashed var(--accent-color)'}
+              onBlur={(e) => e.target.style.borderBottom = '1.5px dashed transparent'}
+            />
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ 
+                display: 'inline-block', 
+                width: '7px', 
+                height: '7px', 
+                backgroundColor: '#10b981', 
+                borderRadius: '50%', 
+                boxShadow: '0 0 8px #10b981',
+                animation: 'pulse 2s infinite'
+              }} />
+              <span style={{ fontWeight: 600 }}>Treino em curso</span>
+              {startTimeFormatted && (
+                <>
+                  <span style={{ opacity: 0.4 }}>•</span>
+                  <span>Iniciado às {startTimeFormatted}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Sets Progress Badge */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            padding: '5px 10px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(91, 94, 244, 0.08)',
+            border: '1px solid rgba(91, 94, 244, 0.15)',
+            fontSize: '0.72rem',
+            fontWeight: 800,
+            color: 'var(--accent-color)',
+            flexShrink: 0
+          }}>
+            <span>{completedSetsCount}/{totalSetsCount} séries</span>
           </div>
         </div>
 
-        {/* Live stats badges & timer */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          {/* Live Volume Badge */}
-          <div 
-            title="Volume total levantado neste treino"
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px', 
-              backgroundColor: 'var(--bg-secondary)', 
-              padding: '6px 10px', 
-              borderRadius: '16px', 
-              border: '1px solid var(--border-color)', 
+        {/* Live HUD Dashboard Grid (3 Columns) */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '8px',
+          background: 'var(--bg-card)',
+          padding: '12px 10px',
+          borderRadius: '18px',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+        }}>
+          {/* 1. Duração / Tempo */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px 4px',
+            borderRadius: '12px',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            textAlign: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '3px' }}>
+              <Timer size={13} color="var(--accent-color)" />
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Tempo
+              </span>
+            </div>
+            <div style={{ 
               fontFamily: 'var(--font-display)', 
-              fontWeight: 800, 
-              fontSize: '0.8rem', 
+              fontSize: '1.15rem', 
+              fontWeight: 900, 
               color: 'var(--text-primary)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-            }}
-          >
-            <span style={{ fontSize: '0.85rem' }}>⚡</span>
-            <span>{liveVolumeStr}</span>
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              {formatElapsed(elapsedSeconds)}
+            </div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
+              duração
+            </div>
           </div>
 
-          {/* Live Records (PRs) Badge */}
-          <div 
-            title={livePRsCount > 0 ? `${livePRsCount} recorde(s) pessoal batido(s) neste treino!` : 'Recordes batidos neste treino'}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px', 
-              backgroundColor: livePRsCount > 0 ? '#FFFBEB' : 'var(--bg-secondary)', 
-              padding: '6px 10px', 
-              borderRadius: '16px', 
-              border: livePRsCount > 0 ? '1px solid #FDE68A' : '1px solid var(--border-color)', 
+          {/* 2. Volume Total */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px 4px',
+            borderRadius: '12px',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+            textAlign: 'center'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '3px' }}>
+              <Zap size={13} color="#00B2FE" />
+              <span style={{ fontSize: '0.62rem', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Volume
+              </span>
+            </div>
+            <div style={{ 
               fontFamily: 'var(--font-display)', 
-              fontWeight: 800, 
-              fontSize: '0.8rem', 
-              color: livePRsCount > 0 ? '#D97706' : 'var(--text-secondary)',
-              boxShadow: livePRsCount > 0 ? '0 1px 6px rgba(217,119,6,0.18)' : '0 1px 3px rgba(0,0,0,0.03)',
-              transition: 'all 0.2s'
-            }}
-          >
-            <span style={{ fontSize: '0.85rem' }}>🏆</span>
-            <span>{livePRsCount} {livePRsCount === 1 ? 'Recorde' : 'Recordes'}</span>
+              fontSize: '1.15rem', 
+              fontWeight: 900, 
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              {liveVolumeFormatted.value}
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', marginLeft: '2px' }}>
+                {liveVolumeFormatted.unit}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: '2px' }}>
+              carga total
+            </div>
           </div>
 
-          {/* Timer */}
-          <div 
-            title="Duração do treino"
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '4px', 
-              backgroundColor: 'var(--bg-secondary)', 
-              padding: '6px 10px', 
-              borderRadius: '16px', 
-              border: '1px solid var(--border-color)', 
+          {/* 3. Recordes (PRs) */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '8px 4px',
+            borderRadius: '12px',
+            background: livePRsCount > 0 ? 'rgba(245, 158, 11, 0.08)' : 'var(--bg-secondary)',
+            border: livePRsCount > 0 ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid var(--border-color)',
+            textAlign: 'center',
+            transition: 'all 0.2s ease',
+            boxShadow: livePRsCount > 0 ? '0 2px 10px rgba(245, 158, 11, 0.15)' : 'none'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '3px' }}>
+              <Trophy size={13} color={livePRsCount > 0 ? '#D97706' : 'var(--text-muted)'} />
+              <span style={{ 
+                fontSize: '0.62rem', 
+                fontWeight: 800, 
+                color: livePRsCount > 0 ? '#D97706' : 'var(--text-secondary)', 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.05em' 
+              }}>
+                Recordes
+              </span>
+            </div>
+            <div style={{ 
               fontFamily: 'var(--font-display)', 
-              fontWeight: 800, 
-              fontSize: '0.82rem', 
-              color: 'var(--text-primary)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
-            }}
-          >
-            <span style={{ fontSize: '0.85rem' }}>⏱️</span>
-            <span>{formatElapsed(elapsedSeconds)}</span>
+              fontSize: '1.15rem', 
+              fontWeight: 900, 
+              color: livePRsCount > 0 ? '#D97706' : 'var(--text-primary)',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2
+            }}>
+              {livePRsCount}
+              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: livePRsCount > 0 ? '#D97706' : 'var(--text-muted)', marginLeft: '2px' }}>
+                PR{livePRsCount === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div style={{ 
+              fontSize: '0.6rem', 
+              color: livePRsCount > 0 ? '#B45309' : 'var(--text-muted)', 
+              fontWeight: livePRsCount > 0 ? 800 : 600, 
+              marginTop: '2px' 
+            }}>
+              {livePRsCount > 0 ? '🔥 Novo PR!' : 'superados'}
+            </div>
           </div>
         </div>
       </div>
