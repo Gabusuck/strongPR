@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
+import type { Workout, Exercise, WorkoutExercise, Set, SetType, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
 import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
+
+export const SET_TYPE_OPTIONS: { type: SetType; label: string; badge: string; desc: string; color: string; bg: string; border: string }[] = [
+  { type: 'normal', label: 'Série Normal', badge: 'N', desc: 'Série de trabalho padrão', color: 'var(--text-primary)', bg: 'var(--bg-secondary)', border: 'var(--border-color)' },
+  { type: 'dropset', label: 'Drop Set', badge: 'D', desc: 'Reduzir carga sem descanso', color: '#8B5CF6', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.3)' },
+  { type: 'right', label: 'Braço / Lado Direito', badge: 'Dir', desc: 'Execução unilateral direita', color: '#10B981', bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)' },
+  { type: 'left', label: 'Braço / Lado Esquerdo', badge: 'Esq', desc: 'Execução unilateral esquerda', color: '#0EA5E9', bg: 'rgba(14,165,233,0.12)', border: 'rgba(14,165,233,0.3)' },
+  { type: 'warmup', label: 'Aquecimento', badge: 'W', desc: 'Série de ativação / leve', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.3)' },
+  { type: 'failure', label: 'Até à Falha', badge: 'F', desc: 'Repetições máximas até falhar', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)' },
+];
 
 // ─── Free Exercise DB types ───────────────────────────────────────────────────
 interface ApiExercise {
@@ -395,6 +404,9 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const [apiExercises, setApiExercises] = useState<ApiExercise[]>(() => cachedApiExercises || []);
   const [apiLoading, setApiLoading] = useState(() => !cachedApiExercises);
   const [apiError, setApiError] = useState(false);
+
+  // Set type picker state (Dropset, Right arm, Left arm, Warmup, Failure, Normal)
+  const [activeSetTypePicker, setActiveSetTypePicker] = useState<{ exerciseId: string; setId: string; currentType: SetType; setIndex: number } | null>(null);
 
   // Bookmarked exercises state
   const [bookmarkedIds, setBookmarkedIds] = useState<string[]>(() => {
@@ -1221,9 +1233,53 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {workoutExercise.sets.map((set, setIdx) => (
               <div key={set.id} style={{ display: 'grid', gridTemplateColumns: '30px 1.2fr 1fr 34px', gap: '6px', alignItems: 'center', padding: '6px 8px', borderRadius: '10px', backgroundColor: set.isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'rgba(255,255,255,0.01)', border: set.isCompleted ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid var(--border-color)', transition: 'all var(--transition-fast)' }}>
-                {/* Set Number */}
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', textAlign: 'center', color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => handleRemoveSet(workoutExercise.id, set.id)} title="Remover série">
-                  {setIdx + 1}
+                {/* Set Number / Type Picker Button */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSetTypePicker({
+                      exerciseId: workoutExercise.id,
+                      setId: set.id,
+                      currentType: set.type || 'normal',
+                      setIndex: setIdx
+                    })}
+                    title="Configurar tipo de série (Dropset, Braço Direito/Esquerdo, etc.)"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      padding: '2px 4px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '24px',
+                      transition: 'transform 0.15s, opacity 0.15s'
+                    }}
+                    onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.9)')}
+                    onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                  >
+                    {(() => {
+                      const type = set.type || 'normal';
+                      if (type === 'dropset') {
+                        return <span style={{ color: '#8B5CF6', backgroundColor: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>D</span>;
+                      }
+                      if (type === 'right') {
+                        return <span style={{ color: '#10B981', backgroundColor: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.3)', padding: '2px 4px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900 }}>Dir</span>;
+                      }
+                      if (type === 'left') {
+                        return <span style={{ color: '#0EA5E9', backgroundColor: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.3)', padding: '2px 4px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900 }}>Esq</span>;
+                      }
+                      if (type === 'warmup') {
+                        return <span style={{ color: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>W</span>;
+                      }
+                      if (type === 'failure') {
+                        return <span style={{ color: '#EF4444', backgroundColor: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', padding: '2px 5px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 900 }}>F</span>;
+                      }
+                      return <span style={{ color: set.isCompleted ? 'var(--success)' : 'var(--text-secondary)', fontFamily: 'var(--font-display)', fontWeight: 850, fontSize: '0.9rem' }}>{setIdx + 1}</span>;
+                    })()}
+                  </button>
                 </div>
 
                 {/* Weight */}
@@ -1921,6 +1977,148 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Set Type Selection Modal ────────────────────────────────────── */}
+      {activeSetTypePicker && (
+        <div
+          onClick={() => setActiveSetTypePicker(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15,23,42,0.6)',
+            backdropFilter: 'blur(4px)',
+            zIndex: 1100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '380px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '20px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.25)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>
+                  Tipo de Série #{activeSetTypePicker.setIndex + 1}
+                </h3>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  Escolhe a modalidade para esta série
+                </p>
+              </div>
+              <button
+                onClick={() => setActiveSetTypePicker(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Options list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {SET_TYPE_OPTIONS.map((opt) => {
+                const isSelected = (activeSetTypePicker.currentType || 'normal') === opt.type;
+                return (
+                  <button
+                    key={opt.type}
+                    type="button"
+                    onClick={() => {
+                      handleUpdateSet(activeSetTypePicker.exerciseId, activeSetTypePicker.setId, { type: opt.type });
+                      setActiveSetTypePicker(null);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 14px',
+                      borderRadius: '14px',
+                      backgroundColor: isSelected ? 'rgba(91,94,244,0.06)' : 'var(--bg-primary)',
+                      border: isSelected ? '1.5px solid var(--accent-color)' : '1px solid var(--border-color)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          backgroundColor: opt.bg,
+                          color: opt.color,
+                          border: `1px solid ${opt.border}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 900,
+                          fontSize: opt.badge.length > 2 ? '0.68rem' : '0.85rem',
+                          flexShrink: 0
+                        }}
+                      >
+                        {opt.badge}
+                      </span>
+                      <div style={{ textAlign: 'left' }}>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-primary)' }}>
+                          {opt.label}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginTop: '1px' }}>
+                          {opt.desc}
+                        </div>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'var(--accent-color)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Check size={13} strokeWidth={3} />
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Delete set option button */}
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  handleRemoveSet(activeSetTypePicker.exerciseId, activeSetTypePicker.setId);
+                  setActiveSetTypePicker(null);
+                }}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  padding: '10px',
+                  borderRadius: '12px',
+                  background: 'none',
+                  border: '1px solid rgba(239,68,68,0.25)',
+                  color: 'var(--danger)',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                <Trash2 size={15} /> Eliminar esta série
+              </button>
+            </div>
           </div>
         </div>
       )}

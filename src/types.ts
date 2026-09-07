@@ -1,8 +1,11 @@
+export type SetType = 'normal' | 'warmup' | 'dropset' | 'failure' | 'right' | 'left';
+
 export interface Set {
   id: string;
   weight: number;
   reps: number;
   isCompleted: boolean;
+  type?: SetType;
 }
 
 export interface WorkoutExercise {
