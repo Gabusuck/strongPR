@@ -111,31 +111,91 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const getFullYearGridDays = () => {
-    const days = [];
+    const currentYear = new Date().getFullYear();
     const today = new Date();
-    for (let i = 370; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(today.getDate() - i);
+    today.setHours(0, 0, 0, 0);
+
+    // Jan 1st of the current year
+    const jan1 = new Date(currentYear, 0, 1);
+    // Find the Monday of the week containing Jan 1st (0 = Mon, 6 = Sun)
+    const jan1DayOfWeek = (jan1.getDay() + 6) % 7;
+    const startDate = new Date(currentYear, 0, 1 - jan1DayOfWeek);
+
+    // Dec 31st of the current year
+    const dec31 = new Date(currentYear, 11, 31);
+    // Find the Sunday of the week containing Dec 31st
+    const dec31DayOfWeek = (dec31.getDay() + 6) % 7;
+    const endDate = new Date(currentYear, 11, 31 + (6 - dec31DayOfWeek));
+
+    const days: {
+      date: Date;
+      dateStr: string;
+      count: number;
+      volume: number;
+      isCurrentYear: boolean;
+      isFuture: boolean;
+    }[] = [];
+
+    // Map workouts by YYYY-MM-DD
+    const workoutsByDate: Record<string, typeof safeWorkouts> = {};
+    safeWorkouts.forEach(w => {
+      try {
+        const dStr = new Date(w.date).toISOString().split('T')[0];
+        if (!workoutsByDate[dStr]) workoutsByDate[dStr] = [];
+        workoutsByDate[dStr].push(w);
+      } catch {}
+    });
+
+    const curr = new Date(startDate);
+    while (curr <= endDate) {
+      const d = new Date(curr);
       const dateStr = d.toISOString().split('T')[0];
-      const dayWorkouts = safeWorkouts.filter(w => {
-        try {
-          return new Date(w.date).toISOString().split('T')[0] === dateStr;
-        } catch {
-          return false;
-        }
+      const isCurrentYear = d.getFullYear() === currentYear;
+      const isFuture = d > today;
+
+      let count = 0;
+      let volume = 0;
+
+      if (isCurrentYear && !isFuture) {
+        const dayWorkouts = workoutsByDate[dateStr] || [];
+        count = dayWorkouts.length;
+        volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
+      }
+
+      days.push({
+        date: d,
+        dateStr,
+        count,
+        volume,
+        isCurrentYear,
+        isFuture
       });
-      const count = dayWorkouts.length;
-      const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
-      days.push({ date: d, count, volume });
+
+      curr.setDate(curr.getDate() + 1);
     }
+
     return days;
+  };
+
+  const getYearMonthLabels = (days: ReturnType<typeof getFullYearGridDays>) => {
+    const monthNames = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+    const labels: { label: string; colIdx: number }[] = [];
+
+    monthNames.forEach((label, mIdx) => {
+      const dayIdx = days.findIndex(d => d.isCurrentYear && d.date.getMonth() === mIdx && d.date.getDate() === 1);
+      if (dayIdx >= 0) {
+        labels.push({ label, colIdx: Math.floor(dayIdx / 7) });
+      }
+    });
+
+    return labels;
   };
 
   const activityDays = getActivityGridDays();
   const fullYearDays = getFullYearGridDays();
 
   // Volume percentile tiers for color intensity
-  const allVolumes = fullYearDays.filter(d => d.volume > 0).map(d => d.volume).sort((a, b) => a - b);
+  const allVolumes = fullYearDays.filter(d => d.isCurrentYear && d.volume > 0).map(d => d.volume).sort((a, b) => a - b);
   const p33 = allVolumes[Math.floor(allVolumes.length * 0.33)] || 1;
   const p66 = allVolumes[Math.floor(allVolumes.length * 0.66)] || 2;
   const p90 = allVolumes[Math.floor(allVolumes.length * 0.90)] || 3;
@@ -203,10 +263,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const BORDER  = '#E5E5EA';
 
       // ── COMPUTE STATS ────────────────────────────────────
-      const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const currentYear = new Date().getFullYear();
       const yw = safeWorkouts.filter(w => {
         try {
-          return new Date(w.date) >= yearAgo;
+          return new Date(w.date).getFullYear() === currentYear;
         } catch {
           return false;
         }
@@ -221,6 +281,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const tod = new Date(); tod.setHours(0,0,0,0);
       for (let i = 0; i < 365; i++) {
         const d = new Date(tod); d.setDate(tod.getDate() - i);
+        if (d.getFullYear() !== currentYear) break;
         const ds = d.toISOString().split('T')[0];
         if (safeWorkouts.some(w => {
           try {
@@ -232,7 +293,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         else if (i > 0) break;
       }
       let best = 0, run = 0;
-      for (const day of fullYearDays) { if (day.count > 0) { run++; best = Math.max(best, run); } else run = 0; }
+      for (const day of fullYearDays) {
+        if (day.isCurrentYear && day.count > 0) {
+          run++;
+          best = Math.max(best, run);
+        } else if (day.isCurrentYear) {
+          run = 0;
+        }
+      }
 
       const mc: Record<string,number> = {};
       yw.forEach(w => (w?.exercises || []).forEach(ex => {
@@ -244,14 +312,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const topMLabel = topM.length > 9 ? topM.slice(0,9)+'.' : topM;
 
       const stats = [
-        { v: yw.length.toString(),  l: 'Treinos',        hi: true  },
-        { v: volStr,                 l: 'Volume Total',   hi: true  },
-        { v: prs.length.toString(), l: 'PRs Batidos',    hi: false },
-        { v: hrsStr,                 l: 'Horas de Gym',   hi: false },
-        { v: avgPW,                  l: 'Treinos/Semana', hi: false },
-        { v: `${streak}d`,          l: 'Streak Atual',   hi: false },
-        { v: `${best}d`,            l: 'Melhor Streak',  hi: false },
-        { v: topMLabel,              l: 'Músculo Fav.',   hi: false },
+        { v: yw.length.toString(),  l: `Treinos (${currentYear})`, hi: true  },
+        { v: volStr,                 l: 'Volume Total',             hi: true  },
+        { v: prs.length.toString(), l: 'PRs Batidos',              hi: false },
+        { v: hrsStr,                 l: 'Horas de Gym',             hi: false },
+        { v: avgPW,                  l: 'Treinos/Semana',           hi: false },
+        { v: `${streak}d`,          l: 'Streak Atual',             hi: false },
+        { v: `${best}d`,            l: 'Melhor Streak',            hi: false },
+        { v: topMLabel,              l: 'Músculo Fav.',             hi: false },
       ];
 
       // ══════════════════════════════════════════════════════
@@ -275,7 +343,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       txt('STRONG APP', 80, 130, '600 28px system-ui,sans-serif', 'rgba(255,255,255,0.6)');
       // Year badge
       rr(W - 200, 95, 120, 50, 25, 'rgba(255,255,255,0.18)');
-      txt(new Date().getFullYear().toString(), W - 140, 130, 'bold 26px system-ui,sans-serif', WHITE, 'center');
+      txt(currentYear.toString(), W - 140, 130, 'bold 26px system-ui,sans-serif', WHITE, 'center');
 
       // Name
       txt(profile.name || 'Os meus Gains', 80, 270, 'bold 100px system-ui,sans-serif', WHITE);
@@ -284,11 +352,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       subLine.addColorStop(0,'rgba(255,255,255,0.7)'); subLine.addColorStop(1,'rgba(255,255,255,0)');
       ctx.fillStyle = subLine; ctx.fillRect(80, 290, 450, 3);
 
-      txt('Consistência Anual · ' + new Date().getFullYear(), 80, 340, '500 30px system-ui,sans-serif', 'rgba(255,255,255,0.75)');
+      txt(`Consistência Anual · 1 Jan a 31 Dez ${currentYear}`, 80, 340, '500 30px system-ui,sans-serif', 'rgba(255,255,255,0.75)');
 
       // ─ 2 hero stats ─
       const heroStats = [
-        { v: yw.length.toString(), l: 'Treinos este ano' },
+        { v: yw.length.toString(), l: `Treinos em ${currentYear}` },
         { v: volStr,                l: 'Volume levantado' },
       ];
       heroStats.forEach((s, i) => {
@@ -338,12 +406,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const afterCards = cardsTop + 3 * (CARD_H + CARD_GAP) + 30;
       // label row
       rr(60, afterCards, 8, 36, 4, CORAL);
-      txt('Atividade Anual', 84, afterCards + 28, '700 30px system-ui,sans-serif', BLACK);
-      txt(`por volume · ${yw.filter(w=>new Date(w.date)>=yearAgo).length} treinos`, W - 60, afterCards + 28, '500 24px system-ui,sans-serif', LGREY, 'right');
+      txt(`Consistência ${currentYear}`, 84, afterCards + 28, '700 30px system-ui,sans-serif', BLACK);
+      txt(`1 Jan – 31 Dez · ${yw.length} treinos`, W - 60, afterCards + 28, '500 24px system-ui,sans-serif', LGREY, 'right');
 
       // ─ ACTIVITY GRID ─
+      const COLS = Math.ceil(fullYearDays.length / 7), ROWS = 7;
       const CELL = 14, GAP = 3;
-      const COLS = 53, ROWS = 7;
       const gW2 = COLS * (CELL + GAP) - GAP;
       const gH2 = ROWS * (CELL + GAP) - GAP;
       const gX2 = (W - gW2) / 2;
@@ -352,6 +420,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       rr(gX2 - 20, gY2 - 16, gW2 + 40, gH2 + 40, 18, CREAM);
 
       fullYearDays.forEach((day, idx) => {
+        if (!day.isCurrentYear) return;
         const col = Math.floor(idx / 7), row = idx % 7;
         const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
         let fc: string;
@@ -377,7 +446,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       txt('strong app', 82, stripY + 52, '700 28px system-ui,sans-serif', GREY);
       txt('strong-pr.vercel.app', W - 60, stripY + 52, '500 24px system-ui,sans-serif', LGREY, 'right');
 
-      const fileName = `strongpr_consistencia_${new Date().getFullYear()}.png`;
+      const fileName = `strongpr_consistencia_${currentYear}.png`;
 
       // Convert canvas to Blob
       const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -1041,19 +1110,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Consistency Year Modal */}
       {showYearGridModal && createPortal((() => {
-        // Calculate month labels and their column positions
-        const monthLabels: { label: string; colIdx: number }[] = [];
-        let prevMonth = -1;
-        fullYearDays.forEach((day, idx) => {
-          if (idx % 7 === 0) {
-            const m = day.date.getMonth();
-            if (m !== prevMonth) {
-              const label = day.date.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '').toUpperCase();
-              monthLabels.push({ label, colIdx: Math.floor(idx / 7) });
-              prevMonth = m;
-            }
+        const currentYear = new Date().getFullYear();
+        const yearWorkouts = safeWorkouts.filter(w => {
+          try {
+            return new Date(w.date).getFullYear() === currentYear;
+          } catch {
+            return false;
           }
         });
+        const numCols = Math.ceil(fullYearDays.length / 7);
+        const monthLabels = getYearMonthLabels(fullYearDays);
 
         return (
           <div 
@@ -1089,8 +1155,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Consistência Anual</h3>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Últimos 365 dias de treinos realizados</p>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)' }}>Consistência · {currentYear}</h3>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>1 de Janeiro a 31 de Dezembro ({yearWorkouts.length} treinos)</p>
                 </div>
                 <button 
                   onClick={() => setShowYearGridModal(false)}
@@ -1117,8 +1183,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   >
                     <div style={{ width: 'max-content' }}>
                       {/* Month Headers */}
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(53, 12px)', gap: '3px', marginBottom: '6px', fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 800 }}>
-                        {Array.from({ length: 53 }).map((_, colIdx) => {
+                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${numCols}, 12px)`, gap: '3px', marginBottom: '6px', fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 800 }}>
+                        {Array.from({ length: numCols }).map((_, colIdx) => {
                           const monthLabel = monthLabels.find(ml => ml.colIdx === colIdx);
                           return (
                             <div key={colIdx} style={{ gridColumnStart: colIdx + 1, width: '12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1131,14 +1197,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                       {/* Day Cells Grid */}
                       <div style={{ display: 'grid', gridTemplateRows: 'repeat(7, 12px)', gridAutoFlow: 'column', gap: '3px' }}>
                         {fullYearDays.map((day, idx) => {
+                          if (!day.isCurrentYear) {
+                            return (
+                              <div
+                                key={idx}
+                                style={{ width: '12px', height: '12px', opacity: 0, pointerEvents: 'none' }}
+                              />
+                            );
+                          }
+
                           const formattedDate = day.date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
                           const volLabel = day.volume > 0 ? ` · ${Math.round(day.volume)}kg` : '';
+                          const tooltip = day.isFuture
+                            ? formattedDate
+                            : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${formattedDate}${volLabel}`;
+
                           return (
                             <div 
                               key={idx}
                               className={`activity-day ${getVolumeClass(day.volume)}`}
                               style={{ width: '12px', height: '12px', borderRadius: '2px', cursor: 'pointer' }}
-                              title={`${day.count} treino${day.count !== 1 ? 's' : ''} em ${formattedDate}${volLabel}`}
+                              title={tooltip}
                             />
                           );
                         })}
