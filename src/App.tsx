@@ -420,6 +420,7 @@ export default function App() {
           <WorkoutLog 
             activeWorkout={activeWorkout}
             exercises={appData.exercises}
+            prs={appData.prs}
             settings={appData.settings}
             templates={appData.templates}
             workouts={appData.workouts}

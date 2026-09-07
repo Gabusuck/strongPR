@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate } from '../types';
+import type { Workout, Exercise, WorkoutExercise, Set, AppSettings, WorkoutTemplate, PersonalRecord } from '../types';
 import { Plus, Trash2, Check, X, Dumbbell, ChevronLeft, Search, Info, Bookmark, SlidersHorizontal, List } from 'lucide-react';
 import { translateExerciseName } from '../utils/translateExercise';
-import { isDoubleDumbbellExercise } from '../utils/exerciseUtils';
+import { isDoubleDumbbellExercise, getExerciseWeightMultiplier } from '../utils/exerciseUtils';
 
 // ─── Free Exercise DB types ───────────────────────────────────────────────────
 interface ApiExercise {
@@ -280,6 +280,7 @@ const resolveExerciseMediaId = (
 interface WorkoutLogProps {
   activeWorkout: Workout | null;
   exercises: Exercise[];
+  prs?: PersonalRecord[];
   settings: AppSettings;
   templates: WorkoutTemplate[];
   workouts: Workout[];
@@ -295,6 +296,7 @@ interface WorkoutLogProps {
 export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   activeWorkout,
   exercises,
+  prs = [],
   settings,
   templates,
   workouts,
@@ -307,6 +309,83 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onSaveWorkout: _onSaveWorkout,
 }) => {
+  // Live Volume Calculation for the active workout
+  const liveVolume = useMemo(() => {
+    if (!activeWorkout || !activeWorkout.exercises) return 0;
+    return activeWorkout.exercises.reduce((total, ex) => {
+      if (!ex || !ex.sets) return total;
+      const mult = getExerciseWeightMultiplier(ex);
+      return total + ex.sets
+        .filter(s => s && s.isCompleted)
+        .reduce((s, set) => s + ((Number(set.weight) || 0) * mult) * (Number(set.reps) || 0), 0);
+    }, 0);
+  }, [activeWorkout]);
+
+  const liveVolumeStr = liveVolume >= 1000 ? `${(liveVolume / 1000).toFixed(1)}t` : `${Math.round(liveVolume)}kg`;
+
+  // Live PRs count calculation for the active workout
+  const livePRsCount = useMemo(() => {
+    if (!activeWorkout || !activeWorkout.exercises) return 0;
+    let count = 0;
+
+    activeWorkout.exercises.forEach(ex => {
+      const completedSets = (ex.sets || []).filter(s => s && s.isCompleted);
+      if (completedSets.length === 0) return;
+
+      // Best set in current workout (highest weight, or reps tiebreaker)
+      let currentBest = completedSets[0];
+      completedSets.forEach(s => {
+        const sw = Number(s.weight) || 0;
+        const sr = Number(s.reps) || 0;
+        const bw = Number(currentBest.weight) || 0;
+        const br = Number(currentBest.reps) || 0;
+        if (sw > bw || (sw === bw && sr > br)) {
+          currentBest = s;
+        }
+      });
+
+      const currWeight = Number(currentBest.weight) || 0;
+      const currReps = Number(currentBest.reps) || 0;
+      if (currWeight <= 0 && currReps <= 0) return;
+
+      // Find highest previous record
+      let pastMaxWeight = 0;
+      let pastMaxRepsAtMaxWeight = 0;
+      let hadPastRecord = false;
+
+      (prs || []).filter(p => p.exerciseId === ex.id || p.exerciseName?.toLowerCase() === ex.name?.toLowerCase()).forEach(p => {
+        hadPastRecord = true;
+        const pw = Number(p.weight) || 0;
+        const pr = Number(p.reps) || 0;
+        if (pw > pastMaxWeight || (pw === pastMaxWeight && pr > pastMaxRepsAtMaxWeight)) {
+          pastMaxWeight = pw;
+          pastMaxRepsAtMaxWeight = pr;
+        }
+      });
+
+      (workouts || []).filter(w => w.id !== activeWorkout.id).forEach(w => {
+        (w.exercises || []).filter(we => we.id === ex.id || we.name?.toLowerCase() === ex.name?.toLowerCase()).forEach(we => {
+          (we.sets || []).filter(s => s && s.isCompleted).forEach(s => {
+            hadPastRecord = true;
+            const sw = Number(s.weight) || 0;
+            const sr = Number(s.reps) || 0;
+            if (sw > pastMaxWeight || (sw === pastMaxWeight && sr > pastMaxRepsAtMaxWeight)) {
+              pastMaxWeight = sw;
+              pastMaxRepsAtMaxWeight = sr;
+            }
+          });
+        });
+      });
+
+      if (hadPastRecord) {
+        if (currWeight > pastMaxWeight || (currWeight === pastMaxWeight && currReps > pastMaxRepsAtMaxWeight)) {
+          count++;
+        }
+      }
+    });
+
+    return count;
+  }, [activeWorkout, prs, workouts]);
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchInput, setShowSearchInput] = useState(false);
@@ -953,33 +1032,97 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
       {/* Workout Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ minWidth: '130px', flex: '1 1 auto' }}>
           <input
             type="text"
             className="form-input"
             value={activeWorkout?.name || ''}
             onChange={(e) => activeWorkout && onUpdateWorkout({ ...activeWorkout, name: e.target.value })}
-            style={{ fontSize: '1.4rem', fontWeight: 850, fontFamily: 'var(--font-display)', background: 'transparent', border: 'none', padding: '4px 0', width: '200px', borderBottom: '1px solid transparent', borderRadius: 0 }}
+            style={{ fontSize: '1.3rem', fontWeight: 850, fontFamily: 'var(--font-display)', background: 'transparent', border: 'none', padding: '2px 0', width: '100%', maxWidth: '240px', borderBottom: '1px solid transparent', borderRadius: 0 }}
             placeholder="Nome do Treino"
             onFocus={(e) => e.target.style.borderBottom = '1px solid var(--accent-color)'}
             onBlur={(e) => e.target.style.borderBottom = '1px solid transparent'}
           />
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <span style={{ display: 'inline-block', width: '6px', height: '6px', backgroundColor: 'var(--accent-color)', borderRadius: '50%', boxShadow: '0 0 6px var(--accent-color)' }} />
             A treinar...
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Timer */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '20px', border: '1px solid var(--border-color)', fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-            ⏱️ {formatElapsed(elapsedSeconds)}
+        {/* Live stats badges & timer */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          {/* Live Volume Badge */}
+          <div 
+            title="Volume total levantado neste treino"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px', 
+              backgroundColor: 'var(--bg-secondary)', 
+              padding: '6px 10px', 
+              borderRadius: '16px', 
+              border: '1px solid var(--border-color)', 
+              fontFamily: 'var(--font-display)', 
+              fontWeight: 800, 
+              fontSize: '0.8rem', 
+              color: 'var(--text-primary)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}
+          >
+            <span style={{ fontSize: '0.85rem' }}>⚡</span>
+            <span>{liveVolumeStr}</span>
           </div>
+
+          {/* Live Records (PRs) Badge */}
+          <div 
+            title={livePRsCount > 0 ? `${livePRsCount} recorde(s) pessoal batido(s) neste treino!` : 'Recordes batidos neste treino'}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px', 
+              backgroundColor: livePRsCount > 0 ? '#FFFBEB' : 'var(--bg-secondary)', 
+              padding: '6px 10px', 
+              borderRadius: '16px', 
+              border: livePRsCount > 0 ? '1px solid #FDE68A' : '1px solid var(--border-color)', 
+              fontFamily: 'var(--font-display)', 
+              fontWeight: 800, 
+              fontSize: '0.8rem', 
+              color: livePRsCount > 0 ? '#D97706' : 'var(--text-secondary)',
+              boxShadow: livePRsCount > 0 ? '0 1px 6px rgba(217,119,6,0.18)' : '0 1px 3px rgba(0,0,0,0.03)',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span style={{ fontSize: '0.85rem' }}>🏆</span>
+            <span>{livePRsCount} {livePRsCount === 1 ? 'Recorde' : 'Recordes'}</span>
+          </div>
+
+          {/* Timer */}
+          <div 
+            title="Duração do treino"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px', 
+              backgroundColor: 'var(--bg-secondary)', 
+              padding: '6px 10px', 
+              borderRadius: '16px', 
+              border: '1px solid var(--border-color)', 
+              fontFamily: 'var(--font-display)', 
+              fontWeight: 800, 
+              fontSize: '0.82rem', 
+              color: 'var(--text-primary)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
+            }}
+          >
+            <span style={{ fontSize: '0.85rem' }}>⏱️</span>
+            <span>{formatElapsed(elapsedSeconds)}</span>
+          </div>
+
           {/* Discard button — subtle trash icon */}
           <button
             onClick={onCancelWorkout}
-            style={{ background: 'none', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
+            style={{ background: 'none', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--danger)', cursor: 'pointer', opacity: 0.7 }}
             title="Descartar treino"
           >
             <Trash2 size={15} />
