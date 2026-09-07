@@ -148,209 +148,275 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     return 'active-4';
   };
 
+  const [isSharingImage, setIsSharingImage] = useState(false);
+
+  // Safe round rect helper for canvas
+  const drawRoundRectPath = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+    if (typeof ctx.roundRect === 'function') {
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + w - radius, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+      ctx.lineTo(x + w, y + h - radius);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+      ctx.lineTo(x + radius, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+    }
+  };
+
   // Download shareable Instagram image using canvas
-  const downloadShareImage = () => {
-    const W = 1080, H = 1920;
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d')!;
+  const downloadShareImage = async () => {
+    if (isSharingImage) return;
+    setIsSharingImage(true);
 
-    // ── Helpers ──────────────────────────────────────────
-    const rr = (x: number, y: number, w: number, h: number, r: number, color: string) => {
-      ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
-    };
-    const txt = (text: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') => {
-      ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.fillText(text, x, y);
-    };
+    try {
+      const W = 1080, H = 1920;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Contexto 2D não disponível');
 
-    // ── Palette ──────────────────────────────────────────
-    const CORAL   = '#5B5EF4';
-    const CORAL2  = '#7B7FF5';
-    const BLACK   = '#1C1C1E';
-    const GREY    = '#8E8E93';
-    const LGREY   = '#AEAEB2';
-    const WHITE   = '#FFFFFF';
-    const CREAM   = '#F2F2F7';
-    const CARD_BG = '#FFFFFF';
-    const BORDER  = '#E5E5EA';
+      // ── Helpers ──────────────────────────────────────────
+      const rr = (x: number, y: number, w: number, h: number, r: number, color: string) => {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        drawRoundRectPath(ctx, x, y, w, h, r);
+        ctx.fill();
+      };
+      const txt = (text: string, x: number, y: number, font: string, color: string, align: CanvasTextAlign = 'left') => {
+        ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.fillText(text, x, y);
+      };
 
-    // ── COMPUTE STATS ────────────────────────────────────
-    const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-    const yw = safeWorkouts.filter(w => {
-      try {
-        return new Date(w.date) >= yearAgo;
-      } catch {
-        return false;
-      }
-    });
-    const vol = yw.reduce((s, w) => s + getWorkoutVolume(w), 0);
-    const volStr = vol >= 1000 ? `${(vol/1000).toFixed(1)}t` : `${Math.round(vol)}kg`;
-    const secs = yw.reduce((s, w) => s + (w.duration || 0), 0);
-    const hrsStr = secs >= 3600 ? `${Math.floor(secs/3600)}h` : secs > 0 ? `${Math.round(secs/60)}min` : '—';
-    const avgPW = yw.length > 0 ? (yw.length / 52).toFixed(1) : '0';
+      // ── Palette ──────────────────────────────────────────
+      const CORAL   = '#5B5EF4';
+      const CORAL2  = '#7B7FF5';
+      const BLACK   = '#1C1C1E';
+      const GREY    = '#8E8E93';
+      const LGREY   = '#AEAEB2';
+      const WHITE   = '#FFFFFF';
+      const CREAM   = '#F2F2F7';
+      const CARD_BG = '#FFFFFF';
+      const BORDER  = '#E5E5EA';
 
-    let streak = 0;
-    const tod = new Date(); tod.setHours(0,0,0,0);
-    for (let i = 0; i < 365; i++) {
-      const d = new Date(tod); d.setDate(tod.getDate() - i);
-      const ds = d.toISOString().split('T')[0];
-      if (safeWorkouts.some(w => {
+      // ── COMPUTE STATS ────────────────────────────────────
+      const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+      const yw = safeWorkouts.filter(w => {
         try {
-          return new Date(w.date).toISOString().split('T')[0] === ds;
+          return new Date(w.date) >= yearAgo;
         } catch {
           return false;
         }
-      })) streak++;
-      else if (i > 0) break;
+      });
+      const vol = yw.reduce((s, w) => s + getWorkoutVolume(w), 0);
+      const volStr = vol >= 1000 ? `${(vol/1000).toFixed(1)}t` : `${Math.round(vol)}kg`;
+      const secs = yw.reduce((s, w) => s + (w.duration || 0), 0);
+      const hrsStr = secs >= 3600 ? `${Math.floor(secs/3600)}h` : secs > 0 ? `${Math.round(secs/60)}min` : '—';
+      const avgPW = yw.length > 0 ? (yw.length / 52).toFixed(1) : '0';
+
+      let streak = 0;
+      const tod = new Date(); tod.setHours(0,0,0,0);
+      for (let i = 0; i < 365; i++) {
+        const d = new Date(tod); d.setDate(tod.getDate() - i);
+        const ds = d.toISOString().split('T')[0];
+        if (safeWorkouts.some(w => {
+          try {
+            return new Date(w.date).toISOString().split('T')[0] === ds;
+          } catch {
+            return false;
+          }
+        })) streak++;
+        else if (i > 0) break;
+      }
+      let best = 0, run = 0;
+      for (const day of fullYearDays) { if (day.count > 0) { run++; best = Math.max(best, run); } else run = 0; }
+
+      const mc: Record<string,number> = {};
+      yw.forEach(w => (w?.exercises || []).forEach(ex => {
+        const cat = ex?.category || 'Outro';
+        const completedCount = (ex?.sets || []).filter(s => s && s.isCompleted).length;
+        mc[cat] = (mc[cat] || 0) + completedCount;
+      }));
+      const topM = Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? '—';
+      const topMLabel = topM.length > 9 ? topM.slice(0,9)+'.' : topM;
+
+      const stats = [
+        { v: yw.length.toString(),  l: 'Treinos',        hi: true  },
+        { v: volStr,                 l: 'Volume Total',   hi: true  },
+        { v: prs.length.toString(), l: 'PRs Batidos',    hi: false },
+        { v: hrsStr,                 l: 'Horas de Gym',   hi: false },
+        { v: avgPW,                  l: 'Treinos/Semana', hi: false },
+        { v: `${streak}d`,          l: 'Streak Atual',   hi: false },
+        { v: `${best}d`,            l: 'Melhor Streak',  hi: false },
+        { v: topMLabel,              l: 'Músculo Fav.',   hi: false },
+      ];
+
+      // ══════════════════════════════════════════════════════
+      // SECTION 1 — CORAL TOP  (0 → 680px)
+      // ══════════════════════════════════════════════════════
+      const topH = 680;
+      const topGrad = ctx.createLinearGradient(0, 0, W, topH);
+      topGrad.addColorStop(0, '#FF6B44');
+      topGrad.addColorStop(1, '#FF3D1A');
+      ctx.fillStyle = topGrad;
+      ctx.fillRect(0, 0, W, topH);
+
+      // decorative big circle top-right
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath(); ctx.arc(W + 80, -80, 420, 0, Math.PI * 2); ctx.fill();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.05)';
+      ctx.beginPath(); ctx.arc(W - 80, 300, 250, 0, Math.PI * 2); ctx.fill();
+
+      // App label
+      txt('STRONG APP', 80, 130, '600 28px system-ui,sans-serif', 'rgba(255,255,255,0.6)');
+      // Year badge
+      rr(W - 200, 95, 120, 50, 25, 'rgba(255,255,255,0.18)');
+      txt(new Date().getFullYear().toString(), W - 140, 130, 'bold 26px system-ui,sans-serif', WHITE, 'center');
+
+      // Name
+      txt(profile.name || 'Os meus Gains', 80, 270, 'bold 100px system-ui,sans-serif', WHITE);
+      // Subtitle line
+      const subLine = ctx.createLinearGradient(80, 0, 600, 0);
+      subLine.addColorStop(0,'rgba(255,255,255,0.7)'); subLine.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle = subLine; ctx.fillRect(80, 290, 450, 3);
+
+      txt('Consistência Anual · ' + new Date().getFullYear(), 80, 340, '500 30px system-ui,sans-serif', 'rgba(255,255,255,0.75)');
+
+      // ─ 2 hero stats ─
+      const heroStats = [
+        { v: yw.length.toString(), l: 'Treinos este ano' },
+        { v: volStr,                l: 'Volume levantado' },
+      ];
+      heroStats.forEach((s, i) => {
+        const hx = 80 + i * 470;
+        rr(hx, 400, 420, 220, 28, 'rgba(255,255,255,0.13)');
+        // left accent bar
+        rr(hx, 400, 5, 220, 3, 'rgba(255,255,255,0.5)');
+        txt(s.v, hx + 30, 510, 'bold 86px system-ui,sans-serif', WHITE);
+        txt(s.l, hx + 30, 560, '500 26px system-ui,sans-serif', 'rgba(255,255,255,0.65)');
+      });
+
+      // wave / divider between sections
+      ctx.fillStyle = WHITE;
+      ctx.beginPath();
+      ctx.moveTo(0, topH - 60);
+      ctx.quadraticCurveTo(W * 0.25, topH + 20, W * 0.5, topH - 30);
+      ctx.quadraticCurveTo(W * 0.75, topH - 80, W, topH - 20);
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
+
+      // ══════════════════════════════════════════════════════
+      // SECTION 2 — WHITE BODY  (680px → bottom)
+      // ══════════════════════════════════════════════════════
+      ctx.fillStyle = WHITE;
+      ctx.fillRect(0, topH, W, H - topH);
+
+      // ─ STAT CARDS 2×3 ─
+      const CARD_W = 480, CARD_H = 130, CARD_GAP = 24;
+      const cardsTop = topH + 40;
+      stats.slice(2).forEach((s, i) => { // first 2 are hero stats above
+        const col = i % 2, row = Math.floor(i / 2);
+        const cx = 60 + col * (CARD_W + CARD_GAP);
+        const cy = cardsTop + row * (CARD_H + CARD_GAP);
+        // card
+        rr(cx, cy, CARD_W, CARD_H, 22, CARD_BG);
+        ctx.strokeStyle = BORDER; ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        drawRoundRectPath(ctx, cx, cy, CARD_W, CARD_H, 22);
+        ctx.stroke();
+        // left accent dot
+        rr(cx + 24, cy + CARD_H/2 - 18, 6, 36, 3, CORAL);
+        // value
+        txt(s.v, cx + 48, cy + 72, 'bold 52px system-ui,sans-serif', BLACK);
+        txt(s.l, cx + 48, cy + 108, '500 24px system-ui,sans-serif', LGREY);
+      });
+
+      // ─ GRID LABEL ─
+      const afterCards = cardsTop + 3 * (CARD_H + CARD_GAP) + 30;
+      // label row
+      rr(60, afterCards, 8, 36, 4, CORAL);
+      txt('Atividade Anual', 84, afterCards + 28, '700 30px system-ui,sans-serif', BLACK);
+      txt(`por volume · ${yw.filter(w=>new Date(w.date)>=yearAgo).length} treinos`, W - 60, afterCards + 28, '500 24px system-ui,sans-serif', LGREY, 'right');
+
+      // ─ ACTIVITY GRID ─
+      const CELL = 14, GAP = 3;
+      const COLS = 53, ROWS = 7;
+      const gW2 = COLS * (CELL + GAP) - GAP;
+      const gH2 = ROWS * (CELL + GAP) - GAP;
+      const gX2 = (W - gW2) / 2;
+      const gY2 = afterCards + 52;
+
+      rr(gX2 - 20, gY2 - 16, gW2 + 40, gH2 + 40, 18, CREAM);
+
+      fullYearDays.forEach((day, idx) => {
+        const col = Math.floor(idx / 7), row = idx % 7;
+        const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
+        let fc: string;
+        if (day.volume === 0)        fc = '#E2E8F0';
+        else if (day.volume <= p33)  fc = '#FFD4C2';
+        else if (day.volume <= p66)  fc = '#FF9070';
+        else if (day.volume <= p90)  fc = CORAL2;
+        else { fc = CORAL; ctx.shadowColor = 'rgba(255,94,58,0.35)'; ctx.shadowBlur = 6; }
+        rr(x, y, CELL, CELL, 3, fc);
+        ctx.shadowBlur = 0;
+      });
+
+      // ─ LEGEND ─
+      const legY2 = gY2 + gH2 + 28;
+      txt('menos', gX2, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
+      ['#E2E8F0','#FFD4C2','#FF9070',CORAL2,CORAL].forEach((c, i) => rr(gX2 + 96 + i*26, legY2, 18, 18, 5, c));
+      txt('mais', gX2 + 96 + 5*26 + 10, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
+
+      // ─ BOTTOM STRIP ─
+      const stripY = H - 90;
+      rr(0, stripY, W, 90, 0, CREAM);
+      ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(60, stripY + 45, 7, 0, Math.PI*2); ctx.fill();
+      txt('strong app', 82, stripY + 52, '700 28px system-ui,sans-serif', GREY);
+      txt('strong-pr.vercel.app', W - 60, stripY + 52, '500 24px system-ui,sans-serif', LGREY, 'right');
+
+      const fileName = `strongpr_consistencia_${new Date().getFullYear()}.png`;
+
+      // Convert canvas to Blob
+      const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('Erro ao converter imagem');
+
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      // Try Native Share API first (perfect for mobile / iOS Safari / Instagram Stories)
+      if (typeof navigator !== 'undefined' && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: 'StrongPR - Consistência Anual',
+            text: `A minha consistência de treinos deste ano no StrongPR! 💪🔥`
+          });
+          return;
+        } catch (shareErr: any) {
+          if (shareErr.name === 'AbortError') return; // User cancelled share modal
+          console.warn('Navigator share error, falling back to download:', shareErr);
+        }
+      }
+
+      // Fallback: Blob URL download for desktop / unsupported browsers
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = blobUrl;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+    } catch (err: any) {
+      console.error('Erro ao partilhar/descarregar imagem:', err);
+      alert('Não foi possível gerar a imagem. Tenta novamente.');
+    } finally {
+      setIsSharingImage(false);
     }
-    let best = 0, run = 0;
-    for (const day of fullYearDays) { if (day.count > 0) { run++; best = Math.max(best, run); } else run = 0; }
-
-    const mc: Record<string,number> = {};
-    yw.forEach(w => (w?.exercises || []).forEach(ex => {
-      const cat = ex?.category || 'Outro';
-      const completedCount = (ex?.sets || []).filter(s => s && s.isCompleted).length;
-      mc[cat] = (mc[cat] || 0) + completedCount;
-    }));
-    const topM = Object.entries(mc).sort((a,b)=>b[1]-a[1])[0]?.[0] ?? '—';
-    const topMLabel = topM.length > 9 ? topM.slice(0,9)+'.' : topM;
-
-    const stats = [
-      { v: yw.length.toString(),  l: 'Treinos',        hi: true  },
-      { v: volStr,                 l: 'Volume Total',   hi: true  },
-      { v: prs.length.toString(), l: 'PRs Batidos',    hi: false },
-      { v: hrsStr,                 l: 'Horas de Gym',   hi: false },
-      { v: avgPW,                  l: 'Treinos/Semana', hi: false },
-      { v: `${streak}d`,          l: 'Streak Atual',   hi: false },
-      { v: `${best}d`,            l: 'Melhor Streak',  hi: false },
-      { v: topMLabel,              l: 'Músculo Fav.',   hi: false },
-    ];
-
-    // ══════════════════════════════════════════════════════
-    // SECTION 1 — CORAL TOP  (0 → 680px)
-    // ══════════════════════════════════════════════════════
-    const topH = 680;
-    const topGrad = ctx.createLinearGradient(0, 0, W, topH);
-    topGrad.addColorStop(0, '#FF6B44');
-    topGrad.addColorStop(1, '#FF3D1A');
-    ctx.fillStyle = topGrad;
-    ctx.fillRect(0, 0, W, topH);
-
-    // decorative big circle top-right
-    ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.beginPath(); ctx.arc(W + 80, -80, 420, 0, Math.PI * 2); ctx.fill();
-
-    ctx.fillStyle = 'rgba(255,255,255,0.05)';
-    ctx.beginPath(); ctx.arc(W - 80, 300, 250, 0, Math.PI * 2); ctx.fill();
-
-    // App label
-    txt('STRONG APP', 80, 130, '600 28px system-ui,sans-serif', 'rgba(255,255,255,0.6)');
-    // Year badge
-    rr(W - 200, 95, 120, 50, 25, 'rgba(255,255,255,0.18)');
-    txt(new Date().getFullYear().toString(), W - 140, 130, 'bold 26px system-ui,sans-serif', WHITE, 'center');
-
-    // Name
-    txt(profile.name || 'Os meus Gains', 80, 270, 'bold 100px system-ui,sans-serif', WHITE);
-    // Subtitle line
-    const subLine = ctx.createLinearGradient(80, 0, 600, 0);
-    subLine.addColorStop(0,'rgba(255,255,255,0.7)'); subLine.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle = subLine; ctx.fillRect(80, 290, 450, 3);
-
-    txt('Consistência Anual · ' + new Date().getFullYear(), 80, 340, '500 30px system-ui,sans-serif', 'rgba(255,255,255,0.75)');
-
-    // ─ 2 hero stats ─
-    const heroStats = [
-      { v: yw.length.toString(), l: 'Treinos este ano' },
-      { v: volStr,                l: 'Volume levantado' },
-    ];
-    heroStats.forEach((s, i) => {
-      const hx = 80 + i * 470;
-      rr(hx, 400, 420, 220, 28, 'rgba(255,255,255,0.13)');
-      // left accent bar
-      rr(hx, 400, 5, 220, 3, 'rgba(255,255,255,0.5)');
-      txt(s.v, hx + 30, 510, 'bold 86px system-ui,sans-serif', WHITE);
-      txt(s.l, hx + 30, 560, '500 26px system-ui,sans-serif', 'rgba(255,255,255,0.65)');
-    });
-
-    // wave / divider between sections
-    ctx.fillStyle = WHITE;
-    ctx.beginPath();
-    ctx.moveTo(0, topH - 60);
-    ctx.quadraticCurveTo(W * 0.25, topH + 20, W * 0.5, topH - 30);
-    ctx.quadraticCurveTo(W * 0.75, topH - 80, W, topH - 20);
-    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath(); ctx.fill();
-
-    // ══════════════════════════════════════════════════════
-    // SECTION 2 — WHITE BODY  (680px → bottom)
-    // ══════════════════════════════════════════════════════
-    ctx.fillStyle = WHITE;
-    ctx.fillRect(0, topH, W, H - topH);
-
-    // ─ STAT CARDS 2×3 ─
-    const CARD_W = 480, CARD_H = 130, CARD_GAP = 24;
-    const cardsTop = topH + 40;
-    stats.slice(2).forEach((s, i) => { // first 2 are hero stats above
-      const col = i % 2, row = Math.floor(i / 2);
-      const cx = 60 + col * (CARD_W + CARD_GAP);
-      const cy = cardsTop + row * (CARD_H + CARD_GAP);
-      // card
-      rr(cx, cy, CARD_W, CARD_H, 22, CARD_BG);
-      ctx.strokeStyle = BORDER; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.roundRect(cx, cy, CARD_W, CARD_H, 22); ctx.stroke();
-      // left accent dot
-      rr(cx + 24, cy + CARD_H/2 - 18, 6, 36, 3, CORAL);
-      // value
-      txt(s.v, cx + 48, cy + 72, 'bold 52px system-ui,sans-serif', BLACK);
-      txt(s.l, cx + 48, cy + 108, '500 24px system-ui,sans-serif', LGREY);
-    });
-
-    // ─ GRID LABEL ─
-    const afterCards = cardsTop + 3 * (CARD_H + CARD_GAP) + 30;
-    // label row
-    rr(60, afterCards, 8, 36, 4, CORAL);
-    txt('Atividade Anual', 84, afterCards + 28, '700 30px system-ui,sans-serif', BLACK);
-    txt(`por volume · ${yw.filter(w=>new Date(w.date)>=yearAgo).length} treinos`, W - 60, afterCards + 28, '500 24px system-ui,sans-serif', LGREY, 'right');
-
-    // ─ ACTIVITY GRID ─
-    const CELL = 14, GAP = 3;
-    const COLS = 53, ROWS = 7;
-    const gW2 = COLS * (CELL + GAP) - GAP;
-    const gH2 = ROWS * (CELL + GAP) - GAP;
-    const gX2 = (W - gW2) / 2;
-    const gY2 = afterCards + 52;
-
-    rr(gX2 - 20, gY2 - 16, gW2 + 40, gH2 + 40, 18, CREAM);
-
-    fullYearDays.forEach((day, idx) => {
-      const col = Math.floor(idx / 7), row = idx % 7;
-      const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
-      let fc: string;
-      if (day.volume === 0)        fc = '#E2E8F0';
-      else if (day.volume <= p33)  fc = '#FFD4C2';
-      else if (day.volume <= p66)  fc = '#FF9070';
-      else if (day.volume <= p90)  fc = CORAL2;
-      else { fc = CORAL; ctx.shadowColor = 'rgba(255,94,58,0.35)'; ctx.shadowBlur = 6; }
-      rr(x, y, CELL, CELL, 3, fc);
-      ctx.shadowBlur = 0;
-    });
-
-    // ─ LEGEND ─
-    const legY2 = gY2 + gH2 + 28;
-    txt('menos', gX2, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
-    ['#E2E8F0','#FFD4C2','#FF9070',CORAL2,CORAL].forEach((c, i) => rr(gX2 + 96 + i*26, legY2, 18, 18, 5, c));
-    txt('mais', gX2 + 96 + 5*26 + 10, legY2 + 15, '500 22px system-ui,sans-serif', LGREY);
-
-    // ─ BOTTOM STRIP ─
-    const stripY = H - 90;
-    rr(0, stripY, W, 90, 0, CREAM);
-    ctx.fillStyle = CORAL; ctx.beginPath(); ctx.arc(60, stripY + 45, 7, 0, Math.PI*2); ctx.fill();
-    txt('strong app', 82, stripY + 52, '700 28px system-ui,sans-serif', GREY);
-    txt('strong-pr.vercel.app', W - 60, stripY + 52, '500 24px system-ui,sans-serif', LGREY, 'right');
-
-    const link = document.createElement('a');
-    link.download = `gains_story_${new Date().getFullYear()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
   };
 
 
@@ -1095,26 +1161,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
                 <button
                   onClick={downloadShareImage}
-                  title="Descarregar imagem para partilhar"
+                  disabled={isSharingImage}
+                  title="Partilhar ou descarregar imagem"
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     width: '32px', height: '32px',
                     background: 'none',
                     border: '1.5px solid var(--border-color)',
                     borderRadius: '50%',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
+                    color: isSharingImage ? 'var(--accent-color)' : 'var(--text-secondary)',
+                    cursor: isSharingImage ? 'wait' : 'pointer',
+                    opacity: isSharingImage ? 0.7 : 1,
                     transition: 'all 0.2s',
                     flexShrink: 0
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-color)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-color)'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-color)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
+                  onMouseEnter={e => { if (!isSharingImage) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent-color)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-color)'; } }}
+                  onMouseLeave={e => { if (!isSharingImage) { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-color)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; } }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
+                  {isSharingImage ? (
+                    <div style={{ width: '14px', height: '14px', border: '2px solid var(--accent-color)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  ) : (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/>
+                      <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
