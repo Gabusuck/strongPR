@@ -27,6 +27,7 @@ const WORD_DICT: Record<string, string> = {
   'band': 'Elástico', 'bands': 'Elásticos', 'bar': 'Barra', 'ez': 'EZ',
   'smith': 'Smith', 'trap': 'Trapézio', 'traps': 'Trapézio', 't-bar': 'T-Bar',
   'ball': 'Bola', 'box': 'Caixa', 'board': 'Prancha',
+  'lever': 'Máquina', 'leverage': 'Máquina', 'hammer': 'Hammer',
   // Posições / Modificadores
   'incline': 'Inclinado', 'decline': 'Declinado', 'flat': 'Plano',
   'standing': 'Em Pé', 'seated': 'Sentado', 'lying': 'Deitado',
@@ -34,7 +35,7 @@ const WORD_DICT: Record<string, string> = {
   'reverse': 'Inverso', 'wide': 'Largo', 'narrow': 'Fechado', 'close': 'Fechado',
   'grip': 'Pega', 'front': 'Frontal', 'rear': 'Posterior', 'lateral': 'Lateral',
   'cross': 'Cruzado', 'sumo': 'Sumo', 'romanian': 'Romeno', 'bulgarian': 'Búlgaro',
-  'nordic': 'Nórdico', 'hammer': 'Martelo', 'concentration': 'Concentração',
+  'nordic': 'Nórdico', 'concentration': 'Concentração',
   'preacher': 'Scott', 'military': 'Militar', 'arnold': 'Arnold', 'goblet': 'Goblet',
   'hack': 'Hack', 'upper': 'Superior', 'lower': 'Inferior', 'inner': 'Interno',
   'outer': 'Externo', 'face': 'Face', 'high': 'Alto', 'low': 'Baixo',
@@ -43,7 +44,9 @@ const WORD_DICT: Record<string, string> = {
   'supinated': 'Supinado', 'pronated': 'Pronado', 'parallel': 'Paralelo',
   'split': 'Dividido', 'loaded': 'Carregado', 'bodyweight': 'Peso Corporal',
   'assisted': 'Assistido', 'weighted': 'Carregado', 'unilateral': 'Unilateral',
+  'isolateral': 'Isolateral', 'iso-lateral': 'Isolateral',
   'bilateral': 'Bilateral', 'isometric': 'Isométrico', 'eccentric': 'Excêntrico',
+  'chest-supported': 'com Apoio no Peito', 'supported': 'Apoiado',
   // Partes do corpo
   'chest': 'Peito', 'back': 'Costas', 'shoulder': 'Ombro', 'shoulders': 'Ombros',
   'arm': 'Braço', 'arms': 'Braços', 'leg': 'Perna', 'legs': 'Pernas',
@@ -79,13 +82,55 @@ const WORD_DICT: Record<string, string> = {
 
 // Overrides para nomes completos muito comuns
 const NAME_OVERRIDES: Record<string, string> = {
+  // Peito
   'Bench Press': 'Press de Banco',
   'Incline Bench Press': 'Press de Banco Inclinado',
   'Decline Bench Press': 'Press de Banco Declinado',
   'Push-Up': 'Flexão',
   'Push Up': 'Flexão',
+  'Chest Fly': 'Fly de Peito',
+  'Cable Fly': 'Fly no Cabo',
+  'Pec Deck': 'Pec Deck',
+  'Lever Chest Press': 'Press de Peito na Máquina',
+  'Lever Incline Chest Press': 'Press Inclinado na Máquina',
+  'Lever Decline Chest Press': 'Press Declinado na Máquina',
+
+  // Costas / Remadas
   'Pull-Up': 'Dominadas',
   'Chin-Up': 'Chin-Up',
+  'Lat Pulldown': 'Puxada para o Peitoral',
+  'Wide Grip Lat Pulldown': 'Puxada Aberta',
+  'Close Grip Lat Pulldown': 'Puxada Fechada',
+  'Pull Over': 'Pullover',
+  'Bent Over Row': 'Remada Curvada',
+  'Bent-Over Row': 'Remada Curvada',
+  'T-Bar Row': 'Remada T-Bar',
+  'Seated Row': 'Remada Sentado',
+  'Cable Row': 'Remada no Cabo',
+  'Dumbbell Row': 'Remada com Haltere',
+  'One Arm Dumbbell Row': 'Remada Unilateral com Haltere',
+  'Single Arm Row': 'Remada Unilateral',
+  'Upright Row': 'Remada Vertical',
+
+  // Remadas em Máquina (Lever / Iso-lateral / Hammer)
+  'Lever Unilateral Row': 'Remada Isolateral na Máquina',
+  'Lever Alternating Narrow Grip Seated Row': 'Remada Isolateral Sentada na Máquina',
+  'Lever One Arm Lateral High Row': 'Remada Alta Isolateral na Máquina',
+  'Lever One Arm Bent Over Row': 'Remada Unilateral Curvada na Máquina',
+  'Lever Seated Row': 'Remada Sentada na Máquina',
+  'Lever High Row': 'Remada Alta na Máquina',
+  'Lever Narrow Grip Seated Row': 'Remada Sentada Pega Fechada na Máquina',
+  'Lever Bent Over Row': 'Remada Curvada na Máquina',
+  'Lever Bent-Over Row': 'Remada Curvada na Máquina',
+  'Lever Bent-Over Row with V-Bar': 'Remada Curvada na Máquina com Barra V',
+  'Lever T Bar Row': 'Remada T-Bar na Máquina',
+  'Lever T-Bar Row': 'Remada T-Bar na Máquina',
+  'Lever Reverse T-Bar Row': 'Remada T-Bar Inversa na Máquina',
+  'Lever Reverse Grip Vertical Row': 'Remada Vertical na Máquina',
+  'Lever T-Bar Reverse Grip Row': 'Remada T-Bar na Máquina com Pega Inversa',
+  'Lever Front Pulldown': 'Puxada Frontal na Máquina',
+
+  // Pernas
   'Squat': 'Agachamento',
   'Deadlift': 'Peso Morto',
   'Romanian Deadlift': 'Peso Morto Romeno',
@@ -102,9 +147,18 @@ const NAME_OVERRIDES: Record<string, string> = {
   'Leg Press': 'Leg Press',
   'Leg Curl': 'Curl de Pernas',
   'Leg Extension': 'Extensão de Pernas',
+  'Lever Leg Extension': 'Extensão de Pernas na Máquina',
+  'Lever Seated Leg Curl': 'Curl de Pernas Sentado na Máquina',
+  'Lever Lying Leg Curl': 'Curl de Pernas Deitado na Máquina',
+  'Lever Leg Press': 'Leg Press na Máquina',
+  'Lever Calf Press': 'Prensa de Gémeos na Máquina',
+  'Lever Seated Calf Raise': 'Elevação de Gémeos Sentado na Máquina',
   'Calf Raise': 'Elevação de Gémeos',
   'Standing Calf Raise': 'Elevação de Gémeos em Pé',
   'Seated Calf Raise': 'Elevação de Gémeos Sentado',
+  'Nordic Curl': 'Curl Nórdico',
+
+  // Ombros
   'Overhead Press': 'Press Militar',
   'Military Press': 'Press Militar',
   'Arnold Press': 'Press Arnold',
@@ -113,18 +167,10 @@ const NAME_OVERRIDES: Record<string, string> = {
   'Rear Delt Fly': 'Fly de Deltóide Posterior',
   'Face Pull': 'Face Pull',
   'Shrug': 'Encolhimento de Ombros',
-  'Bent Over Row': 'Remada Curvada',
-  'Bent-Over Row': 'Remada Curvada',
-  'T-Bar Row': 'Remada T-Bar',
-  'Seated Row': 'Remada Sentado',
-  'Cable Row': 'Remada no Cabo',
-  'Lat Pulldown': 'Puxada para o Peitoral',
-  'Wide Grip Lat Pulldown': 'Puxada Aberta',
-  'Close Grip Lat Pulldown': 'Puxada Fechada',
-  'Pull Over': 'Pullover',
-  'Chest Fly': 'Fly de Peito',
-  'Cable Fly': 'Fly no Cabo',
-  'Pec Deck': 'Pec Deck',
+  'Lever Shoulder Press': 'Press de Ombros na Máquina',
+  'Lever Lateral Raise': 'Elevação Lateral na Máquina',
+
+  // Braços
   'Bicep Curl': 'Rosca Bíceps',
   'Hammer Curl': 'Rosca Martelo',
   'Concentration Curl': 'Rosca Concentrada',
@@ -133,12 +179,18 @@ const NAME_OVERRIDES: Record<string, string> = {
   'Incline Curl': 'Rosca Inclinada',
   'Cable Curl': 'Rosca no Cabo',
   'EZ Bar Curl': 'Rosca Barra EZ',
+  'Lever Bicep Curl': 'Rosca Bíceps na Máquina',
+  'Lever Preacher Curl': 'Rosca Scott na Máquina',
   'Skull Crusher': 'Skull Crusher',
   'Tricep Extension': 'Extensão de Tríceps',
   'Overhead Tricep Extension': 'Extensão de Tríceps Acima da Cabeça',
   'Tricep Pushdown': 'Puxada de Tríceps',
   'Tricep Kickback': 'Kickback de Tríceps',
   'Dip': 'Mergulho',
+  'Wrist Curl': 'Rosca de Pulso',
+  'Reverse Curl': 'Rosca Inversa',
+
+  // Core / Outros
   'Crunch': 'Abdominal',
   'Sit-Up': 'Abdominal Completo',
   'Plank': 'Prancha',
@@ -146,15 +198,8 @@ const NAME_OVERRIDES: Record<string, string> = {
   'Leg Raise': 'Elevação de Pernas',
   'Hanging Leg Raise': 'Elevação de Pernas Suspenso',
   'Good Morning': 'Bom Dia',
-  'Nordic Curl': 'Curl Nórdico',
   'Hyperextension': 'Hiperextensão',
   'Back Extension': 'Extensão de Costas',
-  'Dumbbell Row': 'Remada com Haltere',
-  'One Arm Dumbbell Row': 'Remada Unilateral',
-  'Single Arm Row': 'Remada Unilateral',
-  'Upright Row': 'Remada Vertical',
-  'Wrist Curl': 'Rosca de Pulso',
-  'Reverse Curl': 'Rosca Inversa',
   'Farmer Walk': 'Caminhada do Fazendeiro',
   'Turkish Get-Up': 'Levantar Turco',
   'Clean And Press': 'Clean & Press',
@@ -181,4 +226,26 @@ export function translateExerciseName(name: string): string {
   }).filter(Boolean);
 
   return translated.join(' ');
+}
+
+export function getExerciseAliases(name: string): string[] {
+  const lower = name.toLowerCase();
+  const aliases: string[] = [];
+
+  if (lower.includes('lever') || lower.includes('machine')) {
+    aliases.push('maquina', 'máquina', 'articulada', 'hammer', 'alavanca');
+  }
+  if (lower.includes('unilateral') || lower.includes('one arm') || lower.includes('single arm') || lower.includes('alternating')) {
+    aliases.push('isolateral', 'iso-lateral', 'iso lateral', 'unilateral', '1 braco', 'um braco');
+  }
+  if (lower.includes('row')) {
+    aliases.push('remada', 'remadas', 'costas', 'dorsal', 'dorsais');
+  }
+  if (lower.includes('pulldown') || lower.includes('pull-up') || lower.includes('chin-up')) {
+    aliases.push('puxada', 'dorsal', 'costas');
+  }
+  if (lower.includes('press') && (lower.includes('bench') || lower.includes('chest'))) {
+    aliases.push('supino', 'peito', 'peitoral');
+  }
+  return aliases;
 }

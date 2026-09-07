@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { WorkoutExercise, Exercise } from '../types';
 import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Info, Bookmark } from 'lucide-react';
-import { translateExerciseName } from '../utils/translateExercise';
+import { translateExerciseName, getExerciseAliases } from '../utils/translateExercise';
 import { preloadExercises } from './WorkoutLog';
 
 export interface ApiExercise {
@@ -196,8 +196,10 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [] }: 
       if (!q) return true;
       const translated = translateExerciseName(ex.name).toLowerCase();
       const secMuscles = (ex.secondary_muscles || []).join(' ').toLowerCase();
+      const aliases = getExerciseAliases(ex.name).join(' ');
       return ex.name.toLowerCase().includes(q) ||
         translated.includes(q) ||
+        aliases.includes(q) ||
         ex.muscle_group.toLowerCase().includes(q) ||
         secMuscles.includes(q) ||
         (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
