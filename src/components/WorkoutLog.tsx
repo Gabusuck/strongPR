@@ -89,20 +89,221 @@ const ALL_FILTER_MUSCLES = [
 
 // Agrupa músculos da API por categoria de filtro
 const MUSCLE_GROUPS: Record<string, string[]> = {
-  chest: ['chest', 'pectorals'],
-  arms: ['biceps', 'triceps', 'forearms', 'wrist flexors', 'wrist extensors'],
-  shoulders: ['shoulders', 'deltoids', 'rotator cuff'],
-  back: ['back', 'lats', 'latissimus dorsi', 'lower back', 'upper back', 'traps', 'trapezius', 'rhomboids'],
-  abdominals: ['abdominals', 'core', 'obliques', 'hip flexors'],
-  legs: ['quadriceps', 'quads', 'hamstrings', 'glutes', 'gluteus maximus', 'calves', 'soleus', 'ankles', 'ankle stabilizers'],
+  chest: ['chest', 'pectorals', 'upper chest', 'lower chest', 'inner chest', 'outer chest'],
+  arms: ['biceps', 'triceps', 'forearms', 'wrist flexors', 'wrist extensors', 'brachialis', 'brachioradialis', 'arms'],
+  shoulders: ['shoulders', 'deltoids', 'anterior deltoid', 'lateral deltoid', 'posterior deltoid', 'rotator cuff', 'rear delts', 'front delts', 'side delts'],
+  back: ['back', 'lats', 'latissimus dorsi', 'lower back', 'upper back', 'traps', 'trapezius', 'rhomboids', 'middle back', 'spine', 'erector spinae'],
+  abdominals: ['abdominals', 'core', 'obliques', 'hip flexors', 'abs', 'rectus abdominis', 'transverse abdominis'],
+  legs: ['quadriceps', 'quads', 'hamstrings', 'glutes', 'gluteus maximus', 'gluteus medius', 'calves', 'soleus', 'ankles', 'ankle stabilizers', 'thighs', 'adductors', 'abductors', 'legs'],
 };
 
-const muscleMatchesFilter = (muscleGroup: string, filter: string): boolean => {
-  if (filter === 'all') return true;
-  if (filter === 'bookmarked') return true; // Handled separately
-  const group = MUSCLE_GROUPS[filter];
-  if (!group) return false;
-  return group.includes((muscleGroup || '').toLowerCase());
+const muscleMatchesFilter = (
+  exercise: {
+    name?: string;
+    muscle_group?: string;
+    target?: string;
+    secondary_muscles?: string[];
+    category?: string;
+  } | string,
+  filter: string
+): boolean => {
+  if (filter === 'all' || filter === 'bookmarked') return true;
+  const targetFilterMuscles = MUSCLE_GROUPS[filter];
+  if (!targetFilterMuscles) return false;
+
+  if (typeof exercise === 'string') {
+    const lower = exercise.toLowerCase().trim();
+    return targetFilterMuscles.some(m => lower.includes(m) || m.includes(lower));
+  }
+
+  // 1. Primary muscle_group
+  const primary = (exercise.muscle_group || '').toLowerCase().trim();
+  if (primary && targetFilterMuscles.some(m => primary.includes(m) || m.includes(primary))) {
+    return true;
+  }
+
+  // 2. Target muscle
+  const target = (exercise.target || '').toLowerCase().trim();
+  if (target && targetFilterMuscles.some(m => target.includes(m) || m.includes(target))) {
+    return true;
+  }
+
+  // 3. Secondary muscles (ANY match)
+  const secondaries = (exercise.secondary_muscles || []).map(m => m.toLowerCase().trim());
+  if (secondaries.some(sec => targetFilterMuscles.some(m => sec.includes(m) || m.includes(sec)))) {
+    return true;
+  }
+
+  // 4. Category
+  const cat = (exercise.category || '').toLowerCase().trim();
+  const catFilterMap: Record<string, string[]> = {
+    chest: ['peito', 'chest'],
+    arms: ['braços', 'bracos', 'arms', 'biceps', 'triceps', 'antebraços', 'antebracos'],
+    shoulders: ['ombros', 'shoulders', 'delts'],
+    back: ['costas', 'back', 'lats', 'traps'],
+    abdominals: ['core', 'abdominais', 'abs'],
+    legs: ['pernas', 'legs', 'glutes', 'quads', 'gémeos', 'panturrilha']
+  };
+  if (cat && catFilterMap[filter]?.some(cf => cat.includes(cf) || cf.includes(cat))) {
+    return true;
+  }
+
+  // 5. Smart compound multi-muscle heuristics by name
+  const name = (exercise.name || '').toLowerCase().trim();
+  if (filter === 'arms') {
+    if (
+      name.includes('press') ||
+      name.includes('supino') ||
+      name.includes('flexão') ||
+      name.includes('flexao') ||
+      name.includes('flexões') ||
+      name.includes('flexoes') ||
+      name.includes('push-up') ||
+      name.includes('pushup') ||
+      name.includes('dip') ||
+      name.includes('fundo') ||
+      name.includes('row') ||
+      name.includes('remada') ||
+      name.includes('pull-up') ||
+      name.includes('pullup') ||
+      name.includes('chin-up') ||
+      name.includes('chinup') ||
+      name.includes('elevaç') ||
+      name.includes('elevac') ||
+      name.includes('curl') ||
+      name.includes('tricep') ||
+      name.includes('bicep') ||
+      name.includes('extension') ||
+      name.includes('extensão') ||
+      name.includes('extensao')
+    ) {
+      return true;
+    }
+  }
+
+  if (filter === 'chest') {
+    if (
+      name.includes('bench') ||
+      name.includes('supino') ||
+      name.includes('push-up') ||
+      name.includes('pushup') ||
+      name.includes('flexão') ||
+      name.includes('flexao') ||
+      name.includes('flexões') ||
+      name.includes('flexoes') ||
+      name.includes('dip') ||
+      name.includes('fundo') ||
+      name.includes('fly') ||
+      name.includes('crossover') ||
+      name.includes('crucifixo') ||
+      name.includes('chest') ||
+      name.includes('peito')
+    ) {
+      return true;
+    }
+  }
+
+  if (filter === 'shoulders') {
+    if (
+      name.includes('shoulder') ||
+      name.includes('ombro') ||
+      name.includes('militar') ||
+      name.includes('overhead') ||
+      name.includes('lateral raise') ||
+      name.includes('elevação lateral') ||
+      name.includes('elevacao lateral') ||
+      name.includes('frontal') ||
+      name.includes('arnold') ||
+      name.includes('upright row') ||
+      name.includes('remada alta') ||
+      name.includes('face pull') ||
+      name.includes('deltoid') ||
+      name.includes('press') ||
+      name.includes('supino inclinado')
+    ) {
+      return true;
+    }
+  }
+
+  if (filter === 'back') {
+    if (
+      name.includes('back') ||
+      name.includes('costas') ||
+      name.includes('row') ||
+      name.includes('remada') ||
+      name.includes('pull-up') ||
+      name.includes('pullup') ||
+      name.includes('chin-up') ||
+      name.includes('chinup') ||
+      name.includes('elevaç') ||
+      name.includes('elevac') ||
+      name.includes('lat pulldown') ||
+      name.includes('puxada') ||
+      name.includes('deadlift') ||
+      name.includes('peso morto') ||
+      name.includes('levantamento terra') ||
+      name.includes('traps') ||
+      name.includes('shrug') ||
+      name.includes('encolhimento')
+    ) {
+      return true;
+    }
+  }
+
+  if (filter === 'legs') {
+    if (
+      name.includes('squat') ||
+      name.includes('agachamento') ||
+      name.includes('leg') ||
+      name.includes('perna') ||
+      name.includes('lunge') ||
+      name.includes('afundo') ||
+      name.includes('deadlift') ||
+      name.includes('peso morto') ||
+      name.includes('levantamento terra') ||
+      name.includes('calf') ||
+      name.includes('gémeos') ||
+      name.includes('gemeos') ||
+      name.includes('panturrilha') ||
+      name.includes('glute') ||
+      name.includes('glúteo') ||
+      name.includes('gluteo') ||
+      name.includes('prensa') ||
+      name.includes('extensora') ||
+      name.includes('flexora') ||
+      name.includes('hip thrust') ||
+      name.includes('elevação pélvica') ||
+      name.includes('elevacao pelvica')
+    ) {
+      return true;
+    }
+  }
+
+  if (filter === 'abdominals') {
+    if (
+      name.includes('crunch') ||
+      name.includes('abdominal') ||
+      name.includes('abdominais') ||
+      name.includes('plank') ||
+      name.includes('prancha') ||
+      name.includes('leg raise') ||
+      name.includes('elevação de pernas') ||
+      name.includes('elevacao de pernas') ||
+      name.includes('sit-up') ||
+      name.includes('situp') ||
+      name.includes('core') ||
+      name.includes('twist') ||
+      name.includes('oblique') ||
+      name.includes('deadlift') ||
+      name.includes('peso morto') ||
+      name.includes('agachamento') ||
+      name.includes('squat')
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 };
 const MUSCLE_ZOOM_MAPPING: Record<string, { scale: number; origin: string }> = {
   chest: { scale: 1.6, origin: 'center 28%' },
@@ -632,22 +833,30 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     return apiExercises.filter(ex => {
       const matchesMuscle = muscleFilter === 'bookmarked' 
         ? bookmarkedIds.includes(ex.id)
-        : muscleMatchesFilter(ex.muscle_group, muscleFilter);
+        : muscleMatchesFilter(ex, muscleFilter);
       if (!matchesMuscle) return false;
       if (!q) return true;
+      const translated = translateExerciseName(ex.name).toLowerCase();
+      const secMuscles = (ex.secondary_muscles || []).join(' ').toLowerCase();
       return ex.name.toLowerCase().includes(q) ||
+        translated.includes(q) ||
         ex.muscle_group.toLowerCase().includes(q) ||
+        secMuscles.includes(q) ||
         (MUSCLE_LABELS[ex.muscle_group.toLowerCase()] || '').toLowerCase().includes(q);
     });
   }, [apiExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   const filteredLocalExercises = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return localExercises;
-    return localExercises.filter((ex: Exercise) =>
-      ex.name.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q)
-    );
-  }, [localExercises, searchQuery]);
+    return localExercises.filter((ex: Exercise) => {
+      const matchesMuscle = muscleFilter === 'bookmarked' 
+        ? bookmarkedIds.includes(ex.id)
+        : muscleMatchesFilter(ex, muscleFilter);
+      if (!matchesMuscle) return false;
+      if (!q) return true;
+      return ex.name.toLowerCase().includes(q) || ex.category.toLowerCase().includes(q);
+    });
+  }, [localExercises, muscleFilter, bookmarkedIds, searchQuery]);
 
   // Add multiple selected exercises to active workout
   const handleConfirmAddExercises = () => {
@@ -1400,7 +1609,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                         {selectedApiExercise.secondary_muscles.map(m => (
                           <span key={m} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '4px 10px', borderRadius: '10px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
-                            {m}
+                            {mapCategory(m)}
                           </span>
                         ))}
                       </div>
@@ -1684,8 +1893,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                       <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                         {translateExerciseName(ex.name)}
                                       </div>
-                                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {mapCategory(ex.muscle_group)}
+                                        {ex.secondary_muscles && ex.secondary_muscles.length > 0 && (
+                                          <span style={{ opacity: 0.7, fontSize: '0.68rem' }}> · {ex.secondary_muscles.slice(0, 2).map(m => mapCategory(m)).join(', ')}</span>
+                                        )}
                                       </div>
                                     </div>
 
@@ -1878,8 +2090,11 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
                                   <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: '1.25', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {translateExerciseName(ex.name)}
                                   </div>
-                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {mapCategory(ex.muscle_group)}
+                                    {ex.secondary_muscles && ex.secondary_muscles.length > 0 && (
+                                      <span style={{ opacity: 0.7, fontSize: '0.68rem' }}> · {ex.secondary_muscles.slice(0, 2).map(m => mapCategory(m)).join(', ')}</span>
+                                    )}
                                   </div>
                                 </div>
 
