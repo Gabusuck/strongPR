@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye, Edit2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { LayoutTemplate, Trash2, Plus, Dumbbell, Eye, Edit2, GripVertical } from "lucide-react";
 import type { WorkoutTemplate, WorkoutExercise, Exercise } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
 import { CreateRoutineModal } from "./CreateRoutineModal";
@@ -20,24 +20,85 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
 
-  const moveTemplateUp = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (index <= 0 || !onReorderTemplates) return;
-    const copy = [...templates];
-    const temp = copy[index - 1];
-    copy[index - 1] = copy[index];
-    copy[index] = temp;
-    onReorderTemplates(copy);
+  // Drag and drop state for routines
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const touchStartY = useRef<number>(0);
+  const touchActiveIdx = useRef<number | null>(null);
+  const routineContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchActiveIdx.current = idx;
+    setDraggingIdx(idx);
+    setDragOverIdx(idx);
+    if (window.navigator?.vibrate) {
+      window.navigator.vibrate(20);
+    }
   };
 
-  const moveTemplateDown = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (index >= templates.length - 1 || !onReorderTemplates) return;
-    const copy = [...templates];
-    const temp = copy[index + 1];
-    copy[index + 1] = copy[index];
-    copy[index] = temp;
-    onReorderTemplates(copy);
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchActiveIdx.current === null || !onReorderTemplates) return;
+    const currentY = e.touches[0].clientY;
+    const activeIdx = touchActiveIdx.current;
+    for (let i = 0; i < routineContainerRefs.current.length; i++) {
+      const el = routineContainerRefs.current[i];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (currentY >= rect.top && currentY <= rect.bottom) {
+          if (i !== activeIdx) {
+            const list = [...templates];
+            const [moved] = list.splice(activeIdx, 1);
+            list.splice(i, 0, moved);
+            onReorderTemplates(list);
+            touchActiveIdx.current = i;
+            setDraggingIdx(i);
+            setDragOverIdx(i);
+            if (window.navigator?.vibrate) {
+              window.navigator.vibrate(10);
+            }
+          }
+          break;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchActiveIdx.current = null;
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragStart = (idx: number, e: React.DragEvent) => {
+    e.dataTransfer.setData("text/plain", String(idx));
+    e.dataTransfer.effectAllowed = "move";
+    setDraggingIdx(idx);
+  };
+
+  const handleDragOver = (idx: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIdx !== idx) {
+      setDragOverIdx(idx);
+    }
+  };
+
+  const handleDrop = (toIdx: number, e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggingIdx !== null && draggingIdx !== toIdx && onReorderTemplates) {
+      const list = [...templates];
+      const [moved] = list.splice(draggingIdx, 1);
+      list.splice(toIdx, 0, moved);
+      onReorderTemplates(list);
+    }
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingIdx(null);
+    setDragOverIdx(null);
   };
 
   const { bind } = useLongPress<WorkoutTemplate>({
@@ -102,120 +163,119 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
         </div>
       ) : (
         <div style={{ background: "#fff", border: "1px solid var(--border-color)", borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-          {templates.map((template, i) => (
-            <div 
-              key={template.id} 
-              {...bind(template)}
-              style={{
-                borderBottom: i < templates.length - 1 ? "1px solid var(--border-color)" : "none",
-                cursor: "pointer",
-                transition: "background-color 0.15s ease",
-                userSelect: "none",
-                WebkitUserSelect: "none",
-                WebkitTouchCallout: "none"
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 10 }}>
-                {/* Reorder Arrows for Templates */}
-                {templates.length > 1 && onReorderTemplates && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => moveTemplateUp(i, e)}
-                      disabled={i === 0}
+          {templates.map((template, i) => {
+            const isDragging = draggingIdx === i;
+            const isDragOver = dragOverIdx === i && draggingIdx !== null && draggingIdx !== i;
+
+            return (
+              <div 
+                key={template.id}
+                ref={(el) => { routineContainerRefs.current[i] = el; }}
+                draggable={true}
+                onDragStart={(e) => handleDragStart(i, e)}
+                onDragOver={(e) => handleDragOver(i, e)}
+                onDrop={(e) => handleDrop(i, e)}
+                onDragEnd={handleDragEnd}
+                {...bind(template)}
+                style={{
+                  borderBottom: i < templates.length - 1 ? "1px solid var(--border-color)" : "none",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  userSelect: isDragging ? "none" : "auto",
+                  backgroundColor: isDragging ? "rgba(91,94,244,0.08)" : isDragOver ? "rgba(91,94,244,0.03)" : "#fff",
+                  transform: isDragging ? "scale(1.02)" : "scale(1)",
+                  boxShadow: isDragging ? "0 8px 24px rgba(0,0,0,0.12)" : "none",
+                  WebkitUserSelect: "none",
+                  WebkitTouchCallout: "none"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 10 }}>
+                  {/* Drag Handle */}
+                  {templates.length > 1 && onReorderTemplates && (
+                    <div
                       style={{
-                        width: 22, height: 18, borderRadius: 5, border: "none",
-                        background: i === 0 ? "transparent" : "rgba(91,94,244,0.08)",
-                        color: i === 0 ? "var(--text-muted)" : "var(--accent-color)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: i === 0 ? "default" : "pointer",
-                        opacity: i === 0 ? 0.3 : 1,
-                        padding: 0
+                        touchAction: "none",
+                        cursor: "grab",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isDragging ? "var(--accent-color)" : "var(--text-muted)",
+                        padding: "6px 2px",
+                        flexShrink: 0
                       }}
-                      title="Mover rotina para cima"
+                      title="Arrasta para mudar a ordem"
+                      onTouchStart={(e) => handleTouchStart(i, e)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      ▲
+                      <GripVertical size={20} />
+                    </div>
+                  )}
+
+                  <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(91,94,244,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <LayoutTemplate size={18} color="var(--accent-color)" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{template.name}</p>
+                    <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 2 }}>
+                      {template.exercises.length > 0
+                        ? template.exercises.map(e => translateExerciseName(e.name)).join(" · ")
+                        : "Sem exercícios"}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => {
+                        setEditingTemplate(template);
+                        setShowCreate(true);
+                      }}
+                      title="Editar rotina"
+                      style={{
+                        width: 36, height: 36, borderRadius: 10,
+                        background: "rgba(91,94,244,0.08)",
+                        color: "var(--accent-color)",
+                        border: "none",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Edit2 size={15} />
                     </button>
                     <button
-                      onClick={(e) => moveTemplateDown(i, e)}
-                      disabled={i === templates.length - 1}
+                      onClick={() => setPreviewTemplate(template)}
+                      title="Ver exercícios"
                       style={{
-                        width: 22, height: 18, borderRadius: 5, border: "none",
-                        background: i === templates.length - 1 ? "transparent" : "rgba(91,94,244,0.08)",
-                        color: i === templates.length - 1 ? "var(--text-muted)" : "var(--accent-color)",
+                        width: 36, height: 36, borderRadius: 10,
+                        background: "rgba(91,94,244,0.08)",
+                        color: "var(--accent-color)",
+                        border: "none",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        cursor: i === templates.length - 1 ? "default" : "pointer",
-                        opacity: i === templates.length - 1 ? 0.3 : 1,
-                        padding: 0
+                        cursor: "pointer",
                       }}
-                      title="Mover rotina para baixo"
                     >
-                      ▼
+                      <Eye size={16} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        window.customConfirm("Eliminar Rotina", `Eliminar "${template.name}"?`, () => onDeleteTemplate(template.id));
+                      }}
+                      title="Eliminar rotina"
+                      style={{
+                        width: 36, height: 36, borderRadius: 10,
+                        background: "rgba(255,59,48,0.1)",
+                        border: "none",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Trash2 size={16} color="var(--danger)" />
                     </button>
                   </div>
-                )}
-
-                <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(91,94,244,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <LayoutTemplate size={18} color="var(--accent-color)" />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{template.name}</p>
-                  <p style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: 2 }}>
-                    {template.exercises.length > 0
-                      ? template.exercises.map(e => translateExerciseName(e.name)).join(" · ")
-                      : "Sem exercícios"}
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => {
-                      setEditingTemplate(template);
-                      setShowCreate(true);
-                    }}
-                    title="Editar rotina"
-                    style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: "rgba(91,94,244,0.08)",
-                      color: "var(--accent-color)",
-                      border: "none",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Edit2 size={15} />
-                  </button>
-                  <button
-                    onClick={() => setPreviewTemplate(template)}
-                    title="Ver exercícios"
-                    style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: "rgba(91,94,244,0.08)",
-                      color: "var(--accent-color)",
-                      border: "none",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      window.customConfirm("Eliminar Rotina", `Eliminar "${template.name}"?`, () => onDeleteTemplate(template.id));
-                    }}
-                    title="Eliminar rotina"
-                    style={{
-                      width: 36, height: 36, borderRadius: 10,
-                      background: "rgba(255,59,48,0.1)",
-                      border: "none",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Trash2 size={16} color="var(--danger)" />
-                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

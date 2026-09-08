@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { WorkoutExercise, Exercise, WorkoutTemplate } from '../types';
-import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Trash2, ArrowUp, ArrowDown, Layers, Bookmark } from 'lucide-react';
+import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Trash2, GripVertical, Layers, Bookmark } from 'lucide-react';
 import { translateExerciseName, filterExercisesBySearch, getExerciseCategory, matchesCategoryFilter } from '../utils/translateExercise';
 import { preloadExercises } from './WorkoutLog';
 
@@ -46,6 +46,12 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
   const [routineName, setRoutineName] = useState('');
   const [routineExercises, setRoutineExercises] = useState<WorkoutExercise[]>([]);
   
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const touchStartY = useRef<number>(0);
+  const touchActiveIdx = useRef<number | null>(null);
+  const exerciseContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   const [showPicker, setShowPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [muscleFilter, setMuscleFilter] = useState<string>('all');
@@ -100,26 +106,82 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
     });
   }, [isOpen, initialTemplate]);
 
-  const moveUp = (index: number) => {
-    if (index <= 0) return;
-    setRoutineExercises(prev => {
-      const copy = [...prev];
-      const temp = copy[index - 1];
-      copy[index - 1] = copy[index];
-      copy[index] = temp;
-      return copy;
-    });
+  const handleTouchStart = (idx: number, e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchActiveIdx.current = idx;
+    setDraggingIdx(idx);
+    setDragOverIdx(idx);
+    if (window.navigator?.vibrate) {
+      window.navigator.vibrate(20);
+    }
   };
 
-  const moveDown = (index: number) => {
-    setRoutineExercises(prev => {
-      if (index >= prev.length - 1) return prev;
-      const copy = [...prev];
-      const temp = copy[index + 1];
-      copy[index + 1] = copy[index];
-      copy[index] = temp;
-      return copy;
-    });
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchActiveIdx.current === null) return;
+    const currentY = e.touches[0].clientY;
+    const activeIdx = touchActiveIdx.current;
+    for (let i = 0; i < exerciseContainerRefs.current.length; i++) {
+      const el = exerciseContainerRefs.current[i];
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (currentY >= rect.top && currentY <= rect.bottom) {
+          if (i !== activeIdx) {
+            setRoutineExercises(prev => {
+              const list = [...prev];
+              const [moved] = list.splice(activeIdx, 1);
+              list.splice(i, 0, moved);
+              return list;
+            });
+            touchActiveIdx.current = i;
+            setDraggingIdx(i);
+            setDragOverIdx(i);
+            if (window.navigator?.vibrate) {
+              window.navigator.vibrate(10);
+            }
+          }
+          break;
+        }
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchActiveIdx.current = null;
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragStart = (idx: number, e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', String(idx));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingIdx(idx);
+  };
+
+  const handleDragOver = (idx: number, e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIdx !== idx) {
+      setDragOverIdx(idx);
+    }
+  };
+
+  const handleDrop = (toIdx: number, e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggingIdx !== null && draggingIdx !== toIdx) {
+      setRoutineExercises(prev => {
+        const list = [...prev];
+        const [moved] = list.splice(draggingIdx, 1);
+        list.splice(toIdx, 0, moved);
+        return list;
+      });
+    }
+    setDraggingIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingIdx(null);
+    setDragOverIdx(null);
   };
 
   const removeExercise = (index: number) => {
@@ -529,7 +591,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
                     Ordem dos Exercícios ({routineExercises.length})
                   </label>
                   <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    Usa as setas ▲ ▼ para mudar a ordem
+                    Arrasta pelo ícone ⠿ para reordenar
                   </span>
                 </div>
 
@@ -561,118 +623,120 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {routineExercises.map((ex, idx) => (
-                      <div
-                        key={`${ex.id}_${idx}`}
-                        style={{
-                          background: '#FFFFFF',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: '16px',
-                          padding: '12px 14px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          boxShadow: '0 1px 4px rgba(0,0,0,0.03)'
-                        }}
-                      >
+                    {routineExercises.map((ex, idx) => {
+                      const isDragging = draggingIdx === idx;
+                      const isDragOver = dragOverIdx === idx && draggingIdx !== null && draggingIdx !== idx;
+
+                      return (
                         <div
+                          key={`${ex.id}_${idx}`}
+                          ref={(el) => { exerciseContainerRefs.current[idx] = el; }}
+                          draggable={true}
+                          onDragStart={(e) => handleDragStart(idx, e)}
+                          onDragOver={(e) => handleDragOver(idx, e)}
+                          onDrop={(e) => handleDrop(idx, e)}
+                          onDragEnd={handleDragEnd}
                           style={{
-                            width: '26px',
-                            height: '26px',
-                            borderRadius: '8px',
-                            background: 'rgba(91, 94, 244, 0.12)',
-                            color: 'var(--accent-color)',
-                            fontSize: '0.78rem',
-                            fontWeight: 900,
+                            background: isDragging ? 'rgba(91,94,244,0.06)' : '#FFFFFF',
+                            border: isDragging
+                              ? '2px solid var(--accent-color)'
+                              : isDragOver
+                              ? '2px dashed var(--accent-color)'
+                              : '1px solid var(--border-color)',
+                            borderRadius: '16px',
+                            padding: '12px 14px',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
+                            gap: '10px',
+                            transform: isDragging ? 'scale(1.02)' : 'scale(1)',
+                            boxShadow: isDragging ? '0 10px 28px rgba(0,0,0,0.14)' : '0 1px 4px rgba(0,0,0,0.03)',
+                            transition: 'all 0.15s ease',
+                            userSelect: isDragging ? 'none' : 'auto'
                           }}
                         >
-                          {idx + 1}
-                        </div>
-
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {translateExerciseName(ex.name)}
+                          {/* Drag Handle */}
+                          <div
+                            style={{
+                              touchAction: 'none',
+                              cursor: 'grab',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: isDragging ? 'var(--accent-color)' : 'var(--text-muted)',
+                              padding: '6px 2px',
+                              flexShrink: 0
+                            }}
+                            title="Arrasta para mudar a ordem"
+                            onTouchStart={(e) => handleTouchStart(idx, e)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                          >
+                            <GripVertical size={20} />
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                            <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'var(--bg-primary)', padding: '1px 6px', borderRadius: '4px' }}>
-                              {ex.category || 'Geral'}
-                            </span>
-                            <span style={{ fontSize: '0.68rem', color: 'var(--accent-color)', fontWeight: 700 }}>
-                              {ex.sets.length} {ex.sets.length === 1 ? 'série' : 'séries'}
-                            </span>
+
+                          <div
+                            style={{
+                              width: '26px',
+                              height: '26px',
+                              borderRadius: '8px',
+                              background: 'rgba(91, 94, 244, 0.12)',
+                              color: 'var(--accent-color)',
+                              fontSize: '0.78rem',
+                              fontWeight: 900,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0
+                            }}
+                          >
+                            {idx + 1}
                           </div>
-                        </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'var(--bg-primary)', padding: '2px 4px', borderRadius: '8px' }}>
-                          <button
-                            type="button"
-                            onClick={() => removeSet(idx)}
-                            disabled={ex.sets.length <= 1}
-                            style={{
-                              width: '22px', height: '22px', borderRadius: '6px', border: 'none', background: '#fff',
-                              color: ex.sets.length <= 1 ? 'var(--text-muted)' : 'var(--text-primary)',
-                              fontWeight: 800, fontSize: '0.8rem', cursor: ex.sets.length <= 1 ? 'not-allowed' : 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}
-                            title="Remover série"
-                          >
-                            -
-                          </button>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 800, minWidth: '18px', textAlign: 'center' }}>
-                            {ex.sets.length}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => addSet(idx)}
-                            style={{
-                              width: '22px', height: '22px', borderRadius: '6px', border: 'none', background: '#fff',
-                              color: 'var(--accent-color)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}
-                            title="Adicionar série"
-                          >
-                            +
-                          </button>
-                        </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {translateExerciseName(ex.name)}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                              <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', background: 'var(--bg-primary)', padding: '1px 6px', borderRadius: '4px' }}>
+                                {ex.category || 'Geral'}
+                              </span>
+                              <span style={{ fontSize: '0.68rem', color: 'var(--accent-color)', fontWeight: 700 }}>
+                                {ex.sets.length} {ex.sets.length === 1 ? 'série' : 'séries'}
+                              </span>
+                            </div>
+                          </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <button
-                            type="button"
-                            onClick={() => moveUp(idx)}
-                            disabled={idx === 0}
-                            style={{
-                              width: '26px', height: '20px', borderRadius: '6px', border: 'none',
-                              background: idx === 0 ? 'transparent' : 'rgba(91,94,244,0.08)',
-                              color: idx === 0 ? 'var(--text-muted)' : 'var(--accent-color)',
-                              cursor: idx === 0 ? 'default' : 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              opacity: idx === 0 ? 0.3 : 1
-                            }}
-                            title="Mover para cima"
-                          >
-                            <ArrowUp size={13} strokeWidth={2.5} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => moveDown(idx)}
-                            disabled={idx === routineExercises.length - 1}
-                            style={{
-                              width: '26px', height: '20px', borderRadius: '6px', border: 'none',
-                              background: idx === routineExercises.length - 1 ? 'transparent' : 'rgba(91,94,244,0.08)',
-                              color: idx === routineExercises.length - 1 ? 'var(--text-muted)' : 'var(--accent-color)',
-                              cursor: idx === routineExercises.length - 1 ? 'default' : 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              opacity: idx === routineExercises.length - 1 ? 0.3 : 1
-                            }}
-                            title="Mover para baixo"
-                          >
-                            <ArrowDown size={13} strokeWidth={2.5} />
-                          </button>
-                        </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'var(--bg-primary)', padding: '2px 4px', borderRadius: '8px' }}>
+                            <button
+                              type="button"
+                              onClick={() => removeSet(idx)}
+                              disabled={ex.sets.length <= 1}
+                              style={{
+                                width: '22px', height: '22px', borderRadius: '6px', border: 'none', background: '#fff',
+                                color: ex.sets.length <= 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+                                fontWeight: 800, fontSize: '0.8rem', cursor: ex.sets.length <= 1 ? 'not-allowed' : 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}
+                              title="Remover série"
+                            >
+                              -
+                            </button>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, minWidth: '18px', textAlign: 'center' }}>
+                              {ex.sets.length}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => addSet(idx)}
+                              style={{
+                                width: '22px', height: '22px', borderRadius: '6px', border: 'none', background: '#fff',
+                                color: 'var(--accent-color)', fontWeight: 800, fontSize: '0.8rem', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}
+                              title="Adicionar série"
+                            >
+                              +
+                            </button>
+                          </div>
 
                         <button
                           type="button"
@@ -687,7 +751,8 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
                           <Trash2 size={14} />
                         </button>
                       </div>
-                    ))}
+                    );
+                  })}
 
                     <button
                       type="button"
