@@ -511,6 +511,7 @@ export default function App() {
             onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
             onAddTemplate={handleAddTemplate}
             onDeleteTemplate={handleDeleteTemplate}
+            onReorderTemplates={(newTemplates) => updateAppDataState({ ...appData, templates: newTemplates })}
           />
         );
       case 'profile':

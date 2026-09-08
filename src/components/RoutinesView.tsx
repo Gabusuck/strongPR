@@ -12,12 +12,33 @@ interface RoutinesViewProps {
   onStartWorkoutFromTemplate: (template: WorkoutTemplate) => void;
   onAddTemplate: (name: string, exercises: WorkoutExercise[], templateId?: string) => void;
   onDeleteTemplate: (id: string) => void;
+  onReorderTemplates?: (templates: WorkoutTemplate[]) => void;
 }
 
-export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate, onAddTemplate, onDeleteTemplate }: RoutinesViewProps) {
+export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate, onAddTemplate, onDeleteTemplate, onReorderTemplates }: RoutinesViewProps) {
   const [showCreate, setShowCreate] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
+
+  const moveTemplateUp = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (index <= 0 || !onReorderTemplates) return;
+    const copy = [...templates];
+    const temp = copy[index - 1];
+    copy[index - 1] = copy[index];
+    copy[index] = temp;
+    onReorderTemplates(copy);
+  };
+
+  const moveTemplateDown = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (index >= templates.length - 1 || !onReorderTemplates) return;
+    const copy = [...templates];
+    const temp = copy[index + 1];
+    copy[index + 1] = copy[index];
+    copy[index] = temp;
+    onReorderTemplates(copy);
+  };
 
   const { bind } = useLongPress<WorkoutTemplate>({
     onLongPress: (template) => {
@@ -94,8 +115,46 @@ export function RoutinesView({ templates, exercises, onStartWorkoutFromTemplate,
                 WebkitTouchCallout: "none"
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", padding: "14px 18px", gap: 12 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 12, background: "rgba(91,94,244,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 10 }}>
+                {/* Reorder Arrows for Templates */}
+                {templates.length > 1 && onReorderTemplates && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => moveTemplateUp(i, e)}
+                      disabled={i === 0}
+                      style={{
+                        width: 22, height: 18, borderRadius: 5, border: "none",
+                        background: i === 0 ? "transparent" : "rgba(91,94,244,0.08)",
+                        color: i === 0 ? "var(--text-muted)" : "var(--accent-color)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: i === 0 ? "default" : "pointer",
+                        opacity: i === 0 ? 0.3 : 1,
+                        padding: 0
+                      }}
+                      title="Mover rotina para cima"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      onClick={(e) => moveTemplateDown(i, e)}
+                      disabled={i === templates.length - 1}
+                      style={{
+                        width: 22, height: 18, borderRadius: 5, border: "none",
+                        background: i === templates.length - 1 ? "transparent" : "rgba(91,94,244,0.08)",
+                        color: i === templates.length - 1 ? "var(--text-muted)" : "var(--accent-color)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        cursor: i === templates.length - 1 ? "default" : "pointer",
+                        opacity: i === templates.length - 1 ? 0.3 : 1,
+                        padding: 0
+                      }}
+                      title="Mover rotina para baixo"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(91,94,244,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <LayoutTemplate size={18} color="var(--accent-color)" />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
