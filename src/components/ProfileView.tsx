@@ -89,21 +89,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
   const safeWorkouts = (workouts || []).filter(w => w && w.date);
 
+  // Helper to format date consistently to local 'YYYY-MM-DD' without UTC offset mismatch
+  const toLocalDateStr = (d: Date | string) => {
+    try {
+      const date = typeof d === 'string' ? new Date(d) : d;
+      if (isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch {
+      return '';
+    }
+  };
+
   // Generate 50 days grid (7 weeks) for the gym activity visual tracker
   const getActivityGridDays = () => {
     const days = [];
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     for (let i = 49; i >= 0; i--) {
-      const d = new Date();
+      const d = new Date(today);
       d.setDate(today.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const dayWorkouts = safeWorkouts.filter(w => {
-        try {
-          return new Date(w.date).toISOString().split('T')[0] === dateStr;
-        } catch {
-          return false;
-        }
-      });
+      const dateStr = toLocalDateStr(d);
+      const dayWorkouts = safeWorkouts.filter(w => toLocalDateStr(w.date) === dateStr);
       const count = dayWorkouts.length;
       const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
       days.push({ date: dateStr, count, volume });
@@ -114,7 +124,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const getFullYearGridDays = () => {
     const currentYear = new Date().getFullYear();
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setHours(23, 59, 59, 999);
 
     // Jan 1st of the current year
     const jan1 = new Date(currentYear, 0, 1);
@@ -137,22 +147,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       isFuture: boolean;
     }[] = [];
 
-    // Map workouts by YYYY-MM-DD
+    // Map workouts by local YYYY-MM-DD
     const workoutsByDate: Record<string, typeof safeWorkouts> = {};
     safeWorkouts.forEach(w => {
       try {
-        const dStr = new Date(w.date).toISOString().split('T')[0];
-        if (!workoutsByDate[dStr]) workoutsByDate[dStr] = [];
-        workoutsByDate[dStr].push(w);
+        const dStr = toLocalDateStr(w.date);
+        if (dStr) {
+          if (!workoutsByDate[dStr]) workoutsByDate[dStr] = [];
+          workoutsByDate[dStr].push(w);
+        }
       } catch {}
     });
 
     const curr = new Date(startDate);
     while (curr <= endDate) {
       const d = new Date(curr);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toLocalDateStr(d);
       const isCurrentYear = d.getFullYear() === currentYear;
-      const isFuture = d > today;
+      const isFuture = d.getTime() > today.getTime();
 
       let count = 0;
       let volume = 0;
@@ -315,14 +327,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       for (let i = 0; i < 365; i++) {
         const d = new Date(tod); d.setDate(tod.getDate() - i);
         if (d.getFullYear() !== currentYear) break;
-        const ds = d.toISOString().split('T')[0];
-        if (safeWorkouts.some(w => {
-          try {
-            return new Date(w.date).toISOString().split('T')[0] === ds;
-          } catch {
-            return false;
-          }
-        })) streak++;
+        const ds = toLocalDateStr(d);
+        if (safeWorkouts.some(w => toLocalDateStr(w.date) === ds)) streak++;
         else if (i > 0) break;
       }
       let best = 0, run = 0;
