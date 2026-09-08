@@ -1,8 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Play, X, Dumbbell, Edit2 } from 'lucide-react';
 import type { WorkoutTemplate } from '../types';
 import { translateExerciseName } from '../utils/translateExercise';
+import { resolveExerciseMediaId, type ApiExerciseItem } from '../utils/exerciseUtils';
+import { StaticExerciseImage } from './StaticExerciseImage';
+import { preloadExercises } from './WorkoutLog';
 
 interface RoutinePreviewModalProps {
   template: WorkoutTemplate | null;
@@ -17,9 +20,14 @@ export const RoutinePreviewModal: React.FC<RoutinePreviewModalProps> = ({
   onStartWorkout,
   onEdit,
 }) => {
+  const [apiExercises, setApiExercises] = useState<ApiExerciseItem[]>([]);
+
   useEffect(() => {
     if (template) {
       document.body.style.overflow = 'hidden';
+      preloadExercises().then(data => {
+        setApiExercises(data);
+      });
     } else {
       document.body.style.overflow = '';
     }
@@ -161,29 +169,31 @@ export const RoutinePreviewModal: React.FC<RoutinePreviewModalProps> = ({
               Esta rotina não tem exercícios definidos.
             </div>
           ) : (
-            template.exercises.map((ex, idx) => (
-              <div
-                key={ex.id || idx}
-                style={{
-                  background: '#F8FAFC',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '16px',
-                  padding: '14px 16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            template.exercises.map((ex, idx) => {
+              const mediaId = resolveExerciseMediaId(ex, apiExercises);
+
+              return (
+                <div
+                  key={ex.id || idx}
+                  style={{
+                    background: '#F8FAFC',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '16px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span
                       style={{
-                        width: '22px',
-                        height: '22px',
-                        borderRadius: '6px',
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '7px',
                         backgroundColor: 'rgba(91, 94, 244, 0.12)',
                         color: 'var(--accent-color)',
-                        fontSize: '0.72rem',
+                        fontSize: '0.75rem',
                         fontWeight: 800,
                         display: 'flex',
                         alignItems: 'center',
@@ -193,36 +203,56 @@ export const RoutinePreviewModal: React.FC<RoutinePreviewModalProps> = ({
                     >
                       {idx + 1}
                     </span>
-                    <h4
+
+                    {/* Thumbnail Image */}
+                    <div
                       style={{
-                        fontSize: '0.92rem',
-                        fontWeight: 700,
-                        color: 'var(--text-primary)',
-                        margin: 0,
-                      }}
-                    >
-                      {translateExerciseName(ex.name)}
-                    </h4>
-                  </div>
-                  {ex.category && (
-                    <span
-                      style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.04em',
-                        color: 'var(--text-secondary)',
-                        backgroundColor: '#FFFFFF',
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '10px',
+                        backgroundColor: 'var(--bg-secondary)',
                         border: '1px solid var(--border-color)',
-                        padding: '2px 6px',
-                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         flexShrink: 0,
                       }}
                     >
-                      {ex.category}
-                    </span>
-                  )}
-                </div>
+                      <StaticExerciseImage mediaId={mediaId} alt={ex.name} style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h4
+                        style={{
+                          fontSize: '0.92rem',
+                          fontWeight: 700,
+                          color: 'var(--text-primary)',
+                          margin: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {translateExerciseName(ex.name)}
+                      </h4>
+                      {ex.category && (
+                        <span
+                          style={{
+                            fontSize: '0.66rem',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                            color: 'var(--text-secondary)',
+                            marginTop: '2px',
+                            display: 'inline-block'
+                          }}
+                        >
+                          {ex.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
                 {/* Sets list */}
                 {ex.sets && ex.sets.length > 0 && (
@@ -261,8 +291,9 @@ export const RoutinePreviewModal: React.FC<RoutinePreviewModalProps> = ({
                     ))}
                   </div>
                 )}
-              </div>
-            ))
+                </div>
+              );
+            })
           )}
         </div>
 

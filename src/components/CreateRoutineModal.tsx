@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { WorkoutExercise, Exercise, WorkoutTemplate } from '../types';
 import { X, Search, Plus, Check, ChevronLeft, Dumbbell, Trash2, GripVertical, Layers, Bookmark } from 'lucide-react';
 import { translateExerciseName, filterExercisesBySearch, getExerciseCategory, matchesCategoryFilter } from '../utils/translateExercise';
+import { resolveExerciseMediaId } from '../utils/exerciseUtils';
+import { StaticExerciseImage } from './StaticExerciseImage';
 import { preloadExercises } from './WorkoutLog';
 
 export interface ApiExercise {
@@ -626,6 +628,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
                     {routineExercises.map((ex, idx) => {
                       const isDragging = draggingIdx === idx;
                       const isDragOver = dragOverIdx === idx && draggingIdx !== null && draggingIdx !== idx;
+                      const mediaId = resolveExerciseMediaId(ex, apiExercises);
 
                       return (
                         <div
@@ -644,7 +647,7 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
                               ? '2px dashed var(--accent-color)'
                               : '1px solid var(--border-color)',
                             borderRadius: '16px',
-                            padding: '12px 14px',
+                            padding: '10px 12px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
@@ -676,12 +679,12 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
 
                           <div
                             style={{
-                              width: '26px',
-                              height: '26px',
-                              borderRadius: '8px',
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '7px',
                               background: 'rgba(91, 94, 244, 0.12)',
                               color: 'var(--accent-color)',
-                              fontSize: '0.78rem',
+                              fontSize: '0.75rem',
                               fontWeight: 900,
                               display: 'flex',
                               alignItems: 'center',
@@ -690,6 +693,24 @@ export function CreateRoutineModal({ isOpen, onClose, onSave, exercises = [], in
                             }}
                           >
                             {idx + 1}
+                          </div>
+
+                          {/* Exercise Thumbnail */}
+                          <div
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '10px',
+                              backgroundColor: 'var(--bg-secondary)',
+                              border: '1px solid var(--border-color)',
+                              overflow: 'hidden',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <StaticExerciseImage mediaId={mediaId} alt={ex.name} style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
                           </div>
 
                           <div style={{ flex: 1, minWidth: 0 }}>
