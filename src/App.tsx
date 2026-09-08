@@ -1176,6 +1176,82 @@ export default function App() {
         }
       `}</style>
 
+      {/* Portrait orientation lock prompt on landscape mobile */}
+      <OrientationLockOverlay />
+
+    </div>
+  );
+}
+
+function OrientationLockOverlay() {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    const handleOrientationChange = () => {
+      // If screen is taller than wide, reset dismissed state so it will trigger next time it's rotated
+      if (window.innerHeight > window.innerWidth) {
+        setDismissed(false);
+      }
+    };
+    window.addEventListener('resize', handleOrientationChange);
+    window.addEventListener('orientationchange', handleOrientationChange);
+    return () => {
+      window.removeEventListener('resize', handleOrientationChange);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+    };
+  }, []);
+
+  if (dismissed) return null;
+
+  return (
+    <div className="orientation-lock-overlay">
+      <div style={{
+        background: 'var(--bg-secondary)',
+        padding: '24px 22px',
+        borderRadius: '24px',
+        border: '1px solid var(--border-color)',
+        boxShadow: '0 20px 50px rgba(0,0,0,0.12)',
+        maxWidth: '350px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+      }}>
+        <div style={{
+          width: '52px',
+          height: '52px',
+          borderRadius: '50%',
+          background: 'rgba(91, 94, 244, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--accent-color)'
+        }}>
+          <Smartphone size={30} className="orientation-phone-icon" />
+        </div>
+        <div>
+          <h3 style={{ fontSize: '1.05rem', fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text-primary)', marginBottom: '4px' }}>
+            Roda o Telemóvel
+          </h3>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4, margin: 0 }}>
+            O StrongPR funciona em modo vertical (retrato) para uma melhor experiência durante o treino.
+          </p>
+        </div>
+        <button
+          onClick={() => setDismissed(true)}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            fontSize: '0.72rem',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            textDecoration: 'underline'
+          }}
+        >
+          Continuar na horizontal
+        </button>
+      </div>
     </div>
   );
 }

@@ -89,7 +89,7 @@ body {
   position: relative;
 }
 
-@media (min-width: 576px) {
+@media (min-width: 576px) and (min-height: 600px) {
   body {
     background-color: #E5E5EA;
     display: flex;
@@ -104,6 +104,39 @@ body {
     border-radius: 28px;
     border: 1px solid var(--border-color);
   }
+}
+
+/* Portrait orientation lock prompt on mobile landscape */
+.orientation-lock-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(242, 242, 247, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 9999999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+@media screen and (orientation: landscape) and (max-height: 600px) and (pointer: coarse),
+       screen and (orientation: landscape) and (max-height: 500px) {
+  .orientation-lock-overlay {
+    display: flex !important;
+  }
+}
+
+@keyframes rotatePhonePrompt {
+  0%, 15% { transform: rotate(90deg); }
+  45%, 65% { transform: rotate(0deg); }
+  90%, 100% { transform: rotate(90deg); }
+}
+
+.orientation-phone-icon {
+  animation: rotatePhonePrompt 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 .app-header {
