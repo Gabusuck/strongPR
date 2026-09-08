@@ -195,17 +195,26 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const activityDays = getActivityGridDays();
   const fullYearDays = getFullYearGridDays();
 
-  // Volume percentile tiers for color intensity
-  const allVolumes = fullYearDays.filter(d => d.isCurrentYear && d.volume > 0).map(d => d.volume).sort((a, b) => a - b);
-  const p33 = allVolumes[Math.floor(allVolumes.length * 0.33)] || 1;
-  const p66 = allVolumes[Math.floor(allVolumes.length * 0.66)] || 2;
-  const p90 = allVolumes[Math.floor(allVolumes.length * 0.90)] || 3;
+  // Volume tiers for color intensity based on total weight lifted per workout day
+  const allVolumes = fullYearDays
+    .filter(d => d.isCurrentYear && d.volume > 0)
+    .map(d => d.volume)
+    .sort((a, b) => a - b);
+
+  const minVol = allVolumes.length > 0 ? allVolumes[0] : 0;
+  const maxVol = allVolumes.length > 0 ? allVolumes[allVolumes.length - 1] : 0;
+
+  // 4 progressive tiers
+  const p25 = allVolumes.length > 0 ? allVolumes[Math.floor((allVolumes.length - 1) * 0.25)] : 0;
+  const p50 = allVolumes.length > 0 ? allVolumes[Math.floor((allVolumes.length - 1) * 0.50)] : 0;
+  const p75 = allVolumes.length > 0 ? allVolumes[Math.floor((allVolumes.length - 1) * 0.75)] : 0;
 
   const getVolumeClass = (volume: number) => {
-    if (volume === 0) return '';
-    if (volume <= p33) return 'active-1';
-    if (volume <= p66) return 'active-2';
-    if (volume <= p90) return 'active-3';
+    if (!volume || volume <= 0) return '';
+    if (allVolumes.length <= 1 || minVol === maxVol) return 'active-3';
+    if (volume <= p25) return 'active-1';
+    if (volume <= p50) return 'active-2';
+    if (volume <= p75) return 'active-3';
     return 'active-4';
   };
 
@@ -433,9 +442,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
         let fc: string;
         if (day.volume === 0)        fc = EMPTY_CELL;
-        else if (day.volume <= p33)  fc = TIER_1;
-        else if (day.volume <= p66)  fc = TIER_2;
-        else if (day.volume <= p90)  fc = TIER_3;
+        else if (day.volume <= p25)  fc = TIER_1;
+        else if (day.volume <= p50)  fc = TIER_2;
+        else if (day.volume <= p75)  fc = TIER_3;
         else { fc = TIER_4; ctx.shadowColor = ACCENT_GLOW; ctx.shadowBlur = 6; }
         rr(x, y, CELL, CELL, 3, fc);
         ctx.shadowBlur = 0;
@@ -930,17 +939,28 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </h3>
         
         <div className="activity-grid">
-          {activityDays.map((day, idx) => (
-            <div 
-              key={idx}
-              className={`activity-day ${day.count > 1 ? 'active-2' : day.count === 1 ? 'active-1' : ''}`}
-              title={`${day.count} treinos em ${day.date}`}
-            />
-          ))}
+          {activityDays.map((day, idx) => {
+            const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg` : '';
+            return (
+              <div 
+                key={idx}
+                className={`activity-day ${getVolumeClass(day.volume)}`}
+                title={`${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
+              />
+            );
+          })}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
           <span style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '3px' }}>Ver ano inteiro →</span>
-          <span>Hoje</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span>Menos</span>
+            <div className="activity-day" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
+            <div className="activity-day active-1" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
+            <div className="activity-day active-2" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
+            <div className="activity-day active-3" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
+            <div className="activity-day active-4" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
+            <span>Mais kg</span>
+          </div>
         </div>
       </div>
 

@@ -144,13 +144,19 @@ export default function App() {
     }
 
     // Lock screen orientation to portrait if supported
-    try {
-      if (window.screen && (window.screen as any).orientation && (window.screen.orientation as any).lock) {
-        (window.screen.orientation as any).lock('portrait').catch(() => {});
+    const tryLockOrientation = () => {
+      try {
+        if (window.screen && (window.screen as any).orientation && (window.screen.orientation as any).lock) {
+          (window.screen.orientation as any).lock('portrait').catch(() => {});
+        }
+      } catch {
+        // Ignore if unsupported
       }
-    } catch {
-      // Ignore if unsupported
-    }
+    };
+
+    tryLockOrientation();
+    window.addEventListener('touchstart', tryLockOrientation, { once: true });
+    window.addEventListener('click', tryLockOrientation, { once: true });
   }, []);
 
   // Save active workout to localStorage
