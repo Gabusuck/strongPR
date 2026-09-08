@@ -195,27 +195,43 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const activityDays = getActivityGridDays();
   const fullYearDays = getFullYearGridDays();
 
-  // Volume tiers for color intensity based on total weight lifted per workout day
-  const allVolumes = fullYearDays
-    .filter(d => d.isCurrentYear && d.volume > 0)
-    .map(d => d.volume)
-    .sort((a, b) => a - b);
+  // Compute workout baseline averages for personalized color tiers based on the user's average
+  const activeWorkoutVolumes = safeWorkouts
+    .map(w => getWorkoutVolume(w))
+    .filter(v => v > 0);
 
-  const minVol = allVolumes.length > 0 ? allVolumes[0] : 0;
-  const maxVol = allVolumes.length > 0 ? allVolumes[allVolumes.length - 1] : 0;
+  const totalWorkoutVolume = activeWorkoutVolumes.reduce((sum, v) => sum + v, 0);
+  const avgWorkoutVolume = activeWorkoutVolumes.length > 0
+    ? totalWorkoutVolume / activeWorkoutVolumes.length
+    : 0;
 
-  // 4 progressive tiers
-  const p25 = allVolumes.length > 0 ? allVolumes[Math.floor((allVolumes.length - 1) * 0.25)] : 0;
-  const p50 = allVolumes.length > 0 ? allVolumes[Math.floor((allVolumes.length - 1) * 0.50)] : 0;
-  const p75 = allVolumes.length > 0 ? allVolumes[Math.floor((allVolumes.length - 1) * 0.75)] : 0;
+  // Classification function based on the athlete's personal average
+  const getVolumeTier = (volume: number): { tier: number; label: string } => {
+    if (!volume || volume <= 0) return { tier: 0, label: 'Sem Treino' };
+    if (activeWorkoutVolumes.length <= 1 || avgWorkoutVolume === 0) {
+      return { tier: 3, label: 'Bom Treino' };
+    }
+    
+    // Menos bom / Leve: abaixo de 70% da média pessoal
+    if (volume < avgWorkoutVolume * 0.70) {
+      return { tier: 1, label: 'Treino Leve' };
+    }
+    // Moderado: entre 70% e 95% da média pessoal
+    if (volume < avgWorkoutVolume * 0.95) {
+      return { tier: 2, label: 'Treino Moderado' };
+    }
+    // Bom Treino: entre 95% e 125% da média pessoal (sólido na média)
+    if (volume < avgWorkoutVolume * 1.25) {
+      return { tier: 3, label: 'Bom Treino' };
+    }
+    // Excelente / Monstro: 125%+ da média pessoal
+    return { tier: 4, label: 'Treino Excelente 🔥' };
+  };
 
   const getVolumeClass = (volume: number) => {
-    if (!volume || volume <= 0) return '';
-    if (allVolumes.length <= 1 || minVol === maxVol) return 'active-3';
-    if (volume <= p25) return 'active-1';
-    if (volume <= p50) return 'active-2';
-    if (volume <= p75) return 'active-3';
-    return 'active-4';
+    const { tier } = getVolumeTier(volume);
+    if (tier === 0) return '';
+    return `active-${tier}`;
   };
 
   const [isSharingImage, setIsSharingImage] = useState(false);
@@ -441,10 +457,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         const col = Math.floor(idx / 7), row = idx % 7;
         const x = gX2 + col * (CELL + GAP), y = gY2 + row * (CELL + GAP);
         let fc: string;
-        if (day.volume === 0)        fc = EMPTY_CELL;
-        else if (day.volume <= p25)  fc = TIER_1;
-        else if (day.volume <= p50)  fc = TIER_2;
-        else if (day.volume <= p75)  fc = TIER_3;
+        const tier = getVolumeTier(day.volume).tier;
+        if (tier === 0)      fc = EMPTY_CELL;
+        else if (tier === 1) fc = TIER_1;
+        else if (tier === 2) fc = TIER_2;
+        else if (tier === 3) fc = TIER_3;
         else { fc = TIER_4; ctx.shadowColor = ACCENT_GLOW; ctx.shadowBlur = 6; }
         rr(x, y, CELL, CELL, 3, fc);
         ctx.shadowBlur = 0;
@@ -940,7 +957,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         
         <div className="activity-grid">
           {activityDays.map((day, idx) => {
-            const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg` : '';
+            const tierInfo = getVolumeTier(day.volume);
+            const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
             return (
               <div 
                 key={idx}
@@ -953,13 +971,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
           <span style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '3px' }}>Ver ano inteiro →</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <span>Menos</span>
+            <span>Leve</span>
             <div className="activity-day" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
-            <div className="activity-day active-1" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
-            <div className="activity-day active-2" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
-            <div className="activity-day active-3" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
-            <div className="activity-day active-4" style={{ width: '8px', height: '8px', borderRadius: '2px' }} />
-            <span>Mais kg</span>
+            <div className="activity-day active-1" style={{ width: '8px', height: '8px', borderRadius: '2px' }} title="Abaixo de 70% da média" />
+            <div className="activity-day active-2" style={{ width: '8px', height: '8px', borderRadius: '2px' }} title="Moderado (70%-95% da média)" />
+            <div className="activity-day active-3" style={{ width: '8px', height: '8px', borderRadius: '2px' }} title="Bom Treino (Média sólida)" />
+            <div className="activity-day active-4" style={{ width: '8px', height: '8px', borderRadius: '2px' }} title="Excelente (>125% da média)" />
+            <span>Intenso</span>
           </div>
         </div>
       </div>
@@ -1272,7 +1290,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           }
 
                           const formattedDate = day.date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' });
-                          const volLabel = day.volume > 0 ? ` · ${Math.round(day.volume)}kg` : '';
+                          const tierInfo = getVolumeTier(day.volume);
+                          const volLabel = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
                           const tooltip = day.isFuture
                             ? formattedDate
                             : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${formattedDate}${volLabel}`;
@@ -1294,14 +1313,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
               {/* Legend, total count and download button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 650, padding: '0 4px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Menos</span>
-                  <div className="activity-day" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
-                  <div className="activity-day active-1" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
-                  <div className="activity-day active-2" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
-                  <div className="activity-day active-3" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
-                  <div className="activity-day active-4" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
-                  <span>Mais</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>Leve</span>
+                    <div className="activity-day" style={{ width: '10px', height: '10px', borderRadius: '2px' }} />
+                    <div className="activity-day active-1" style={{ width: '10px', height: '10px', borderRadius: '2px' }} title="Abaixo de 70% da tua média" />
+                    <div className="activity-day active-2" style={{ width: '10px', height: '10px', borderRadius: '2px' }} title="Moderado (70%-95% da média)" />
+                    <div className="activity-day active-3" style={{ width: '10px', height: '10px', borderRadius: '2px' }} title="Bom Treino (Média sólida)" />
+                    <div className="activity-day active-4" style={{ width: '10px', height: '10px', borderRadius: '2px' }} title="Treino Excelente (>125% da média)" />
+                    <span>Intenso</span>
+                  </div>
+                  {avgWorkoutVolume > 0 && (
+                    <span style={{ fontSize: '0.66rem', color: 'var(--text-muted)' }}>
+                      Média pessoal: <strong>{Math.round(avgWorkoutVolume)}kg</strong>/treino
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={downloadShareImage}
