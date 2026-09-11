@@ -490,12 +490,85 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   // Elapsed workout time (wall-clock based)
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
+  // Shared AudioContext for zero-latency, reliably unlocked notification beeps
+  const getAudioContext = (): AudioContext | null => {
+    try {
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return null;
+      if (!(window as any).__strongpr_audio_ctx) {
+        (window as any).__strongpr_audio_ctx = new AudioCtxClass();
+      }
+      const ctx = (window as any).__strongpr_audio_ctx as AudioContext;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      return ctx;
+    } catch {
+      return null;
+    }
+  };
+
+  const scheduleServiceWorkerRestTimer = (endTime: number) => {
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SCHEDULE_REST_TIMER',
+          endTime,
+          title: 'Tempo de Descanso Concluído! ⏱️',
+          body: 'Está na hora de começares a próxima série!'
+        });
+      }
+    } catch {}
+  };
+
+  const cancelServiceWorkerRestTimer = () => {
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'CANCEL_REST_TIMER'
+        });
+      }
+    } catch {}
+  };
+
+  // Screen WakeLock to prevent screen auto-sleep during active workouts
+  useEffect(() => {
+    let wakeLockSentinel: any = null;
+    const requestLock = async () => {
+      try {
+        if ('wakeLock' in navigator && activeWorkout && document.visibilityState === 'visible') {
+          wakeLockSentinel = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch {}
+    };
+
+    if (activeWorkout) {
+      requestLock();
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && activeWorkout) {
+        requestLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wakeLockSentinel) {
+        try { wakeLockSentinel.release(); } catch {}
+      }
+    };
+  }, [activeWorkout]);
+
   // Helper functions for Rest Timer
   const startRestTimer = (seconds: number) => {
+    getAudioContext();
     const endTime = Date.now() + seconds * 1000;
     setRestDuration(seconds);
     setRestEndTime(endTime);
     setRestTimeLeft(seconds);
+    scheduleServiceWorkerRestTimer(endTime);
     try {
       localStorage.setItem('strongpr_rest_end_time', endTime.toString());
       localStorage.setItem('strongpr_rest_duration', seconds.toString());
@@ -503,6 +576,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   };
 
   const addRestTime = (additionalSeconds: number) => {
+    getAudioContext();
     const currentEnd = restEndTime && restEndTime > Date.now() ? restEndTime : Date.now();
     const newEnd = currentEnd + additionalSeconds * 1000;
     const newDuration = (restDuration || settings.defaultRestDuration) + additionalSeconds;
@@ -510,6 +584,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
     setRestDuration(newDuration);
     setRestEndTime(newEnd);
     setRestTimeLeft(newLeft);
+    scheduleServiceWorkerRestTimer(newEnd);
     try {
       localStorage.setItem('strongpr_rest_end_time', newEnd.toString());
       localStorage.setItem('strongpr_rest_duration', newDuration.toString());
@@ -519,6 +594,7 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   const clearRestTimer = () => {
     setRestEndTime(null);
     setRestTimeLeft(null);
+    cancelServiceWorkerRestTimer();
     try {
       localStorage.removeItem('strongpr_rest_end_time');
       localStorage.removeItem('strongpr_rest_duration');
@@ -539,12 +615,17 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
 
       // 2. Rest Timer Countdown (Real Wall-Clock)
       if (restEndTime) {
-        const left = Math.ceil((restEndTime - Date.now()) / 1000);
-        if (left <= 0) {
-          triggerRestEndNotifications();
+        const diff = restEndTime - Date.now();
+        if (diff <= 0) {
+          const expiredSecondsAgo = Math.abs(diff) / 1000;
+          // Only fire foreground sound/vibe if it expired in the last 2.5 seconds in foreground
+          // If expired long ago while sleeping, do not fire delayed annoying notifications
+          if (expiredSecondsAgo <= 2.5) {
+            triggerRestEndNotifications();
+          }
           clearRestTimer();
         } else {
-          setRestTimeLeft(left);
+          setRestTimeLeft(Math.ceil(diff / 1000));
         }
       }
     };
@@ -591,29 +672,34 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
   }, [apiExercises.length]);
 
   const triggerRestEndNotifications = () => {
-    if (settings.enableVibration && 'vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+    if (settings.enableVibration && 'vibrate' in navigator) {
+      try { navigator.vibrate([250, 100, 250, 100, 250]); } catch {}
+    }
     if (settings.enableSound) {
       try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const playBeep = (time: number, freq: number) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.frequency.value = freq;
-          gain.gain.setValueAtTime(0.15, time);
-          gain.gain.exponentialRampToValueAtTime(0.01, time + 0.15);
-          osc.start(time);
-          osc.stop(time + 0.15);
-        };
-        const now = audioCtx.currentTime;
-        playBeep(now, 880);
-        playBeep(now + 0.25, 880);
+        const audioCtx = getAudioContext();
+        if (audioCtx) {
+          const playBeep = (time: number, freq: number) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, time);
+            gain.gain.setValueAtTime(0.2, time);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+            osc.start(time);
+            osc.stop(time + 0.18);
+          };
+          const now = audioCtx.currentTime;
+          playBeep(now, 880);
+          playBeep(now + 0.22, 1174.66);
+        }
       } catch (err) { console.error('Audio beep error', err); }
     }
 
-    // System Push Notification (triggers exactly once when the rest time ends)
-    if ('Notification' in window && Notification.permission === 'granted') {
+    // System Push Notification if app is in background
+    if (document.visibilityState !== 'visible' && 'Notification' in window && Notification.permission === 'granted') {
       const title = 'Tempo de Descanso Concluído! ⏱️';
       const body = 'Está na hora de começares a próxima série!';
       
@@ -621,25 +707,25 @@ export const WorkoutLog: React.FC<WorkoutLogProps> = ({
         navigator.serviceWorker.ready.then((registration) => {
           registration.showNotification(title, {
             body,
-            icon: '/logo.png',
-            badge: '/logo.png',
-            tag: 'rest-timer-end',
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: 'strongpr-rest-timer',
             renotify: true,
-            vibrate: [200, 100, 200]
+            vibrate: [250, 100, 250, 100, 250]
           } as any);
         }).catch(() => {
           new Notification(title, {
             body,
-            icon: '/logo.png',
-            tag: 'rest-timer-end',
+            icon: '/icon-192.png',
+            tag: 'strongpr-rest-timer',
             renotify: true
           } as any);
         });
       } else {
         new Notification(title, {
           body,
-          icon: '/logo.png',
-          tag: 'rest-timer-end',
+          icon: '/icon-192.png',
+          tag: 'strongpr-rest-timer',
           renotify: true
         } as any);
       }
