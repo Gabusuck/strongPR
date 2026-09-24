@@ -1001,8 +1001,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             return (
               <div 
                 key={idx}
-                className={`activity-day ${day.isCurrentMonth && !day.isFuture ? getVolumeClass(day.volume) : ''}`}
-                style={!day.isCurrentMonth ? { opacity: 0 } : day.isFuture ? { opacity: 0.3 } : {}}
+                className={`activity-day ${day.isCurrentMonth ? getVolumeClass(day.volume) : ''}`}
+                style={!day.isCurrentMonth ? { opacity: 0 } : {}}
                 title={!day.isCurrentMonth ? '' : day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
               />
             );
