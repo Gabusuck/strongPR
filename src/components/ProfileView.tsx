@@ -103,20 +103,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  // Generate 50 days grid (7 weeks) for the gym activity visual tracker
+  // Generate 70 days grid (10 weeks) for the gym activity visual tracker, aligned to Monday-Sunday
   const getActivityGridDays = () => {
     const days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    for (let i = 49; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
+    const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+    // If Sunday (0), daysUntilSunday = 0. Else 7 - dayOfWeek
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    const endOfGrid = new Date(today);
+    endOfGrid.setDate(today.getDate() + daysUntilSunday);
+
+    for (let i = 69; i >= 0; i--) {
+      const d = new Date(endOfGrid);
+      d.setDate(endOfGrid.getDate() - i);
       const dateStr = toLocalDateStr(d);
-      const dayWorkouts = safeWorkouts.filter(w => toLocalDateStr(w.date) === dateStr);
+      
+      const dayWorkouts = d > today ? [] : safeWorkouts.filter(w => toLocalDateStr(w.date) === dateStr);
       const count = dayWorkouts.length;
       const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
-      days.push({ date: dateStr, count, volume });
+      days.push({ date: dateStr, count, volume, isFuture: d > today });
     }
     return days;
   };
@@ -968,8 +975,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             return (
               <div 
                 key={idx}
-                className={`activity-day ${getVolumeClass(day.volume)}`}
-                title={`${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
+                className={`activity-day ${!day.isFuture ? getVolumeClass(day.volume) : ''}`}
+                style={day.isFuture ? { opacity: 0.3 } : {}}
+                title={day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
               />
             );
           })}
