@@ -278,6 +278,34 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
           >
             + Vazio
           </button>
+
+          <button
+            onClick={() => {
+              const todayStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`;
+              if (onMarkRestDay) onMarkRestDay(todayStr);
+              if (window.customAlert) {
+                window.customAlert("Descanso Marcado", "O dia de hoje foi marcado como dia de descanso!");
+              } else {
+                alert("Dia de descanso marcado para hoje!");
+              }
+            }}
+            style={{
+              background: "rgba(255,255,255,0.18)",
+              color: "#FFFFFF",
+              border: "none",
+              borderRadius: "16px",
+              padding: "14px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              cursor: "pointer"
+            }}
+            title="Marcar Dia de Descanso"
+          >
+            💤 Descanso
+          </button>
         </div>
       </div>
 
