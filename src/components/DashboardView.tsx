@@ -27,8 +27,10 @@ function getWeekDays() {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Sun
   const todayIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  
   return days.map((label, i) => {
-    const d = new Date(today.getTime() - (todayIdx - i) * 86400000);
+    const d = new Date(today);
+    d.setDate(today.getDate() - (todayIdx - i));
     const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     return {
       label,
