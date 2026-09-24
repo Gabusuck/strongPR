@@ -75,14 +75,26 @@ self.addEventListener('message', (event) => {
     const delay = Math.max(0, targetEndTime - Date.now());
 
     restTimerTimeoutId = setTimeout(() => {
-      self.registration.showNotification(event.data.title || 'Tempo de Descanso Concluído! ⏱️', {
-        body: event.data.body || 'Está na hora de começares a próxima série!',
-        icon: '/icon-192.png',
-        badge: '/icon-192.png',
-        tag: 'strongpr-rest-timer',
-        renotify: true,
-        vibrate: [250, 100, 250, 100, 250],
-        data: { url: '/' }
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+        let isAppVisible = false;
+        for (let client of windowClients) {
+          if (client.visibilityState === 'visible') {
+            isAppVisible = true;
+            break;
+          }
+        }
+
+        if (!isAppVisible) {
+          self.registration.showNotification(event.data.title || 'Tempo de Descanso Concluído! ⏱️', {
+            body: event.data.body || 'Está na hora de começares a próxima série!',
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            tag: 'strongpr-rest-timer',
+            renotify: true,
+            vibrate: [250, 100, 250, 100, 250],
+            data: { url: '/' }
+          });
+        }
       });
       restTimerTimeoutId = null;
     }, delay);

@@ -555,18 +555,6 @@ export function getExerciseCategory(item: {
     return 'Costas';
   }
   if (
-    name.includes('curl') ||
-    name.includes('skull crusher') ||
-    name.includes('tricep extension') ||
-    name.includes('tricep pushdown') ||
-    name.includes('tricep kickback') ||
-    name.includes('wrist curl') ||
-    name.includes('tricep dip') ||
-    name.includes('triceps dip')
-  ) {
-    return 'Braços';
-  }
-  if (
     name.includes('squat') ||
     name.includes('leg press') ||
     name.includes('lunge') ||
@@ -581,25 +569,45 @@ export function getExerciseCategory(item: {
     return 'Pernas';
   }
   if (
+    name.includes('curl') ||
+    name.includes('skull crusher') ||
+    name.includes('tricep') ||
+    name.includes('bicep') ||
+    name.includes('french press') ||
+    name.includes('kickback') ||
+    name.includes('extension') ||
+    name.includes('pushdown') ||
+    name.includes('dip')
+  ) {
+    return 'Braços';
+  }
+  if (
     name.includes('crunch') ||
     name.includes('sit-up') ||
+    name.includes('sit up') ||
     name.includes('plank') ||
     name.includes('russian twist') ||
     name.includes('hanging leg raise') ||
-    name.includes('ab wheel')
+    name.includes('ab wheel') ||
+    name.includes('rollerout') ||
+    name.includes('rollout') ||
+    name.includes('abdominal')
   ) {
     return 'Abs';
   }
 
-  // 2. Target muscle classification
-  if (target === 'pectorals' || target === 'serratus anterior' || muscleGroup === 'chest') return 'Peito';
-  if (target === 'delts' || muscleGroup === 'shoulders' || muscleGroup === 'deltoids' || muscleGroup === 'rotator cuff') return 'Ombros';
+  // 2. Target muscle classification (Specific overrides general)
+  if (target === 'abs') return 'Abs';
+  if (target === 'pectorals' || target === 'serratus anterior') return 'Peito';
+  if (target === 'delts') return 'Ombros';
+  if (target === 'lats' || target === 'upper back' || target === 'traps' || target === 'spine' || target === 'levator scapulae') return 'Costas';
+  if (target === 'biceps' || target === 'triceps' || target === 'forearms') return 'Braços';
+  if (target === 'quads' || target === 'hamstrings' || target === 'glutes' || target === 'calves' || target === 'adductors' || target === 'abductors') return 'Pernas';
+
+  // 3. Muscle Group classification
+  if (muscleGroup === 'chest') return 'Peito';
+  if (muscleGroup === 'shoulders' || muscleGroup === 'deltoids' || muscleGroup === 'rotator cuff') return 'Ombros';
   if (
-    target === 'lats' ||
-    target === 'upper back' ||
-    target === 'traps' ||
-    target === 'spine' ||
-    target === 'levator scapulae' ||
     muscleGroup === 'back' ||
     muscleGroup === 'lats' ||
     muscleGroup === 'traps' ||
@@ -610,9 +618,6 @@ export function getExerciseCategory(item: {
     muscleGroup === 'latissimus dorsi'
   ) return 'Costas';
   if (
-    target === 'biceps' ||
-    target === 'triceps' ||
-    target === 'forearms' ||
     muscleGroup === 'biceps' ||
     muscleGroup === 'triceps' ||
     muscleGroup === 'forearms' ||
@@ -622,12 +627,6 @@ export function getExerciseCategory(item: {
     muscleGroup === 'hands'
   ) return 'Braços';
   if (
-    target === 'quads' ||
-    target === 'hamstrings' ||
-    target === 'glutes' ||
-    target === 'calves' ||
-    target === 'adductors' ||
-    target === 'abductors' ||
     muscleGroup === 'quadriceps' ||
     muscleGroup === 'hamstrings' ||
     muscleGroup === 'glutes' ||
@@ -637,14 +636,13 @@ export function getExerciseCategory(item: {
     muscleGroup === 'ankle stabilizers'
   ) return 'Pernas';
   if (
-    target === 'abs' ||
     muscleGroup === 'abdominals' ||
     muscleGroup === 'core' ||
     muscleGroup === 'obliques' ||
     muscleGroup === 'hip flexors'
   ) return 'Abs';
 
-  // 3. Category fallback
+  // 4. Category fallback
   if (cat.includes('peito') || cat.includes('chest')) return 'Peito';
   if (cat.includes('costas') || cat.includes('back')) return 'Costas';
   if (cat.includes('ombro') || cat.includes('shoulder')) return 'Ombros';

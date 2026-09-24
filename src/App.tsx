@@ -763,7 +763,7 @@ export default function App() {
       {dialog.isOpen && (
         <div 
           onClick={dialog.type === 'alert' ? dialog.onConfirm : undefined}
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
+          style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(4px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}
         >
           <div 
             onClick={(e) => e.stopPropagation()}
