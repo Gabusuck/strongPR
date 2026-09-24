@@ -991,41 +991,64 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Weekly Accumulated Bar Chart */}
       {renderWeeklyChart()}
 
-      {/* Navigation Sub-Pages */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* Painel 2x2 Grid */}
+      <div style={{ marginTop: '10px' }}>
+        <h3 style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '12px' }}>Painel</h3>
         
-        {/* Recordes Pessoais (PR Tracker) */}
-        <div 
-          className="glass-card interactive" 
-          onClick={() => setSubView('prs')}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Trophy size={18} style={{ color: '#f59e0b' }} />
-            <div>
-              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Os Meus PRs</span>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Recordes pessoais e gráficos de evolução.</div>
-            </div>
-          </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
-        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          
+          {/* Estatísticas */}
+          <button 
+            onClick={() => setSubView('prs')}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 14px', background: 'var(--bg-secondary)', border: 'none', borderRadius: '12px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <TrendingUp size={20} style={{ color: 'var(--text-primary)' }} />
+            Estatísticas
+          </button>
 
-        {/* Catálogo de Exercícios */}
-        <div 
-          className="glass-card interactive" 
-          onClick={() => setSubView('exercises')}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', marginBottom: 0, cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Dumbbell size={18} style={{ color: 'var(--accent-color)' }} />
-            <div>
-              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-primary)' }}>Catálogo de Exercícios</span>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Pesquisa, filtros e exercícios personalizados.</div>
-            </div>
-          </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: '1rem', fontWeight: 800 }}>→</span>
-        </div>
+          {/* Exercícios */}
+          <button 
+            onClick={() => setSubView('exercises')}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 14px', background: 'var(--bg-secondary)', border: 'none', borderRadius: '12px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <Dumbbell size={20} style={{ color: 'var(--text-primary)' }} />
+            Exercícios
+          </button>
 
+          {/* Medições */}
+          <button 
+            onClick={() => {
+              setEditName(profile.name);
+              setEditWeight(profile.weight.toString());
+              setEditHeight(profile.height.toString());
+              setEditAge(profile.age.toString());
+              setEditAvatarUrl(profile.avatarUrl);
+              setEditAvatarType(profile.avatarType);
+              setEditWeeklyGoal(profile.weeklyGoal || 4);
+              setShowEditProfileModal(true);
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 14px', background: 'var(--bg-secondary)', border: 'none', borderRadius: '12px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-primary)' }}>
+              <circle cx="12" cy="5" r="2"></circle>
+              <path d="M5 10h14"></path>
+              <path d="M12 10v12"></path>
+              <path d="M9 22h6"></path>
+              <path d="M7 10l-2 5"></path>
+              <path d="M17 10l2 5"></path>
+            </svg>
+            Medições
+          </button>
+
+          {/* Calendário */}
+          <button 
+            onClick={() => setShowYearGridModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 14px', background: 'var(--bg-secondary)', border: 'none', borderRadius: '12px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <Calendar size={20} style={{ color: 'var(--text-primary)' }} />
+            Calendário
+          </button>
+        </div>
       </div>
 
       {/* EDIT PROFILE MODAL */}
