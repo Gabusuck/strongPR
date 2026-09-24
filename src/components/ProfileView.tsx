@@ -11,6 +11,7 @@ interface ProfileViewProps {
   prs: PersonalRecord[];
   exercises: Exercise[];
   profile: UserProfile;
+  restDays?: string[];
   onUpdateProfile: (profile: UserProfile) => void;
   onAddManualPR: (exerciseId: string, weight: number, reps: number, date: string) => void;
   onAddCustomExercise: (name: string, category: string) => void;
@@ -24,6 +25,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   prs,
   exercises,
   profile,
+  restDays = [],
   onUpdateProfile,
   onAddManualPR,
   onAddCustomExercise,
@@ -134,13 +136,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         count, 
         volume, 
         isFuture: currentDate > today,
-        isCurrentMonth 
+        isCurrentMonth,
+        isRestDay: restDays.includes(dateStr) && count === 0
       });
       currentDate.setDate(currentDate.getDate() + 1);
     }
     return days;
   };
-
 
   const getFullYearGridDays = () => {
     const currentYear = new Date().getFullYear();
@@ -166,6 +168,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       volume: number;
       isCurrentYear: boolean;
       isFuture: boolean;
+      isRestDay?: boolean;
     }[] = [];
 
     // Map workouts by local YYYY-MM-DD
@@ -202,7 +205,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         count,
         volume,
         isCurrentYear,
-        isFuture
+        isFuture,
+        isRestDay: restDays.includes(dateStr) && count === 0
       });
 
       curr.setDate(curr.getDate() + 1);
@@ -1001,9 +1005,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             return (
               <div 
                 key={idx}
-                className={`activity-day ${day.isCurrentMonth ? getVolumeClass(day.volume) : ''}`}
+                className={`activity-day ${day.isCurrentMonth ? getVolumeClass(day.volume) : ''} ${day.isRestDay ? 'rest-day' : ''}`}
                 style={!day.isCurrentMonth ? { opacity: 0 } : {}}
-                title={!day.isCurrentMonth ? '' : day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
+                title={!day.isCurrentMonth ? '' : day.isFuture ? 'Futuro' : day.isRestDay ? 'Dia de Descanso' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
               />
             );
           })}
@@ -1357,12 +1361,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                           const volLabel = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
                           const tooltip = day.isFuture
                             ? formattedDate
+                            : day.isRestDay
+                            ? `Dia de Descanso (${formattedDate})`
                             : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${formattedDate}${volLabel}`;
 
                           return (
                             <div 
                               key={idx}
-                              className={`activity-day ${getVolumeClass(day.volume)}`}
+                              className={`activity-day ${getVolumeClass(day.volume)} ${day.isRestDay ? 'rest-day' : ''}`}
                               style={{ width: '12px', height: '12px', borderRadius: '2px', cursor: 'pointer' }}
                               title={tooltip}
                             />

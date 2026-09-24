@@ -75,5 +75,6 @@ export interface AppData {
   settings: AppSettings;
   profile: UserProfile;
   templates: WorkoutTemplate[];
+  restDays?: string[];
 }
 

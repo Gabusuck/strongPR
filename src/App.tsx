@@ -450,6 +450,19 @@ export default function App() {
     setActiveTab('profile');
   };
 
+  // Rest Days
+  const handleMarkRestDay = (dateStr: string) => {
+    const currentRestDays = appData.restDays || [];
+    const newRestDays = currentRestDays.includes(dateStr)
+      ? currentRestDays.filter(d => d !== dateStr)
+      : [...currentRestDays, dateStr];
+    
+    updateAppDataState({
+      ...appData,
+      restDays: newRestDays
+    });
+  };
+
   // Reset all application data
   const handleResetData = () => {
     updateAppDataState(INITIAL_DATA);
@@ -521,6 +534,7 @@ export default function App() {
             prs={appData.prs}
             exercises={appData.exercises}
             profile={appData.profile}
+            restDays={appData.restDays || []}
             onUpdateProfile={(updatedProfile) => updateAppDataState({ ...appData, profile: updatedProfile })}
             onAddManualPR={handleAddManualPR}
             onAddCustomExercise={handleAddExercise}

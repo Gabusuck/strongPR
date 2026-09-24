@@ -72,6 +72,7 @@ export const INITIAL_DATA: AppData = {
   settings: DEFAULT_SETTINGS,
   profile: DEFAULT_PROFILE,
   templates: DEFAULT_TEMPLATES,
+  restDays: [],
 };
 
 // Calculate Estimated 1-Rep Max (1RM) using Epley's formula

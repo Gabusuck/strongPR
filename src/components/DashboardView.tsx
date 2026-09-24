@@ -9,10 +9,12 @@ interface DashboardViewProps {
   prs: PersonalRecord[];
   profile: UserProfile;
   templates: WorkoutTemplate[];
+  restDays?: string[];
   onStartWorkout: () => void;
   onStartWorkoutFromTemplate: (template: WorkoutTemplate) => void;
   onNavigate: (tab: string) => void;
   onDeleteTemplate?: (id: string) => void;
+  onMarkRestDay?: (dateStr: string) => void;
 }
 
 function getGreeting(name: string): string {
@@ -25,14 +27,19 @@ function getWeekDays() {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Sun
   const todayIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  return days.map((label, i) => ({
-    label,
-    isToday: i === todayIdx,
-    dayNum: new Date(today.getTime() - (todayIdx - i) * 86400000).getDate()
-  }));
+  return days.map((label, i) => {
+    const d = new Date(today.getTime() - (todayIdx - i) * 86400000);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return {
+      label,
+      dateStr,
+      isToday: i === todayIdx,
+      dayNum: d.getDate()
+    };
+  });
 }
 
-export function DashboardView({ workouts, prs, profile, templates, onStartWorkout, onStartWorkoutFromTemplate, onNavigate, onDeleteTemplate }: DashboardViewProps) {
+export function DashboardView({ workouts, prs, profile, templates, restDays = [], onStartWorkout, onStartWorkoutFromTemplate, onNavigate, onDeleteTemplate, onMarkRestDay }: DashboardViewProps) {
   const [previewTemplate, setPreviewTemplate] = useState<WorkoutTemplate | null>(null);
   const activeRoutines = templates;
 
@@ -293,12 +300,18 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
         </div>
 
         {/* Dias da semana */}
+        <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginBottom: "8px", padding: "0 4px", textAlign: "right" }}>
+          Clica num dia vazio para marcar descanso
+        </p>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}>
           {weekDays.map((day, i) => {
             const trained = weekDaysTrained[i];
+            const isRest = restDays.includes(day.dateStr) && !trained;
+            
             return (
               <div
                 key={i}
+                onClick={() => !trained && onMarkRestDay && onMarkRestDay(day.dateStr)}
                 style={{
                   flex: 1,
                   display: "flex",
@@ -306,15 +319,20 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
                   alignItems: "center",
                   padding: "10px 4px",
                   borderRadius: "14px",
+                  cursor: !trained ? "pointer" : "default",
                   background: trained
                     ? "rgba(52, 199, 89, 0.12)"
+                    : isRest 
+                    ? "rgba(56, 189, 248, 0.12)"
                     : day.isToday
                     ? "rgba(91, 94, 244, 0.08)"
                     : "#F8F8FA",
-                  border: day.isToday
+                  border: day.isToday && !trained && !isRest
                     ? "1.5px solid var(--accent-color)"
                     : trained
                     ? "1px solid rgba(52, 199, 89, 0.3)"
+                    : isRest
+                    ? "1px solid rgba(56, 189, 248, 0.4)"
                     : "1px solid transparent",
                 }}
               >
@@ -327,6 +345,8 @@ export function DashboardView({ workouts, prs, profile, templates, onStartWorkou
                 <div style={{ width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {trained ? (
                     <CheckCircle2 size={16} color="#34C759" />
+                  ) : isRest ? (
+                    <div style={{ fontSize: "0.65rem" }}>💤</div>
                   ) : (
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: day.isToday ? "var(--accent-color)" : "#D1D1D6" }} />
                   )}

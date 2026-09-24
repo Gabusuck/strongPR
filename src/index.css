@@ -345,6 +345,7 @@ body {
   border: 1px solid var(--border-color);
 }
 .activity-day { aspect-ratio: 1; border-radius: 4px; background-color: #E5E5EA; }
+.activity-day.rest-day { background-color: rgba(56, 189, 248, 0.6); }
 .activity-day.active-1 { background: #C7C8FC; }
 .activity-day.active-2 { background: #9395F8; }
 .activity-day.active-3 { background: var(--accent-color); box-shadow: 0 2px 6px var(--accent-glow); }
