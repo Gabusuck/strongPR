@@ -1055,16 +1055,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* Medições */}
           <button 
-            onClick={() => {
-              setEditName(profile.name);
-              setEditWeight(profile.weight.toString());
-              setEditHeight(profile.height.toString());
-              setEditAge(profile.age.toString());
-              setEditAvatarUrl(profile.avatarUrl);
-              setEditAvatarType(profile.avatarType);
-              setEditWeeklyGoal(profile.weeklyGoal || 4);
-              setShowEditProfileModal(true);
-            }}
+            onClick={() => alert('Os gráficos e histórico de Medições detalhadas serão implementados em breve. Por agora, podes atualizar o teu peso atual através do botão Editar (lápis) no topo do teu perfil.')}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px 14px', background: 'var(--bg-secondary)', border: 'none', borderRadius: '12px', color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left' }}
           >
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-primary)' }}>
