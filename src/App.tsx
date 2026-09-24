@@ -479,10 +479,12 @@ export default function App() {
             prs={appData.prs}
             profile={appData.profile}
             templates={appData.templates}
+            restDays={appData.restDays || []}
             onStartWorkout={handleStartWorkout}
             onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
             onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
             onDeleteTemplate={handleDeleteTemplate}
+            onMarkRestDay={handleMarkRestDay}
           />
         );
       case 'history':
@@ -548,9 +550,11 @@ export default function App() {
             prs={appData.prs}
             profile={appData.profile}
             templates={appData.templates}
+            restDays={appData.restDays || []}
             onStartWorkout={handleStartWorkout}
             onStartWorkoutFromTemplate={(t) => { handleStartWorkoutFromTemplate(t); setActiveTab('workout'); }}
             onNavigate={(tab) => setActiveTab(tab as ActiveTab)}
+            onMarkRestDay={handleMarkRestDay}
           />
         );
     }
