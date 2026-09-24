@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2, Eye } from "lucide-react";
+import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2, Eye, X } from "lucide-react";
 import type { Workout, PersonalRecord, UserProfile, WorkoutTemplate } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
 import { useLongPress } from "../utils/useLongPress";
@@ -34,6 +34,7 @@ function getWeekDays() {
       label,
       dateStr,
       isToday: i === todayIdx,
+      isPast: i < todayIdx,
       dayNum: d.getDate()
     };
   });
@@ -347,6 +348,8 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
                     <CheckCircle2 size={16} color="#34C759" />
                   ) : isRest ? (
                     <div style={{ fontSize: "0.65rem" }}>💤</div>
+                  ) : day.isPast ? (
+                    <X size={14} color="#EF4444" strokeWidth={3} />
                   ) : (
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: day.isToday ? "var(--accent-color)" : "#D1D1D6" }} />
                   )}
