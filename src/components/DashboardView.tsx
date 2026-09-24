@@ -328,9 +328,6 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
         </div>
 
         {/* Dias da semana */}
-        <p style={{ fontSize: "0.65rem", color: "var(--text-muted)", marginBottom: "8px", padding: "0 4px", textAlign: "right" }}>
-          Clica num dia vazio para marcar descanso
-        </p>
         <div style={{ display: "flex", justifyContent: "space-between", gap: "6px" }}>
           {weekDays.map((day, i) => {
             const trained = weekDaysTrained[i];
@@ -339,7 +336,6 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
             return (
               <div
                 key={i}
-                onClick={() => !trained && onMarkRestDay && onMarkRestDay(day.dateStr)}
                 style={{
                   flex: 1,
                   display: "flex",
@@ -347,7 +343,6 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
                   alignItems: "center",
                   padding: "10px 4px",
                   borderRadius: "14px",
-                  cursor: !trained ? "pointer" : "default",
                   background: trained
                     ? "rgba(52, 199, 89, 0.12)"
                     : isRest 
