@@ -54,9 +54,6 @@ html {
   margin: 0;
   padding: 0;
   -webkit-text-size-adjust: 100%;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
 }
 
 body {
@@ -65,9 +62,8 @@ body {
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
-  height: 100%;
-  height: 100dvh;
-  overflow: hidden;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
 }
@@ -75,22 +71,22 @@ body {
 #root {
   width: 100%;
   max-width: 480px;
-  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: hidden;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   position: relative;
-  overflow: hidden;
 }
 
 @media (min-width: 576px) and (min-height: 600px) {
@@ -175,8 +171,6 @@ body {
   width: 100%;
   padding: 16px 16px 95px 16px;
   background-color: var(--bg-primary);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .glass-card {
@@ -193,7 +187,7 @@ body {
 
 /* Navbar Pilula Branca — Estilo Money Manager */
 .bottom-nav {
-  position: absolute;
+  position: fixed;
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
@@ -357,7 +351,7 @@ body {
 .activity-day.active-4 { background: #4347D0; box-shadow: 0 2px 8px rgba(67,71,208,0.4); }
 
 .modal-overlay {
-  position: absolute;
+  position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.4);
   backdrop-filter: blur(8px);
@@ -387,9 +381,9 @@ body {
 }
 
 .circular-timer-container {
-  position: absolute;
+  position: fixed;
   bottom: calc(82px + env(safe-area-inset-bottom, 0px));
-  right: 16px;
+  right: max(16px, calc((100vw - 480px) / 2 + 16px));
   width: 76px; height: 76px;
   border-radius: 50%;
   background: #FFFFFF;
