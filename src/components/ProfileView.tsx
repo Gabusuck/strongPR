@@ -103,30 +103,44 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  // Generate 70 days grid (10 weeks) for the gym activity visual tracker, aligned to Monday-Sunday
+  // Generate a traditional calendar grid (Mon-Sun columns) for the current month
   const getActivityGridDays = () => {
     const days = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-    // If Sunday (0), daysUntilSunday = 0. Else 7 - dayOfWeek
-    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-    const endOfGrid = new Date(today);
-    endOfGrid.setDate(today.getDate() + daysUntilSunday);
+    const year = today.getFullYear();
+    const month = today.getMonth();
 
-    for (let i = 69; i >= 0; i--) {
-      const d = new Date(endOfGrid);
-      d.setDate(endOfGrid.getDate() - i);
-      const dateStr = toLocalDateStr(d);
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    
+    const firstDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7; 
+    const startDate = new Date(year, month, 1 - firstDayOfWeek);
+    
+    const lastDayOfWeek = (lastDayOfMonth.getDay() + 6) % 7;
+    const endDate = new Date(year, month, lastDayOfMonth.getDate() + (6 - lastDayOfWeek));
+
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateStr = toLocalDateStr(currentDate);
+      const isCurrentMonth = currentDate.getMonth() === month;
       
-      const dayWorkouts = d > today ? [] : safeWorkouts.filter(w => toLocalDateStr(w.date) === dateStr);
+      const dayWorkouts = isCurrentMonth && currentDate <= today ? safeWorkouts.filter(w => toLocalDateStr(w.date) === dateStr) : [];
       const count = dayWorkouts.length;
       const volume = dayWorkouts.reduce((sum, w) => sum + getWorkoutVolume(w), 0);
-      days.push({ date: dateStr, count, volume, isFuture: d > today });
+      days.push({ 
+        date: dateStr, 
+        count, 
+        volume, 
+        isFuture: currentDate > today,
+        isCurrentMonth 
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     return days;
   };
+
 
   const getFullYearGridDays = () => {
     const currentYear = new Date().getFullYear();
@@ -968,33 +982,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           Consistência de Treinos
         </h3>
         
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '110px', fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 800, paddingRight: '2px', paddingTop: '16px', paddingBottom: '16px' }}>
-            <span>Seg</span>
-            <span>Qua</span>
-            <span>Sex</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', paddingBottom: '8px' }}>
+          <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 800, textTransform: 'uppercase' }}>
+            {['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'][new Date().getMonth()]}
           </div>
+        </div>
 
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '2px', textAlign: 'right', paddingRight: '4px' }}>
-              {['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'][new Date().getMonth()]}
-            </div>
-            
-            <div className="activity-grid" style={{ marginTop: 0, padding: '10px' }}>
-              {activityDays.map((day, idx) => {
-                const tierInfo = getVolumeTier(day.volume);
-                const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
-                return (
-                  <div 
-                    key={idx}
-                    className={`activity-day ${!day.isFuture ? getVolumeClass(day.volume) : ''}`}
-                    style={day.isFuture ? { opacity: 0.3 } : {}}
-                    title={day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
-                  />
-                );
-              })}
-            </div>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', marginBottom: '4px' }}>
+          {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((d, i) => (
+            <div key={i} style={{ textAlign: 'center', fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)' }}>{d}</div>
+          ))}
+        </div>
+
+        <div className="activity-grid" style={{ marginTop: 0, padding: '10px' }}>
+          {activityDays.map((day, idx) => {
+            const tierInfo = getVolumeTier(day.volume);
+            const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
+            return (
+              <div 
+                key={idx}
+                className={`activity-day ${day.isCurrentMonth && !day.isFuture ? getVolumeClass(day.volume) : ''}`}
+                style={!day.isCurrentMonth ? { opacity: 0 } : day.isFuture ? { opacity: 0.3 } : {}}
+                title={!day.isCurrentMonth ? '' : day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
+              />
+            );
+          })}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
           <span style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '3px' }}>Ver ano inteiro →</span>
