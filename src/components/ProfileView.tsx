@@ -968,19 +968,33 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           Consistência de Treinos
         </h3>
         
-        <div className="activity-grid">
-          {activityDays.map((day, idx) => {
-            const tierInfo = getVolumeTier(day.volume);
-            const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
-            return (
-              <div 
-                key={idx}
-                className={`activity-day ${!day.isFuture ? getVolumeClass(day.volume) : ''}`}
-                style={day.isFuture ? { opacity: 0.3 } : {}}
-                title={day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
-              />
-            );
-          })}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '110px', fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 800, paddingRight: '2px', paddingTop: '16px', paddingBottom: '16px' }}>
+            <span>Seg</span>
+            <span>Qua</span>
+            <span>Sex</span>
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '2px', textAlign: 'right', paddingRight: '4px' }}>
+              {['JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO', 'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'][new Date().getMonth()]}
+            </div>
+            
+            <div className="activity-grid" style={{ marginTop: 0, padding: '10px' }}>
+              {activityDays.map((day, idx) => {
+                const tierInfo = getVolumeTier(day.volume);
+                const volStr = day.volume > 0 ? ` · ${Math.round(day.volume)}kg (${tierInfo.label})` : '';
+                return (
+                  <div 
+                    key={idx}
+                    className={`activity-day ${!day.isFuture ? getVolumeClass(day.volume) : ''}`}
+                    style={day.isFuture ? { opacity: 0.3 } : {}}
+                    title={day.isFuture ? 'Futuro' : `${day.count} treino${day.count !== 1 ? 's' : ''} em ${day.date}${volStr}`}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '8px', padding: '0 2px', fontWeight: 600 }}>
           <span style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '3px' }}>Ver ano inteiro →</span>
