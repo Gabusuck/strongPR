@@ -113,6 +113,7 @@ export function loadAppData(): AppData {
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       profile: { ...DEFAULT_PROFILE, ...(parsed.profile || {}) },
       templates: userTemplates,
+      restDays: parsed.restDays || [],
     };
   } catch (error) {
     console.error('Failed to load data from localStorage', error);
@@ -245,6 +246,7 @@ export function importBackup(file: File): Promise<AppData> {
             settings: { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) },
             profile: parsed.profile || DEFAULT_PROFILE,
             templates: Array.isArray(parsed.templates) ? parsed.templates : [],
+            restDays: Array.isArray(parsed.restDays) ? parsed.restDays : [],
           };
           saveAppData(appData);
           resolve(appData);

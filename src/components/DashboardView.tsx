@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2, Eye, X } from "lucide-react";
+import { Play, Plus, Flame, Trophy, Calendar, Dumbbell, ChevronRight, RotateCcw, CheckCircle2, Eye, XCircle } from "lucide-react";
 import type { Workout, PersonalRecord, UserProfile, WorkoutTemplate } from "../types";
 import { RoutinePreviewModal } from "./RoutinePreviewModal";
 import { useLongPress } from "../utils/useLongPress";
@@ -324,16 +324,20 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
                   background: trained
                     ? "rgba(52, 199, 89, 0.12)"
                     : isRest 
-                    ? "rgba(56, 189, 248, 0.12)"
+                    ? "rgba(75, 85, 99, 0.15)"
+                    : day.isPast
+                    ? "rgba(239, 68, 68, 0.08)"
                     : day.isToday
                     ? "rgba(91, 94, 244, 0.08)"
                     : "#F8F8FA",
-                  border: day.isToday && !trained && !isRest
+                  border: day.isToday && !trained && !isRest && !day.isPast
                     ? "1.5px solid var(--accent-color)"
                     : trained
                     ? "1px solid rgba(52, 199, 89, 0.3)"
                     : isRest
-                    ? "1px solid rgba(56, 189, 248, 0.4)"
+                    ? "1px solid rgba(75, 85, 99, 0.4)"
+                    : day.isPast
+                    ? "1px solid rgba(239, 68, 68, 0.3)"
                     : "1px solid transparent",
                 }}
               >
@@ -349,7 +353,7 @@ export function DashboardView({ workouts, prs, profile, templates, restDays = []
                   ) : isRest ? (
                     <div style={{ fontSize: "0.65rem" }}>💤</div>
                   ) : day.isPast ? (
-                    <X size={14} color="#EF4444" strokeWidth={3} />
+                    <XCircle size={16} color="#EF4444" />
                   ) : (
                     <div style={{ width: 5, height: 5, borderRadius: "50%", background: day.isToday ? "var(--accent-color)" : "#D1D1D6" }} />
                   )}
